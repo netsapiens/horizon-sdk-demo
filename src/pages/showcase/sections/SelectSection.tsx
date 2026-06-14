@@ -1,0 +1,60 @@
+/** Showcase section: Select dropdown. */
+import { useState } from 'react';
+import { useHorizonContext } from '@netsapiens/horizon-sdk';
+
+import { CodeBlock } from '../../../components/CodeBlock';
+
+export default function SelectSection() {
+  const { ui } = useHorizonContext();
+  const { Select, Typography, Stack, Paper, Divider } = ui || {};
+  const [selectValue, setSelectValue] = useState('option1');
+  if (!Paper || !Typography || !Stack || !Select) return null;
+
+  return (
+    <Paper sx={{ p: 3 }}>
+      <Typography variant='h5' gutterBottom>
+        Select
+      </Typography>
+      <Typography variant='body2' color='text.secondary' sx={{ mb: 3 }}>
+        Dropdown selection
+      </Typography>
+
+      <Select
+        label='Choose Option'
+        value={selectValue}
+        onChange={(e) => setSelectValue(e.target.value as string)}
+        options={[
+          { value: 'option1', label: 'Option 1' },
+          { value: 'option2', label: 'Option 2' },
+          { value: 'option3', label: 'Option 3' },
+        ]}
+      />
+
+      {Divider && <Divider sx={{ my: 3 }} />}
+      <CodeBlock>
+        {`const { Select } = horizonContext.ui;
+const [selectValue, setSelectValue] = useState('option1');
+
+<Select
+  label="Choose Option"
+  value={selectValue}
+  onChange={(e) => setSelectValue(e.target.value as string)}
+  options={[
+    { value: 'option1', label: 'Option 1' },
+    { value: 'option2', label: 'Option 2' },
+    { value: 'option3', label: 'Option 3' }
+  ]}
+/>`}
+      </CodeBlock>
+
+      <Typography
+        variant='caption'
+        color='text.secondary'
+        sx={{ mt: 2, display: 'block' }}
+      >
+        💡 Used in: Forms, filters, settings (e.g., account status selector,
+        timezone picker, device type filter)
+      </Typography>
+    </Paper>
+  );
+}

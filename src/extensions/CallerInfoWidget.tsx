@@ -1,0 +1,98 @@
+/**
+ * Caller Info Widget
+ * Displays enriched caller information in the incoming call widget
+ * Shows data fetched based on call events
+ */
+import type { ExtensionComponentProps } from '@netsapiens/horizon-sdk';
+import { useEffect, useState } from 'react';
+
+import type { CallerInfo } from '../services/callEnrichment';
+import {
+  activeCallsStore,
+  CALL_REMOVED_EVENT,
+  CALL_UPDATED_EVENT,
+} from '../services/callEnrichment';
+
+export function CallerInfoWidget({ context }: ExtensionComponentProps) {
+  // context.theme is injected by DynamicExtensionRenderer via useColorScheme()
+  // and updated as a prop whenever the host theme changes — always correct on
+  // first render, no event subscription needed.
+  const { Paper, Stack, Typography, Divider } = context.ui ?? {};
+
+  const [activeCalls, setActiveCalls] = useState<CallerInfo[]>([]);
+
+  useEffect(() => {
+    if (!context.eventBus) return;
+
+    const updateActiveCalls = () =>
+      setActiveCalls(Array.from(activeCallsStore.values()));
+
+    const handleCallUpdate = (data: CallerInfo) => {
+      activeCallsStore.set(data.callId, data);
+      updateActiveCalls();
+    };
+
+    const handleCallRemoved = (callId: string) => {
+      activeCallsStore.delete(callId);
+      updateActiveCalls();
+    };
+
+    context.eventBus.on(CALL_UPDATED_EVENT, handleCallUpdate);
+    context.eventBus.on(CALL_REMOVED_EVENT, handleCallRemoved);
+    updateActiveCalls();
+
+    return () => {
+      context.eventBus?.off(CALL_UPDATED_EVENT, handleCallUpdate);
+      context.eventBus?.off(CALL_REMOVED_EVENT, handleCallRemoved);
+    };
+  }, [context.eventBus]);
+
+  const ringingCall = activeCalls.find((call) => call.status === 'ringing');
+  if (!ringingCall || !Paper || !Stack || !Typography) return null;
+
+  return (
+    <Paper variant='outlined' sx={{ p: 1.5, mb: 2 }}>
+      <Stack spacing={1}>
+        {ringingCall.company && (
+          <Stack direction='row' spacing={1} alignItems='center'>
+            <span>🏢</span>
+            <Typography variant='subtitle2' fontWeight={600}>
+              {ringingCall.company}
+            </Typography>
+          </Stack>
+        )}
+
+        {ringingCall.lastContact && (
+          <Stack direction='row' spacing={1} alignItems='center'>
+            <span>🕒</span>
+            <Typography variant='caption' color='text.secondary'>
+              Last contact: {ringingCall.lastContact}
+            </Typography>
+          </Stack>
+        )}
+
+        {ringingCall.callCount !== undefined && ringingCall.callCount > 0 && (
+          <Stack direction='row' spacing={1} alignItems='center'>
+            <span>📞</span>
+            <Typography variant='caption' color='text.secondary'>
+              {ringingCall.callCount} previous calls
+            </Typography>
+          </Stack>
+        )}
+
+        {ringingCall.notes && (
+          <>
+            {Divider && <Divider />}
+            <Typography
+              variant='caption'
+              color='text.secondary'
+              sx={{ fontStyle: 'italic' }}
+            >
+              {ringingCall.notes}
+            </Typography>
+          </>
+        )}
+      </Stack>
+    </Paper>
+  );
+}

@@ -1,0 +1,61 @@
+import type { ExtensionComponentProps } from '@netsapiens/horizon-sdk';
+import { useSidePanel } from '@netsapiens/horizon-sdk';
+
+import { QuickLinksPanel } from '../panels/QuickLinksPanel';
+
+/**
+ * Topbar Help Button Extension
+ * Zone: `topbar-actions` — action button in the global top app bar (renders on
+ * every page).
+ *
+ * Opens the demo app's Quick Links / help content in the shared SDK side panel,
+ * showing the panel can be opened from a global, app-wide entry point.
+ */
+
+export function TopbarHelpButton({ context }: ExtensionComponentProps) {
+  const { Button, Icon, Tooltip } = context.ui ?? {};
+  // Pass context.eventBus: extension components render outside HorizonContextProvider.
+  const { open } = useSidePanel(context.eventBus);
+
+  const handleClick = () => {
+    open({
+      title: 'Help & Quick Links',
+      subtitle: 'Demo app side panel',
+      width: 'sm',
+      icon: 'material-symbols-light:menu-book-outline-rounded',
+      component: QuickLinksPanel,
+    });
+  };
+
+  // Fallback if the host UI surface is unavailable
+  if (!Button || !Icon) {
+    return (
+      <button onClick={handleClick} title='Help & docs (Demo Extension)'>
+        ?
+      </button>
+    );
+  }
+
+  // Mirror the native topbar button style (see AppbarActionItems.tsx):
+  // soft-filled, circular, icon-only.
+  const button = (
+    <Button
+      color='primary'
+      variant='soft'
+      shape='circle'
+      size='medium'
+      onClick={handleClick}
+    >
+      <Icon
+        icon='material-symbols-light:menu-book-outline-rounded'
+        sx={{ fontSize: 22 }}
+      />
+    </Button>
+  );
+
+  return Tooltip ? (
+    <Tooltip title='Help & Quick Links (Demo Extension)'>{button}</Tooltip>
+  ) : (
+    button
+  );
+}

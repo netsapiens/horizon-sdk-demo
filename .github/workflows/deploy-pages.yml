@@ -1,0 +1,63 @@
+name: Deploy to GitHub Pages
+
+# Builds the Module Federation remote and publishes dist/ to GitHub Pages, which
+# serves it as a CDN: a Horizon host loads
+#   https://<org>.github.io/horizon-sdk-demo/remoteEntry.js
+# GitHub Pages sends `Access-Control-Allow-Origin: *`, so cross-origin loading
+# by the host works. The page itself renders nothing standalone (headless remote).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Allow the deploy job to publish to Pages via OIDC.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One in-flight deploy at a time; don't cancel a running publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          # Writes an auth-bearing .npmrc (via NODE_AUTH_TOKEN) so the restricted
+          # @netsapiens/horizon-sdk package can be installed in CI.
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Build
+        run: npm run build
+
+      # Stop Jekyll from stripping webpack's _-prefixed files.
+      - name: Disable Jekyll
+        run: touch dist/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
