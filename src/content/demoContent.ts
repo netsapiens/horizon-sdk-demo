@@ -18,7 +18,7 @@ export const CAPABILITIES: Capability[] = [
   {
     title: 'Full-page routes',
     api: 'sdk.registerRoute()',
-    desc: 'Add standalone pages to the Apps and Manage menus — e.g. this page and the Hardphone Devices page.',
+    desc: 'Add standalone pages to the Apps and Manage menus — e.g. this page and the CRM Integration page.',
   },
   {
     title: 'Dynamic extensions',
@@ -171,9 +171,9 @@ export const WALKTHROUGH: WalkthroughItem[] = [
     badge: 'warning',
   },
   {
-    label: 'Hardphone Devices',
-    desc: 'A full registered page that makes a live NetSapiens v2 API call for the signed-in user’s devices.',
-    nav: '/manage/hardphone-devices',
+    label: 'CRM Integration',
+    desc: 'A full registered page nested under Manage › Call Logs that lists the user’s calls from a live NetSapiens v2 API call and matches each caller to their CRM record.',
+    nav: '/manage/call-logs/crm-integration',
     badge: 'primary',
   },
   {
@@ -194,13 +194,13 @@ export const CODE_EXAMPLES: CodeExample[] = [
   {
     title: 'Register a full page',
     code: `sdk.registerRoute({
-  id: 'ucaas-hardphone-devices',
-  parentPath: '/manage',
-  path: 'hardphone-devices',
-  label: 'Hardphone Devices',
-  icon: 'mdi:deskphone',
-  placement: { after: 'devices' },
-  component: HardphoneDevicesPage,
+  id: 'ucaas-crm-integration',
+  parentPath: '/manage/call-logs', // nest under any node — a full path, not just a top-level menu
+  path: 'crm-integration',
+  label: 'CRM Integration',
+  icon: 'mdi:account-sync',
+  placement: { last: true },
+  component: CrmIntegrationPage,
 });`,
   },
   {

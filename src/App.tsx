@@ -33,8 +33,8 @@ import { QuickActionButton } from './extensions/QuickActionButton';
 import { TableToolbarInfo } from './extensions/TableToolbarInfo';
 import { TopbarHelpButton } from './extensions/TopbarHelpButton';
 import ComponentShowcasePage from './pages/ComponentShowcasePage';
+import CrmIntegrationPage from './pages/CrmIntegrationPage';
 import DemoPage from './pages/DemoPage';
-import HardphoneDevicesPage from './pages/HardphoneDevicesPage';
 import { createCallEventHandler } from './services/callEnrichment';
 
 // Injected at build time by webpack DefinePlugin (see webpack.config.js).
@@ -76,12 +76,12 @@ export default function App(horizonContext: HorizonContext) {
     [],
   );
 
-  const HardphoneDevicesPageWithContext = useMemo(
+  const CrmIntegrationPageWithContext = useMemo(
     () =>
-      function HardphoneDevicesPageWithContext() {
+      function CrmIntegrationPageWithContext() {
         return (
           <HorizonContextProvider context={horizonContext}>
-            <HardphoneDevicesPage />
+            <CrmIntegrationPage />
           </HorizonContextProvider>
         );
       },
@@ -126,19 +126,18 @@ export default function App(horizonContext: HorizonContext) {
 
     sdk
       .registerRoute({
-        id: 'ucaas-hardphone-devices',
-        parentPath: '/manage',
-        path: 'hardphone-devices',
-        label: 'Hardphone Devices',
-        icon: 'mdi:deskphone',
-        placement: { after: 'devices' },
-        component: HardphoneDevicesPageWithContext,
+        id: 'ucaas-crm-integration',
+        // Nested under the Manage › Call Logs node (parentPath is a full path,
+        // not just a top-level menu) → /manage/call-logs/crm-integration.
+        parentPath: '/manage/call-logs',
+        path: 'crm-integration',
+        label: 'CRM Integration',
+        icon: 'mdi:account-sync',
+        placement: { last: true },
+        component: CrmIntegrationPageWithContext,
       })
       .catch((error) =>
-        console.error(
-          '[Demo App] Failed to register Hardphone Devices:',
-          error,
-        ),
+        console.error('[Demo App] Failed to register CRM Integration:', error),
       );
 
     // ============================================================

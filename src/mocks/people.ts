@@ -1,7 +1,7 @@
 /**
  * Shared demo directory — the few internal people who appear on more than one
- * surface in this demo (CRM caller enrichment in `mocks/crm.ts` and device
- * assignments in `mocks/hardphoneDevices.ts`).
+ * surface in this demo (CRM caller enrichment in `mocks/crm.ts`, used by the
+ * inbound-call widget and the CRM Integration page).
  *
  * Centralizing them here is the single source of truth for an extension/name
  * pairing, so the same person reads consistently everywhere instead of being
@@ -20,7 +20,11 @@ export interface Person {
 export const INTERNAL_PEOPLE: Person[] = [
   { extension: '2001', name: 'Alice Williams', department: 'Sales Team' },
   { extension: '2002', name: 'Bob Martinez', department: 'Support Team' },
-  { extension: '2009', name: 'Reseller Pete', department: 'VIP Reseller Client' },
+  {
+    extension: '2009',
+    name: 'Reseller Pete',
+    department: 'VIP Reseller Client',
+  },
   { extension: '2364', name: 'David Chen', department: 'Engineering' },
   { extension: '3832', name: 'Emily Rodriguez', department: 'Product' },
   { extension: '5226', name: 'Chris Aaker', department: 'SVP of Engineering' },

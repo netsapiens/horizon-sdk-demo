@@ -20,11 +20,11 @@ side panel**, and a **remote-auth handshake** with a backend.
 
 ### Full-page routes — `sdk.registerRoute()`
 
-| Page               | Menu location            | Notes                                                                                                 |
-| ------------------ | ------------------------ | ----------------------------------------------------------------------------------------------------- |
-| Horizon SDK Demo   | Apps                     | The overview/walkthrough page (`pages/DemoPage.tsx`).                                                 |
-| Component Showcase | Apps                     | Reference for every shared MUI Aurora component (`pages/ComponentShowcasePage.tsx`).                  |
-| Hardphone Devices  | Manage (after _Devices_) | Full management page that makes a **live** NetSapiens v2 API call (`pages/HardphoneDevicesPage.tsx`). |
+| Page               | Menu location               | Notes                                                                                                                                                                                                                                |
+| ------------------ | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Horizon SDK Demo   | Apps                        | The overview/walkthrough page (`pages/DemoPage.tsx`).                                                                                                                                                                                |
+| Component Showcase | Apps                        | Reference for every shared MUI Aurora component (`pages/ComponentShowcasePage.tsx`).                                                                                                                                                 |
+| CRM Integration    | Manage › Call Logs (nested) | Lists the user's calls from a **live** NetSapiens v2 API call, matched to their CRM record — nested under the Call Logs node to show routes attach anywhere in the tree, not just a top-level menu (`pages/CrmIntegrationPage.tsx`). |
 
 ### Zone extensions — `sdk.registerDynamicExtension()`
 
@@ -203,7 +203,7 @@ via `useRemoteApp()`. Page components read the live context with
 src/
   App.tsx                     # Orchestrator: registers all routes, extensions, column, call events
   api/
-    crmApi.ts                 # NetSapiens v2 API helpers (live device fetch + SIP user-agent parse)
+    callsApi.ts               # NetSapiens v2 API helper (live recent-calls/CDR fetch via the proxy)
   columns/
     CallPriorityColumn.tsx    # Dynamic column cell
   components/
@@ -211,8 +211,8 @@ src/
   content/
     demoContent.ts            # Static content for DemoPage (capabilities, zones, patterns, snippets)
   extensions/                 # One component per zone extension
-  mocks/                      # Demo fixtures (people, CRM, devices, sample table) — see mocks/README.md
-  panels/                     # Side-panel content (CallDetails, QuickLinks, DeviceDetail)
+  mocks/                      # Demo fixtures (people, CRM, recent calls, sample table) — see mocks/README.md
+  panels/                     # Side-panel content (CallDetails, QuickLinks)
   services/
     callEnrichment.ts         # Call-event → CRM enrichment + shared active-calls store
   pages/
@@ -220,7 +220,7 @@ src/
     demo/                     # One component per DemoPage tab + shared style helpers
     ComponentShowcasePage.tsx # Composes the showcase sections
     showcase/sections/        # One self-contained section per shared UI component
-    HardphoneDevicesPage.tsx  # Full page with a live API call
+    CrmIntegrationPage.tsx    # Full page: remoteAuth connect + live API call + CRM matching
 ```
 
 ## Hosting on GitHub Pages
@@ -298,12 +298,13 @@ self-host their remote on their own `*.github.io` and just register it.
 
 ## Notes
 
-- **Live data on the Hardphone Devices page.** On load it calls
-  `GET /domains/{domain}/users/{user}/devices` for the signed-in user via
-  `horizonContext.api`, tags those rows **● Live**, and shows sample devices
-  alongside them so the page is never empty. A domain-wide registration feed is
-  delivered over the platform's socket channel rather than REST, so it is out of
-  scope for the SDK's REST client.
+- **Live data on the CRM Integration page.** On load it calls
+  `GET /domains/{domain}/users/{user}/cdrs` for the signed-in user via
+  `horizonContext.api`, tags those rows **● Live**, and shows sample calls
+  alongside them so the page is never empty. Caller matching reuses the same mock
+  CRM directory that powers the inbound-call widget. (Authenticating to a real CRM
+  backend on behalf of the user — the `auth.requestRemoteAuth` flow — is
+  demonstrated standalone on the **Remote Auth** tab and can gate this page later.)
 - **The on-demand side panel** is rendered by the host's `SdkSidePanel`
   (`components/sdk/SdkSidePanel.tsx` in `netsapiens-horizon`), mounted once in
   `MainLayout`. It reuses the shared `components/common/SidePanel` drawer and
