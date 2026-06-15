@@ -97,7 +97,8 @@ export default function CrmIntegrationPage() {
 
   const callLabel = (c: RecentCall) => {
     const rec = lookupCrmRecord(normalizePhoneNumber(c.party));
-    return rec?.name ?? c.party;
+    // CRM match wins; otherwise the API's friendly name; otherwise the number.
+    return rec?.name ?? c.name ?? c.party;
   };
 
   return (

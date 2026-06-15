@@ -12,6 +12,11 @@ export interface RecentCall {
   id: string;
   /** The other party — an E.164 number or internal extension (a CRM key). */
   party: string;
+  /**
+   * The other party's friendly display name from the API, when one is available
+   * and human-readable. Used as the row label when there's no CRM match.
+   */
+  name?: string;
   direction: 'inbound' | 'outbound';
   /** Human-friendly relative time, e.g. "2m ago". */
   timeLabel: string;

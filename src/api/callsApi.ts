@@ -6,28 +6,38 @@
  * Credentials never reach this remote app — the host injects auth and audits the
  * call. The page falls back to sample data on any failure so it's never empty.
  *
- * NetSapiens does not expose a single canonical CDR shape across versions, so the
- * fields below are read best-effort with fallbacks (mirroring the user-agent
- * parsing approach the demo uses elsewhere).
+ * The v2 CDR feed mixes genuine calls with registration-keepalive artifacts and
+ * self/test calls. We read the real `call-*` field names the API returns and
+ * filter the feed down to actual calls the signed-in user took part in, so the
+ * page shows a clean call history (not registration noise or platform traffic).
  */
 import type { HorizonApiClient } from '@netsapiens/horizon-sdk';
 
 import type { RecentCall } from '../mocks/recentCalls';
 import { normalizePhoneNumber } from '../mocks/crm';
 
-/** Raw NetSapiens CDR record (the subset of fields the demo reads). */
+/**
+ * Raw NetSapiens v2 CDR record (the subset of fields the demo reads). The API
+ * prefixes call fields with `call-` and encodes direction as an integer.
+ */
 interface NetSapiensCdr {
   id?: string;
-  'cdr-id'?: string;
-  'time-start'?: string;
-  'orig-from-uri'?: string;
-  'orig-from-user'?: string;
-  'term-to-uri'?: string;
-  'term-to-user'?: string;
-  duration?: number | string;
-  'duration-seconds'?: number | string;
-  direction?: string;
-  type?: string;
+  /** The other party as the API resolved it (e.g. `2364` or `sip:2364@netsapiens`). */
+  number?: string;
+  /** The other party's display name (e.g. `2364w`, `Horizon Agent`). */
+  name?: string;
+  /** 0 = outbound, 1 = inbound (answered), 2 = inbound missed. */
+  'call-direction'?: number | string;
+  'call-start-datetime'?: string;
+  'call-answer-datetime'?: string;
+  'call-total-duration-seconds'?: number | string;
+  /** Clean extension of the originating party (no device suffix). */
+  'call-orig-user'?: string;
+  /** Clean extension of the terminating party (no device suffix). */
+  'call-term-user'?: string;
+  /** The dialed destination on an outbound call. */
+  'call-orig-to-user'?: string;
+  'call-disconnect-reason-text'?: string;
 }
 
 function toSeconds(v: number | string | undefined): number {
@@ -35,15 +45,55 @@ function toSeconds(v: number | string | undefined): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function relativeTime(start?: string): string {
+/**
+ * The other party's friendly display name, if the API gives a human-readable
+ * one. SIP-URI-shaped names (e.g. `sip:vmail-unreg@netsapiens`) aren't friendly,
+ * so we skip them and let the caller fall back to the bare number.
+ */
+function friendlyName(name?: string): string | undefined {
+  const trimmed = (name ?? '').trim();
+  if (!trimmed || /^sips?:/i.test(trimmed) || trimmed.includes('@')) {
+    return undefined;
+  }
+  return trimmed;
+}
+
+/** Format an ISO timestamp as a short, readable label; fall back to raw text. */
+function formatTime(start?: string): string {
   if (!start) return '—';
-  // Best-effort: show the date/time as-is rather than guessing a relative label.
-  return start;
+  const d = new Date(start);
+  if (Number.isNaN(d.getTime())) return start;
+  return d.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+/**
+ * A "non-real" CDR: not an actual call the user placed or received. We drop:
+ *  - registration-keepalive artifacts (`Term: Reg Expired`), the bulk of the
+ *    noise — these fire when a device's registration lapses, not on a real call;
+ *  - self/test calls (orig and term are the same extension), e.g. the call-
+ *    recording test legs that ring 3832 from 3832.
+ */
+function isNonRealCall(c: NetSapiensCdr): boolean {
+  const reason = c['call-disconnect-reason-text'] ?? '';
+  if (/reg expired/i.test(reason)) return true;
+  const orig = c['call-orig-user'];
+  const term = c['call-term-user'];
+  if (orig && term && orig === term) return true;
+  return false;
 }
 
 /**
  * Fetch the signed-in user's recent calls from the NetSapiens v2 API and
  * normalize them for the CRM Integration page.
+ *
+ * The raw feed is filtered to genuine calls the user took part in: registration
+ * artifacts and self/test calls are dropped, and records are scoped to the
+ * signed-in user (defends against the feed returning calls beyond their own).
  */
 export async function fetchRecentCalls(
   domain: string,
@@ -59,25 +109,36 @@ export async function fetchRecentCalls(
   const path = `/domains/${domain}/users/${userId}/cdrs`;
   const cdrs = await apiClient.get<NetSapiensCdr[]>(path);
 
-  return (cdrs ?? []).map((c, i) => {
-    const direction: RecentCall['direction'] =
-      (c.direction ?? c.type)?.toLowerCase() === 'outbound'
-        ? 'outbound'
-        : 'inbound';
-    // The "other party" is the far end for the call's direction.
-    const rawParty =
-      direction === 'outbound'
-        ? (c['term-to-user'] ?? c['term-to-uri'] ?? '')
-        : (c['orig-from-user'] ?? c['orig-from-uri'] ?? '');
-    const seconds = toSeconds(c['duration-seconds'] ?? c.duration);
-    return {
-      id: `live-${c.id ?? c['cdr-id'] ?? i}`,
-      party: normalizePhoneNumber(rawParty),
-      direction,
-      timeLabel: relativeTime(c['time-start']),
-      durationSeconds: seconds,
-      answered: seconds > 0,
-      source: 'live' as const,
-    };
-  });
+  return (cdrs ?? [])
+    .map((c, i): RecentCall | null => {
+      if (isNonRealCall(c)) return null;
+
+      // Scope guard: keep only calls this user is actually a party to.
+      const origUser = c['call-orig-user'];
+      const termUser = c['call-term-user'];
+      const isOutbound = origUser === userId;
+      const isInbound = termUser === userId;
+      if (!isOutbound && !isInbound) return null;
+
+      // The API resolves the other party into `number`; fall back to the dialed
+      // destination (outbound) or the originator (inbound) if it's absent.
+      const rawParty =
+        c.number ?? (isOutbound ? c['call-orig-to-user'] : origUser) ?? '';
+      const party = normalizePhoneNumber(rawParty);
+      if (!party) return null;
+
+      const seconds = toSeconds(c['call-total-duration-seconds']);
+      return {
+        id: `live-${c.id ?? i}`,
+        party,
+        name: friendlyName(c.name),
+        direction: isOutbound ? 'outbound' : 'inbound',
+        timeLabel: formatTime(c['call-start-datetime']),
+        durationSeconds: seconds,
+        // Answered if the call connected (has an answer time or real talk time).
+        answered: !!c['call-answer-datetime'] || seconds > 0,
+        source: 'live',
+      };
+    })
+    .filter((c): c is RecentCall => c !== null);
 }
