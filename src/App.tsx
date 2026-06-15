@@ -127,13 +127,15 @@ export default function App(horizonContext: HorizonContext) {
     sdk
       .registerRoute({
         id: 'ucaas-crm-integration',
-        // Nested under the Manage › Call Logs node (parentPath is a full path,
-        // not just a top-level menu) → /manage/call-logs/crm-integration.
-        parentPath: '/manage/call-logs',
+        // Mounts under the host's /manage/$ dynamic-route outlet, so the route
+        // lives one level under /manage (→ /manage/crm-integration). The menu
+        // item is placed right after Call Logs. (Deeper nesting under a static
+        // route like call-logs would need a host-side splat outlet there.)
+        parentPath: '/manage',
         path: 'crm-integration',
         label: 'CRM Integration',
         icon: 'mdi:account-sync',
-        placement: { last: true },
+        placement: { after: 'call-logs' },
         component: CrmIntegrationPageWithContext,
       })
       .catch((error) =>

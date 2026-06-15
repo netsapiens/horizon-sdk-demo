@@ -20,11 +20,11 @@ side panel**, and a **remote-auth handshake** with a backend.
 
 ### Full-page routes — `sdk.registerRoute()`
 
-| Page               | Menu location               | Notes                                                                                                                                                                                                                                |
-| ------------------ | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Horizon SDK Demo   | Apps                        | The overview/walkthrough page (`pages/DemoPage.tsx`).                                                                                                                                                                                |
-| Component Showcase | Apps                        | Reference for every shared MUI Aurora component (`pages/ComponentShowcasePage.tsx`).                                                                                                                                                 |
-| CRM Integration    | Manage › Call Logs (nested) | Lists the user's calls from a **live** NetSapiens v2 API call, matched to their CRM record — nested under the Call Logs node to show routes attach anywhere in the tree, not just a top-level menu (`pages/CrmIntegrationPage.tsx`). |
+| Page               | Menu location              | Notes                                                                                                                                                                                                                 |
+| ------------------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Horizon SDK Demo   | Apps                       | The overview/walkthrough page (`pages/DemoPage.tsx`).                                                                                                                                                                 |
+| Component Showcase | Apps                       | Reference for every shared MUI Aurora component (`pages/ComponentShowcasePage.tsx`).                                                                                                                                  |
+| CRM Integration    | Manage (after _Call Logs_) | Lists the user's calls from a **live** NetSapiens v2 API call, matched to their CRM record — registered into the Manage menu to show the Manage tree can be extended, not just Apps (`pages/CrmIntegrationPage.tsx`). |
 
 ### Zone extensions — `sdk.registerDynamicExtension()`
 

@@ -172,8 +172,8 @@ export const WALKTHROUGH: WalkthroughItem[] = [
   },
   {
     label: 'CRM Integration',
-    desc: 'A full registered page nested under Manage › Call Logs that lists the user’s calls from a live NetSapiens v2 API call and matches each caller to their CRM record.',
-    nav: '/manage/call-logs/crm-integration',
+    desc: 'A full registered page in the Manage menu that lists the user’s calls from a live NetSapiens v2 API call and matches each caller to their CRM record.',
+    nav: '/manage/crm-integration',
     badge: 'primary',
   },
   {
@@ -195,11 +195,11 @@ export const CODE_EXAMPLES: CodeExample[] = [
     title: 'Register a full page',
     code: `sdk.registerRoute({
   id: 'ucaas-crm-integration',
-  parentPath: '/manage/call-logs', // nest under any node — a full path, not just a top-level menu
+  parentPath: '/manage', // extend the Manage menu, not just /apps
   path: 'crm-integration',
   label: 'CRM Integration',
   icon: 'mdi:account-sync',
-  placement: { last: true },
+  placement: { after: 'call-logs' },
   component: CrmIntegrationPage,
 });`,
   },

@@ -1,9 +1,9 @@
 /**
- * CRM Integration — a full page registered as a nested item under the host's
- * Manage › Call Logs node (parentPath '/manage/call-logs') by this remote app,
- * proving routes can attach anywhere in the nav tree, not just a top-level menu.
- * It does something the host can't do natively: surface a third-party CRM next
- * to the user's NetSapiens telephony data.
+ * CRM Integration — a full page registered into the host's Manage menu by this
+ * remote app (parentPath '/manage', placed after Call Logs), proving the Manage
+ * tree can be extended, not just /apps. It does something the host can't do
+ * natively: surface a third-party CRM next to the user's NetSapiens telephony
+ * data.
  *
  *   - apiProxy  — the recent-call list is fetched live from the NetSapiens v2
  *                 API through horizonContext.api; credentials never reach this
@@ -106,7 +106,6 @@ export default function CrmIntegrationPage() {
       subtitle="The signed-in user's NetSapiens calls, matched to their CRM record"
       breadcrumbs={[
         { label: t('MANAGE') || 'Manage', url: '/manage' },
-        { label: 'Call Logs', url: '/manage/call-logs' },
         { label: `${VENDOR_NAME} Integration` },
       ]}
     >
@@ -281,11 +280,10 @@ export default function CrmIntegrationPage() {
             About this integration
           </Typography>
           <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>
-            This page is injected as a nested item under{' '}
-            <strong>Manage › Call Logs</strong> by a remote app via the Horizon
-            SDK — no host changes, and not limited to a top-level menu. It
-            surfaces a third-party CRM <em>inside</em> Horizon, something the
-            host doesn't do natively.
+            This page is injected into the <strong>Manage</strong> menu (after
+            Call Logs) by a remote app via the Horizon SDK — no host changes,
+            and not limited to the Apps menu. It surfaces a third-party CRM{' '}
+            <em>inside</em> Horizon, something the host doesn't do natively.
           </Typography>
           <Typography variant='body2' color='text.secondary'>
             The recent-call list is a live <code>horizonContext.api</code> call
