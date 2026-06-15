@@ -89,9 +89,8 @@ Patterns decide which host routes an extension applies to:
 
 - Node.js 18+ (this repo pins **22.8.0** via `.nvmrc`)
 - A running Horizon host (default dev port **5003**)
-- npm access to the restricted `@netsapiens/horizon-sdk` package. Authenticate
-  once with `npm login` (writes a token to `~/.npmrc`); CI uses the `NPM_TOKEN`
-  secret. See `.npmrc`.
+- The [`@netsapiens/horizon-sdk`](https://www.npmjs.com/package/@netsapiens/horizon-sdk)
+  package is published **publicly** to npm — `npm install` needs no auth.
 
 ### Install & develop
 
@@ -110,7 +109,7 @@ npm run build    # emits dist/remoteEntry.js + chunks
 ```
 
 The production build is published to GitHub Pages and served as a CDN for the
-remote — see **Deployment** below.
+remote — see **Hosting on GitHub Pages** below.
 
 ## Module Federation
 
@@ -171,29 +170,78 @@ src/
     HardphoneDevicesPage.tsx  # Full page with a live API call
 ```
 
-## Deployment
+## Hosting on GitHub Pages
 
-This remote is hosted on **GitHub Pages**, which serves the build output as a
-CDN. After a push to `main`, the workflow in `.github/workflows/deploy-pages.yml`
-runs `npm ci` + `npm run build` and publishes `dist/`. A Horizon host then loads
-the remote from:
+A Module Federation remote is just static files (`remoteEntry.js` + chunks), so
+**any** static host with permissive CORS works as the CDN. This repo uses
+**GitHub Pages** — it's free, sends `Access-Control-Allow-Origin: *` by default,
+and deploys straight from CI. The host loads this remote from:
 
 ```
 https://netsapiens.github.io/horizon-sdk-demo/remoteEntry.js
+        └──── Pages origin ────┘└─ repo path ─┘
 ```
 
-GitHub Pages sends `Access-Control-Allow-Origin: *`, so the host can load it
-cross-origin. `webpack.config.js` uses `publicPath: 'auto'`, so the remote
-resolves its own chunks from wherever Pages serves them (the repo subpath).
+> Opening that URL in a browser shows a blank page — this is a **headless
+> remote**. It renders nothing on its own; it only mounts inside the Horizon host.
 
-> Opening the Pages URL in a browser shows a blank page — this is a **headless
-> remote**, it only renders once mounted by the host.
+### How the build is wired for Pages
 
-One-time repo setup:
+Two settings make a remote work from a Pages **subpath** (`/<repo>/`):
 
-1. **Settings → Pages → Build and deployment → Source: GitHub Actions.**
-2. Add an **`NPM_TOKEN`** repository secret (a token with read access to the
-   restricted `@netsapiens/horizon-sdk` package) so CI can install the SDK.
+- **`webpack.config.js` → `output.publicPath: 'auto'`** (production). The remote
+  resolves its own chunk URLs at runtime from wherever `remoteEntry.js` was
+  loaded, so it doesn't care that Pages serves it under `/horizon-sdk-demo/`.
+  Never hard-code an absolute `publicPath` for a Pages-hosted remote.
+- **`.nojekyll`** — added by the workflow. Without it, GitHub's Jekyll layer
+  strips files/folders that start with `_`, which breaks some webpack output.
+
+### Set up your own GitHub Pages CDN
+
+To host your own SDK remote (replace `horizon-sdk-demo` with your repo name):
+
+1. **Create a repo** and push your app. A **public** repo gets Pages for free;
+   private repos need GitHub Pro/Team/Enterprise.
+2. **Enable Pages with the Actions source.** Repo **Settings → Pages → Build and
+   deployment → Source: GitHub Actions**. (Or via CLI:
+   `gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`.)
+3. **Add the deploy workflow.** Copy `.github/workflows/deploy-pages.yml`. It
+   runs on every push to `main`: `npm ci` → `npm run build` → `touch
+   dist/.nojekyll` → upload `dist/` → `actions/deploy-pages`. Pushing a file
+   under `.github/workflows/` requires your `gh`/git token to have the
+   **`workflow`** scope (`gh auth refresh -s workflow`).
+4. **Push to `main`.** Watch the run with `gh run watch` (or the Actions tab).
+   First deploy can take a minute to go live.
+5. **Verify the CDN** serves the remote with CORS:
+
+   ```bash
+   curl -sI https://<owner>.github.io/<repo>/remoteEntry.js \
+     | grep -iE 'http/|content-type|access-control-allow-origin'
+   # → 200, application/javascript, access-control-allow-origin: *
+   ```
+
+### Register the remote with a Horizon host
+
+Hosting the files is only half of it — the host won't load a remote it doesn't
+know about. In the host's **Registered Apps** UI (or the platform API):
+
+1. **`remote_entry_url`** → your `https://<owner>.github.io/<repo>/remoteEntry.js`.
+2. **`webpack_module`** → must **exactly** match the `name` in your
+   `ModuleFederationPlugin` config (`MODULE_FEDERATION_NAME` in
+   `webpack.config.js`, here `horizonExtensionDemo`). The host looks up
+   `window[<webpack_module>]` after loading the script; a mismatch fails with
+   `Container '<name>' not found`. This value is **immutable** — it's baked into
+   the deployed bundle and is the root the server derives the app id from.
+3. **`integrity_hash`** _(optional, recommended for production)_ — an SRI hash of
+   `remoteEntry.js`. If set, the host verifies it before executing the script.
+   Because each build emits content-hashed filenames, **re-register the hash on
+   every deploy** or loads will fail with `Integrity check failed`. Leave it
+   blank while iterating.
+
+The host also gates remotes by an **approved-domains** allowlist (defense in
+depth, on top of registration). The Horizon host approves **`*.github.io`**, so
+any GitHub Pages origin is accepted without a host-side change — clients can
+self-host their remote on their own `*.github.io` and just register it.
 
 ## Notes
 
