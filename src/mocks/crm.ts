@@ -58,6 +58,11 @@ const INTERNAL_CRM_EXTRAS: Record<
     notes: 'Tier-2 support engineer',
     callCount: 2,
   },
+  '2009': {
+    lastContact: 'Today',
+    notes: 'VIP reseller client — white-glove handling',
+    callCount: 22,
+  },
   '2364': {
     lastContact: 'This morning',
     notes: 'Senior Developer — Project Phoenix lead',
@@ -67,6 +72,11 @@ const INTERNAL_CRM_EXTRAS: Record<
     lastContact: '30 minutes ago',
     notes: 'Product Manager — requesting demo of new features',
     callCount: 5,
+  },
+  '5226': {
+    lastContact: '1 hour ago',
+    notes: 'Executive escalation — engineering leadership',
+    callCount: 9,
   },
 };
 

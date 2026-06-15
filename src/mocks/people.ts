@@ -20,8 +20,10 @@ export interface Person {
 export const INTERNAL_PEOPLE: Person[] = [
   { extension: '2001', name: 'Alice Williams', department: 'Sales Team' },
   { extension: '2002', name: 'Bob Martinez', department: 'Support Team' },
+  { extension: '2009', name: 'Reseller Pete', department: 'VIP Reseller Client' },
   { extension: '2364', name: 'David Chen', department: 'Engineering' },
   { extension: '3832', name: 'Emily Rodriguez', department: 'Product' },
+  { extension: '5226', name: 'Chris Aaker', department: 'SVP of Engineering' },
 ];
 
 /** Lookup by extension, e.g. `peopleByExtension['2001'].name`. */
