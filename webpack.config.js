@@ -6,7 +6,7 @@ const path = require('path');
 // Single source of truth for the Module Federation container name. Used as the
 // ModuleFederationPlugin `name` AND injected via DefinePlugin as `__MF_NAME__`,
 // so App.tsx passes it to useRemoteApp without retyping the string.
-const MODULE_FEDERATION_NAME = 'ucaasExtensionDemo';
+const MODULE_FEDERATION_NAME = 'horizonExtensionDemo';
 
 module.exports = (_env, argv) => ({
   mode: argv.mode || 'development',
