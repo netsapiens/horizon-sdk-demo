@@ -35,6 +35,64 @@ const VENDOR_NAME = 'Acme CRM';
  */
 const VENDOR_CRM_BASE_URL = 'https://app.acmecrm.example';
 
+/**
+ * REAL CRM FETCH (stubbed) — how the "Matched CRM record" pane would be filled
+ * from a live CRM instead of the mock directory.
+ *
+ * The demo resolves records from a static fixture (`lookupCrmRecord`). In a real
+ * integration you'd authenticate to the vendor CRM on the Horizon user's behalf
+ * via the SDK's remoteAuth flow (demonstrated standalone on the "Remote Auth"
+ * tab), then call the vendor API with the brokered token. Horizon credentials
+ * never reach this remote app — only the vendor token does.
+ *
+ * Uncomment and wire `selectedRecord` to this (in an effect, keyed on the
+ * selected call's party) once a vendor backend + callbackUrl exist:
+ *
+ *   const VENDOR_ID = 'acme-crm';
+ *
+ *   async function fetchCrmRecord(
+ *     auth: ReturnType<typeof useHorizonContext>['auth'],
+ *     phoneNumber: string,
+ *   ): Promise<CrmRecord | undefined> {
+ *     // 1. Reuse a session-cached vendor token, or broker a new handshake.
+ *     //    requestRemoteAuth resolves only after your backend mints the token
+ *     //    from the platform's signed, single-use code (see Remote Auth tab).
+ *     let token = auth.getRemoteAuthToken(VENDOR_ID);
+ *     if (!token) {
+ *       token = await auth.requestRemoteAuth(
+ *         {
+ *           vendorId: VENDOR_ID,
+ *           callbackUrl: 'https://your-backend.example/horizon/remote-auth/callback',
+ *           scopes: ['contacts:read'],
+ *         },
+ *         { timeout: 60000 },
+ *       );
+ *     }
+ *
+ *     // 2. Call the vendor CRM with the brokered token (RemoteAuthResponse:
+ *     //    { vendorId, accessToken, tokenType?, expiresAt?, refreshToken?, ... }).
+ *     const res = await fetch(
+ *       `${VENDOR_CRM_BASE_URL}/api/contacts/lookup?phone=${encodeURIComponent(phoneNumber)}`,
+ *       {
+ *         headers: {
+ *           Authorization: `${token.tokenType ?? 'Bearer'} ${token.accessToken}`,
+ *         },
+ *       },
+ *     );
+ *     if (!res.ok) return undefined; // 404 -> no match -> offer to create contact
+ *
+ *     // 3. Map the vendor's payload into the card's CrmRecord shape.
+ *     const c = await res.json();
+ *     return {
+ *       name: c.full_name,
+ *       company: c.account?.name ?? '',
+ *       lastContact: c.last_activity_at ?? '—',
+ *       notes: c.notes ?? '',
+ *       callCount: c.call_count ?? 0,
+ *     };
+ *   }
+ */
+
 /** How the live CDR fetch resolved — drives the apiProxy status banner. */
 type LiveStatus = 'loading' | 'live' | 'empty' | 'error';
 
@@ -88,6 +146,8 @@ export default function CrmIntegrationPage() {
   }, [allCalls, selectedId]);
 
   const selectedCall = allCalls.find((c) => c.id === selectedId) ?? null;
+  // Mock lookup for the demo. A real integration would replace this with the
+  // remoteAuth-backed vendor fetch sketched above (`fetchCrmRecord`).
   const selectedRecord = selectedCall
     ? lookupCrmRecord(normalizePhoneNumber(selectedCall.party))
     : undefined;
