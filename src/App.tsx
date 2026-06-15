@@ -44,7 +44,7 @@ export default function App(horizonContext: HorizonContext) {
   // `__MF_NAME__` is injected at build time (webpack DefinePlugin) from the
   // single MODULE_FEDERATION_NAME constant in webpack.config.js — the same value
   // used as the ModuleFederationPlugin `name`, so the container name lives in one
-  // place. The SDK derives the kebab app id ('ucaas-extension-demo') from it for
+  // place. The SDK derives the kebab app id ('horizon-extension-demo') from it for
   // registry attribution.
   const { sdk, user, theme } = useRemoteApp(horizonContext, __MF_NAME__);
 
