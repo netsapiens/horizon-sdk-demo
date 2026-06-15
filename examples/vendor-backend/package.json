@@ -1,0 +1,20 @@
+{
+  "name": "horizon-remote-auth-vendor-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reference vendor backend for the Horizon remoteAuth flow: receives the signed callback, verifies it, exchanges the PKCE code, and mints a vendor token.",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "sign": "node scripts/sign.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.1.0"
+  }
+}

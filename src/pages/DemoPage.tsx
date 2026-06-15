@@ -16,17 +16,25 @@ import { useHorizonContext, VERSION } from '@netsapiens/horizon-sdk';
 import CodePanel from './demo/CodePanel';
 import OverviewPanel from './demo/OverviewPanel';
 import PatternsPanel from './demo/PatternsPanel';
+import RemoteAuthPanel from './demo/RemoteAuthPanel';
 import { tabStyle } from './demo/styles';
 import WalkthroughPanel from './demo/WalkthroughPanel';
 import ZonesPanel from './demo/ZonesPanel';
 
-type TabKey = 'overview' | 'zones' | 'patterns' | 'code' | 'walkthrough';
+type TabKey =
+  | 'overview'
+  | 'zones'
+  | 'patterns'
+  | 'code'
+  | 'remote-auth'
+  | 'walkthrough';
 
 const TABS: [TabKey, string][] = [
   ['overview', 'Overview'],
   ['zones', 'Extension Zones'],
   ['patterns', 'Route Patterns'],
   ['code', 'Code'],
+  ['remote-auth', 'Remote Auth'],
   ['walkthrough', 'Walkthrough'],
 ];
 
@@ -112,6 +120,7 @@ export default function DemoPage() {
         {activeTab === 'zones' && <ZonesPanel s={s} t={t} />}
         {activeTab === 'patterns' && <PatternsPanel s={s} t={t} />}
         {activeTab === 'code' && <CodePanel s={s} t={t} />}
+        {activeTab === 'remote-auth' && <RemoteAuthPanel s={s} t={t} />}
         {activeTab === 'walkthrough' && (
           <WalkthroughPanel s={s} t={t} onNavigate={horizonContext.navigate} />
         )}

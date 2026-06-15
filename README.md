@@ -15,8 +15,8 @@ light and dark mode.
 ## What it demonstrates
 
 This single app registers **3 full-page routes**, **10 zone extensions**, **1
-dynamic table column**, **1 live call-event subscription**, and an **on-demand
-side panel**.
+dynamic table column**, **1 live call-event subscription**, an **on-demand
+side panel**, and a **remote-auth handshake** with a backend.
 
 ### Full-page routes — `sdk.registerRoute()`
 
@@ -70,6 +70,59 @@ Subscribes to the live SIP call stream (`call-started` / `-answered` / `-missed`
 / `-ended`) through the capability-gated, app-scoped SDK path (declaring the
 `call-events:subscribe` capability), enriches each inbound call with CRM data,
 and broadcasts it to the `CallerInfoWidget`.
+
+### Remote auth — `auth.requestRemoteAuth()`
+
+When the app needs to call **your own backend** on behalf of the signed-in user,
+the host relays a trusted identity handshake so the app never handles Horizon
+credentials. The **Remote Auth** tab on the demo page
+(`pages/demo/RemoteAuthPanel.tsx`) exercises the full `horizonContext.auth`
+contract live — request a token, reuse the session-cached token, and clear it:
+
+```tsx
+const { auth } = horizonContext;
+
+const token = await auth.requestRemoteAuth(
+  {
+    vendorId: 'horizon-demo-backend',
+    callbackUrl: 'https://demo.example.com/horizon/callback',
+    scopes: ['contacts:read'],
+  },
+  { timeout: 60000 },
+);
+// token: { vendorId, accessToken, tokenType?, expiresAt?, refreshToken?, metadata? }
+
+auth.getRemoteAuthToken('horizon-demo-backend'); // cached for the session, or null
+auth.clearRemoteAuthToken('horizon-demo-backend'); // sign out of the vendor
+```
+
+The NetSapiens platform binds the identity to the caller's **trusted session**
+(never the request's `user.uid`, which is attacker-controllable), checks the app
+is remote-auth enabled and the `callbackUrl` hostname is allow-listed, then POSTs
+a **single-use auth code** (not a token) to your `callbackUrl`. Your backend:
+
+1. Verifies the `X-NS-Signature` HMAC — `sha256=<hex>` over the string
+   `request_id + code + timestamp`, using the shared callback secret. (A second
+   `X-NS-Cluster-Verification` signed JWT can be verified against the platform's
+   published JWKS for secret-less proof.)
+2. Exchanges the code (PKCE) at the `validation_endpoint` from the payload for a
+   token that proves the user's identity.
+3. Mints its **own** vendor token and returns it — which resolves the promise as
+   the `RemoteAuthResponse`.
+
+The panel shows both the client call and the backend verification + exchange
+snippet. A runnable reference backend lives in [`examples/vendor-backend/`](examples/vendor-backend/).
+
+> This is the **client half** of the flow; the platform handles the signing,
+> callback delivery, code exchange, and response shaping server-side. Two things
+> to know: the response is mapped through an explicit allow-list (`access_token`,
+> `token_type`, `expires_in`, `refresh_token` — no generic `metadata`
+> pass-through today), and the platform sends `X-NS-Signature` /
+> `X-NS-Cluster-Verification` best-effort while a secure backend requires both. It
+> also needs per-app admin config (remote auth enabled, allowed callback
+> hostnames, signing secret). Against a host without it the request rejects/times
+> out and the panel
+> renders the error.
 
 ## Route patterns
 
@@ -207,7 +260,7 @@ To host your own SDK remote (replace `horizon-sdk-demo` with your repo name):
    `gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`.)
 3. **Add the deploy workflow.** Copy `.github/workflows/deploy-pages.yml`. It
    runs on every push to `main`: `npm ci` → `npm run build` → `touch
-   dist/.nojekyll` → upload `dist/` → `actions/deploy-pages`. Pushing a file
+dist/.nojekyll` → upload `dist/` → `actions/deploy-pages`. Pushing a file
    under `.github/workflows/` requires your `gh`/git token to have the
    **`workflow`** scope (`gh auth refresh -s workflow`).
 4. **Push to `main`.** Watch the run with `gh run watch` (or the Actions tab).
