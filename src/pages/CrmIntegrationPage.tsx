@@ -29,6 +29,11 @@ import { lookupCrmRecord, normalizePhoneNumber } from '../mocks/crm';
 import { formatDuration, SAMPLE_RECENT_CALLS } from '../mocks/recentCalls';
 
 const VENDOR_NAME = 'Acme CRM';
+/**
+ * Where the vendor CRM lives. A real integration would deep-link to the matched
+ * contact in your CRM; this demo opens an illustrative per-contact URL.
+ */
+const VENDOR_CRM_BASE_URL = 'https://app.acmecrm.example';
 
 /** How the live CDR fetch resolved — drives the apiProxy status banner. */
 type LiveStatus = 'loading' | 'live' | 'empty' | 'error';
@@ -258,6 +263,15 @@ export default function CrmIntegrationPage() {
                   <Button
                     variant='text'
                     sx={{ alignSelf: 'flex-start', px: 0 }}
+                    onClick={() =>
+                      window.open(
+                        `${VENDOR_CRM_BASE_URL}/contacts/${encodeURIComponent(
+                          normalizePhoneNumber(selectedCall?.party ?? ''),
+                        )}`,
+                        '_blank',
+                        'noopener,noreferrer',
+                      )
+                    }
                   >
                     Open in {VENDOR_NAME} ↗
                   </Button>
