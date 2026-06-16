@@ -10,7 +10,7 @@
  * Styled with the host theme tokens (`horizonContext.ui.styles` / `.theme`) so
  * it tracks the host light/dark theme automatically.
  */
-import { useState } from 'react';
+import { type ComponentType, type CSSProperties, useState } from 'react';
 import { useHorizonContext, VERSION } from '@netsapiens/horizon-sdk';
 
 import CodePanel from './demo/CodePanel';
@@ -42,11 +42,19 @@ export default function DemoPage() {
   const horizonContext = useHorizonContext();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
-  const { PageTemplate } = horizonContext.ui?.templates || {};
-  const s = horizonContext.ui?.styles;
-  const t = horizonContext.ui?.theme;
+  // The host UI components are typed loosely (`ComponentType<unknown>`); cast to
+  // a props-accepting type so JSX usage type-checks instead of tripping TS2769.
+  type UIComponent = ComponentType<Record<string, unknown>>;
+  const ui = horizonContext.ui;
+  const PageTemplate = ui?.templates?.PageTemplate as UIComponent | undefined;
+  const Paper = ui?.Paper as UIComponent | undefined;
+  const Stack = ui?.Stack as UIComponent | undefined;
+  const Box = ui?.Box as UIComponent | undefined;
+  const Typography = ui?.Typography as UIComponent | undefined;
+  const s = ui?.styles;
+  const t = ui?.theme;
 
-  if (!PageTemplate || !s || !t) {
+  if (!PageTemplate || !Paper || !Stack || !Box || !Typography || !s || !t) {
     return (
       <div style={{ padding: '24px' }}>
         <h1>Horizon SDK Demo</h1>
@@ -64,44 +72,38 @@ export default function DemoPage() {
         { label: 'Horizon SDK Demo' },
       ]}
     >
-      {/* SDK version badge */}
-      <div
-        style={{
-          padding: t.spacing.md,
-          backgroundColor: t.colors.success + '15',
-          borderLeft: `4px solid ${t.colors.success}`,
-          marginBottom: t.spacing.lg,
-          borderRadius: t.borderRadius.md,
+      {/* SDK version badge — host ui components, theme palette via sx tokens. */}
+      <Paper
+        variant='outlined'
+        sx={{
+          p: 2,
+          mb: 3,
+          borderLeft: '4px solid',
+          borderLeftColor: 'success.main',
         }}
       >
-        <div
-          style={{ display: 'flex', alignItems: 'center', gap: t.spacing.sm }}
-        >
-          <span style={{ fontSize: '20px' }}>📦</span>
-          <div>
-            <strong style={{ color: t.colors.text.primary }}>
+        <Stack direction='row' spacing={1.5} alignItems='center'>
+          <span style={{ fontSize: 20 }}>📦</span>
+          <Box>
+            <Typography variant='subtitle2' fontWeight={600}>
               Using the published SDK
-            </strong>
-            <div
-              style={{
-                fontSize: t.typography.fontSize.xs,
-                color: t.colors.text.secondary,
-              }}
-            >
+            </Typography>
+            <Typography variant='caption' color='text.secondary'>
               @netsapiens/horizon-sdk@{VERSION} — loaded over Module Federation
-            </div>
-          </div>
-        </div>
-      </div>
+            </Typography>
+          </Box>
+        </Stack>
+      </Paper>
 
-      <div style={s.surface.page}>
+      <Box style={(s.surface as Record<string, CSSProperties>).page}>
         {/* Tabs */}
-        <div
-          style={{
-            display: 'flex',
-            gap: t.spacing.xs,
-            borderBottom: `2px solid ${t.colors.border.light}`,
-            marginBottom: t.spacing.lg,
+        <Stack
+          direction='row'
+          spacing={0.5}
+          sx={{
+            borderBottom: '2px solid',
+            borderColor: 'divider',
+            mb: 3,
             flexWrap: 'wrap',
           }}
         >
@@ -114,7 +116,7 @@ export default function DemoPage() {
               {label}
             </button>
           ))}
-        </div>
+        </Stack>
 
         {activeTab === 'overview' && <OverviewPanel s={s} t={t} />}
         {activeTab === 'zones' && <ZonesPanel s={s} t={t} />}
@@ -124,7 +126,7 @@ export default function DemoPage() {
         {activeTab === 'walkthrough' && (
           <WalkthroughPanel s={s} t={t} onNavigate={horizonContext.navigate} />
         )}
-      </div>
+      </Box>
     </PageTemplate>
   );
 }
