@@ -83,7 +83,7 @@ export const ZONES: ZoneInfo[] = [
   {
     zone: 'table-filter-bar',
     desc: 'Filter chips alongside the host’s status filters.',
-    usedFor: '“● Recording” filter on Active Calls.',
+    usedFor: '“● Recording / ⏸ On hold / ☎ In queue” filters on Active Calls.',
   },
   {
     zone: 'table-row-actions',
@@ -166,7 +166,7 @@ export const WALKTHROUGH: WalkthroughItem[] = [
   },
   {
     label: 'Active Calls',
-    desc: 'The “● Recording” filter chip injected beside the host’s status filters.',
+    desc: 'Recording / On hold / In queue filter chips injected beside the host’s status filters.',
     nav: '/manage/active-calls',
     badge: 'warning',
   },
