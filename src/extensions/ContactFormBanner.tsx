@@ -1,14 +1,48 @@
 /**
  * Contact Form Banner Extension
- * Demonstrates form-section-before zone
- * Shows contextual information at the top of contact forms
+ * Zone: `form-section-before` — injected at the top of the Contacts add/edit form.
+ *
+ * Surfaces Acme CRM (mock) data above the form:
+ *  - edit: the matched contact's CRM record, resolved from the shared mock
+ *    directory (the same source the CallerInfoWidget uses);
+ *  - add:  there's no contact yet, so we show recently-added Acme CRM contacts
+ *    for context.
  */
 import { type ExtensionComponentProps } from '@netsapiens/horizon-sdk';
+
+import type { CrmRecord } from '../mocks/crm';
+import {
+  lookupCrmRecord,
+  MOCK_CRM_DIRECTORY,
+  normalizePhoneNumber,
+} from '../mocks/crm';
+
+const VENDOR_NAME = 'Acme CRM';
+
+/** Contacts surfaced as "recently added" on the add form. */
+const RECENT_CONTACT_KEYS = ['+15551234567', '+15559876543', '2009'];
+
+/**
+ * Find this contact's CRM record by scanning the form's values for a
+ * number/extension that's in the mock directory — robust to whichever field
+ * (phone, extension, …) the host form happens to use.
+ */
+function findCrmRecord(
+  formData?: Record<string, unknown>,
+): CrmRecord | undefined {
+  if (!formData) return undefined;
+  for (const value of Object.values(formData)) {
+    if (typeof value !== 'string' || !value) continue;
+    const record = lookupCrmRecord(normalizePhoneNumber(value));
+    if (record) return record;
+  }
+  return undefined;
+}
 
 export default function ContactFormBanner({
   context,
 }: ExtensionComponentProps) {
-  const { Alert, Stack, Typography } = context.ui ?? {};
+  const { Alert, Stack, Typography, Divider } = context.ui ?? {};
   if (!Alert || !Stack || !Typography) return null;
 
   const pageContext = context.pageContext as {
@@ -17,33 +51,55 @@ export default function ContactFormBanner({
     formData?: Record<string, unknown>;
   };
 
-  const isEditMode = pageContext.mode === 'edit';
-  const email = pageContext.formData?.email as string | undefined;
+  const record =
+    pageContext.mode === 'edit'
+      ? findCrmRecord(pageContext.formData)
+      : undefined;
 
-  return (
-    <Stack spacing={2} sx={{ width: '100%' }}>
-      <Alert severity='info'>
+  // Edit + matched: show the contact's Acme CRM record.
+  if (record) {
+    return (
+      <Alert severity='info' sx={{ width: '100%' }}>
         <Typography variant='body2' fontWeight={600}>
-          CRM Integration Active
+          {VENDOR_NAME} record
         </Typography>
         <Typography variant='body2'>
-          {isEditMode
-            ? 'Contact data will be synced with your CRM system on save.'
-            : 'This contact will be automatically added to your CRM system.'}
+          {record.name} · {record.company}
         </Typography>
+        <Typography variant='body2' color='text.secondary'>
+          Last contact: {record.lastContact} • {record.callCount} lifetime calls
+        </Typography>
+        {record.notes && (
+          <Typography
+            variant='body2'
+            color='text.secondary'
+            sx={{ fontStyle: 'italic', mt: 0.5 }}
+          >
+            {record.notes}
+          </Typography>
+        )}
       </Alert>
+    );
+  }
 
-      {isEditMode && email && (
-        <Alert severity='success'>
-          <Typography variant='body2' fontWeight={600}>
-            Recent Activity
+  // Add (or edit with no match): show recently-added Acme CRM contacts.
+  const recent = RECENT_CONTACT_KEYS.map((k) => MOCK_CRM_DIRECTORY[k]).filter(
+    Boolean,
+  ) as CrmRecord[];
+
+  return (
+    <Alert severity='info' sx={{ width: '100%' }}>
+      <Typography variant='body2' fontWeight={600}>
+        Recently added in {VENDOR_NAME}
+      </Typography>
+      {Divider && <Divider sx={{ my: 0.5 }} />}
+      <Stack spacing={0.25}>
+        {recent.map((c) => (
+          <Typography key={c.name} variant='body2' color='text.secondary'>
+            • {c.name} — {c.company}
           </Typography>
-          <Typography variant='body2'>
-            Last contacted: 2 days ago • Total interactions: 12 • Last purchase:
-            $1,250
-          </Typography>
-        </Alert>
-      )}
-    </Stack>
+        ))}
+      </Stack>
+    </Alert>
   );
 }

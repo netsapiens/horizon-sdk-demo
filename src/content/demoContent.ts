@@ -161,7 +161,7 @@ export const WALKTHROUGH: WalkthroughItem[] = [
   {
     label: 'Contacts',
     desc: 'Open the add/edit contact drawer to see the CRM banner and the consent checkboxes injected into the form.',
-    nav: '/manage/contacts',
+    nav: '/home/contacts',
     badge: 'success',
   },
   {
