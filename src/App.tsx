@@ -224,7 +224,7 @@ export default function App(horizonContext: HorizonContext) {
         // right-aligned (matching native columns) unless a column overrides it.
         renderCell: (params) => <CallPriorityCell params={params} />,
         valueGetter: (value, row) => {
-          const duration = row['call-total-duration-seconds'] || 0;
+          const duration = Number(row['call-total-duration-seconds']) || 0;
           const direction = row['call-direction'];
           if (direction === 2) return 'High';
           if (direction === 1 && duration > 300) return 'High';
@@ -280,15 +280,13 @@ export default function App(horizonContext: HorizonContext) {
       component: ActiveCallsRecordingFilter,
     });
 
-    // One example per remaining generic zone, so every zone has a live demo:
-    // "● Live" status badge beside the call-logs title.
+    // "● Live (Demo Extension)" status badge beside the page title — registered
+    // on every route (`/*`) so the secondary-header zone is visible across the
+    // whole app, showcasing how one zone + catch-all pattern blankets the UI.
     sdk.registerDynamicExtension({
       id: 'demo-header-status-badge',
       zone: 'page-header-secondary',
-      routes: [
-        { pattern: '/manage/call-logs' },
-        { pattern: '/manage/*/call-logs' },
-      ],
+      routes: [{ pattern: '/*' }],
       component: HeaderStatusBadge,
     });
     // Triage tips button in the call-logs table toolbar.
