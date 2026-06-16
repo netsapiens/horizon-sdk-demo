@@ -11,7 +11,43 @@
  */
 import type { HorizonEventBus } from '@netsapiens/horizon-sdk';
 
+import type { CrmRecord } from '../mocks/crm';
 import { lookupCrmRecord, normalizePhoneNumber } from '../mocks/crm';
+
+/** The vendor CRM this demo "calls" to enrich a caller. */
+const VENDOR_NAME = 'Acme CRM';
+const VENDOR_CRM_BASE_URL = 'https://app.acmecrm.example';
+
+/**
+ * Resolve a caller from the CRM, logging the request/response.
+ *
+ * In production this is a real authenticated request to the vendor CRM —
+ * see the `fetchCrmRecord` stub in `pages/CrmIntegrationPage.tsx`. Here it
+ * resolves from the mock directory, but we log the GET it *would* make (with the
+ * remoteAuth-brokered token) and the record it returns, so the third-party CRM
+ * call behind the caller card is visible in the console on each incoming call.
+ */
+function fetchCrmContact(phone: string): CrmRecord | undefined {
+  const url = `${VENDOR_CRM_BASE_URL}/api/contacts/lookup?phone=${encodeURIComponent(phone)}`;
+  console.groupCollapsed(
+    `%c[${VENDOR_NAME}]%c CRM lookup for ${phone}`,
+    'color:#7b61ff;font-weight:600',
+    'color:inherit',
+  );
+  console.info('→ GET', url);
+  console.info('  headers', {
+    Authorization: 'Bearer <vendor token from auth.requestRemoteAuth>',
+  });
+
+  const record = lookupCrmRecord(phone);
+  if (record) {
+    console.info('← 200 OK', record);
+  } else {
+    console.info(`← 404 Not Found — no contact for ${phone}`);
+  }
+  console.groupEnd();
+  return record;
+}
 
 /** Enriched active-call record shared between this service and CallerInfoWidget. */
 export interface CallerInfo {
@@ -64,7 +100,7 @@ export function createCallEventHandler(eventBus: HorizonEventBus) {
       return;
     }
 
-    const record = lookupCrmRecord(normalizePhoneNumber(event.from));
+    const record = fetchCrmContact(normalizePhoneNumber(event.from));
 
     const enriched: CallerInfo = {
       callId: event.callId,

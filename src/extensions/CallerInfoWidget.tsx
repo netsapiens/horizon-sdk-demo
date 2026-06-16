@@ -48,7 +48,20 @@ export function CallerInfoWidget({ context }: ExtensionComponentProps) {
   }, [context.eventBus]);
 
   const ringingCall = activeCalls.find((call) => call.status === 'ringing');
-  if (!ringingCall || !Paper || !Stack || !Typography) return null;
+  // Only render when there's a ringing call AND the CRM actually matched it.
+  // With no enrichment data the card would be an empty bordered box, so we hide
+  // the zone entirely instead.
+  const hasCrmData =
+    !!ringingCall &&
+    !!(
+      ringingCall.company ||
+      ringingCall.lastContact ||
+      ringingCall.notes ||
+      (ringingCall.callCount ?? 0) > 0
+    );
+  if (!ringingCall || !hasCrmData || !Paper || !Stack || !Typography) {
+    return null;
+  }
 
   return (
     <Paper variant='outlined' sx={{ p: 1.5, mb: 2 }}>

@@ -22,12 +22,13 @@ export const INTERNAL_PEOPLE: Person[] = [
   { extension: '2002', name: 'Bob Martinez', department: 'Support Team' },
   {
     extension: '2009',
-    name: 'Reseller Pete',
+    name: 'Reid Sellers',
     department: 'VIP Reseller Client',
   },
   { extension: '2364', name: 'Horizon Agent', department: 'Engineering' },
   { extension: '3832', name: 'Andrew Lighterink', department: 'Product' },
   { extension: '5226', name: 'Chris Aaker', department: 'SVP of Engineering' },
+  { extension: '6767', name: 'Tony Friar', department: 'Customer Support' },
 ];
 
 /** Lookup by extension, e.g. `peopleByExtension['2001'].name`. */

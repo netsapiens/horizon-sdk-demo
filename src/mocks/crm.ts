@@ -78,6 +78,11 @@ const INTERNAL_CRM_EXTRAS: Record<
     notes: 'Executive escalation — engineering leadership',
     callCount: 9,
   },
+  '6767': {
+    lastContact: 'Opening Day',
+    notes: 'Basic user · die-hard Padres fan — keep it brown & gold',
+    callCount: 6,
+  },
 };
 
 /**

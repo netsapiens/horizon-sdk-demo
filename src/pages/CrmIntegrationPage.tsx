@@ -105,6 +105,8 @@ export default function CrmIntegrationPage() {
   const [liveCalls, setLiveCalls] = useState<RecentCall[]>([]);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>('loading');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // The deep-link the "Open in Acme CRM" button reveals (demo doesn't navigate).
+  const [deepLink, setDeepLink] = useState<string | null>(null);
 
   useEffect(() => {
     const userId = user?.extension;
@@ -144,6 +146,11 @@ export default function CrmIntegrationPage() {
   useEffect(() => {
     if (!selectedId && allCalls.length) setSelectedId(allCalls[0].id);
   }, [allCalls, selectedId]);
+
+  // Hide any revealed deep-link when the selected call changes.
+  useEffect(() => {
+    setDeepLink(null);
+  }, [selectedId]);
 
   const selectedCall = allCalls.find((c) => c.id === selectedId) ?? null;
   // Mock lookup for the demo. A real integration would replace this with the
@@ -323,18 +330,31 @@ export default function CrmIntegrationPage() {
                   <Button
                     variant='text'
                     sx={{ alignSelf: 'flex-start', px: 0 }}
-                    onClick={() =>
-                      window.open(
-                        `${VENDOR_CRM_BASE_URL}/contacts/${encodeURIComponent(
-                          normalizePhoneNumber(selectedCall?.party ?? ''),
-                        )}`,
-                        '_blank',
-                        'noopener,noreferrer',
-                      )
-                    }
+                    onClick={() => {
+                      // Demo: instead of navigating to a live vendor site, reveal
+                      // the per-contact deep-link the host would open — showing the
+                      // matched contact's data handed off to the CRM.
+                      const url = `${VENDOR_CRM_BASE_URL}/contacts/${encodeURIComponent(
+                        normalizePhoneNumber(selectedCall?.party ?? ''),
+                      )}`;
+                      console.info(
+                        `[${VENDOR_NAME}] would deep-link contact →`,
+                        url,
+                      );
+                      setDeepLink(url);
+                    }}
                   >
                     Open in {VENDOR_NAME} ↗
                   </Button>
+                )}
+                {deepLink && (
+                  <Typography
+                    variant='caption'
+                    color='text.secondary'
+                    sx={{ wordBreak: 'break-all' }}
+                  >
+                    Deep-links this contact into {VENDOR_NAME}: <code>{deepLink}</code>
+                  </Typography>
                 )}
               </Stack>
             ) : (
