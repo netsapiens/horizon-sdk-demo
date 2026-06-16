@@ -23,7 +23,7 @@ export const INTERNAL_PEOPLE: Person[] = [
   {
     extension: '2009',
     name: 'Reid Sellers',
-    department: 'VIP Reseller Client',
+    department: 'Reseller / Channel Partner',
   },
   { extension: '2364', name: 'Horizon Agent', department: 'Engineering' },
   { extension: '3832', name: 'Andrew Lighterink', department: 'Product' },
