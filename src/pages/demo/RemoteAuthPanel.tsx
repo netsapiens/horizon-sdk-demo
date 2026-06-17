@@ -99,10 +99,10 @@ type Status = 'idle' | 'pending' | 'connected' | 'error';
 
 export default function RemoteAuthPanel({
   s,
-  t,
+  themeTokens,
 }: {
   s: DemoStyles;
-  t: DemoTheme;
+  themeTokens: DemoTheme;
 }) {
   const { auth, ui } = useHorizonContext();
 
@@ -165,16 +165,16 @@ export default function RemoteAuthPanel({
         onClick={onClick}
         disabled={opts.disabled}
         style={{
-          padding: `${t.spacing.sm} ${t.spacing.lg}`,
+          padding: `${themeTokens.spacing.sm} ${themeTokens.spacing.lg}`,
           backgroundColor:
-            opts.color === 'error' ? t.colors.error : t.colors.primary,
+            opts.color === 'error' ? themeTokens.colors.error : themeTokens.colors.primary,
           color: '#fff',
           border: 'none',
-          borderRadius: t.borderRadius.sm,
+          borderRadius: themeTokens.borderRadius.sm,
           cursor: opts.disabled ? 'default' : 'pointer',
           opacity: opts.disabled ? 0.6 : 1,
-          fontFamily: t.typography.fontFamily.sans,
-          fontSize: t.typography.fontSize.sm,
+          fontFamily: themeTokens.typography.fontFamily.sans,
+          fontSize: themeTokens.typography.fontSize.sm,
         }}
       >
         {label}
@@ -183,10 +183,10 @@ export default function RemoteAuthPanel({
 
   return (
     <div style={s.surface.card}>
-      <h2 style={{ ...s.text.subheading, marginBottom: t.spacing.md }}>
+      <h2 style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.md }}>
         Remote authentication
       </h2>
-      <p style={{ ...s.text.muted, marginBottom: t.spacing.lg }}>
+      <p style={{ ...s.text.muted, marginBottom: themeTokens.spacing.lg }}>
         When the app needs to call <em>your</em> backend on behalf of the
         signed-in user, the host relays a trusted identity handshake — your
         server proves the request came from Horizon (HMAC signature), exchanges
@@ -195,9 +195,9 @@ export default function RemoteAuthPanel({
       </p>
 
       {/* Live demo */}
-      <div style={{ ...s.surface.elevated, marginBottom: t.spacing.lg }}>
-        <div style={subheading(s, t)}>Try it</div>
-        <p style={{ ...s.text.muted, marginBottom: t.spacing.md }}>
+      <div style={{ ...s.surface.elevated, marginBottom: themeTokens.spacing.lg }}>
+        <div style={subheading(s, themeTokens)}>Try it</div>
+        <p style={{ ...s.text.muted, marginBottom: themeTokens.spacing.md }}>
           Requests a token from <code>{VENDOR_ID}</code> via{' '}
           <code>auth.requestRemoteAuth()</code>. Requires a host with remote
           auth wired up and the callback hostname allow-listed for this app;
@@ -207,10 +207,10 @@ export default function RemoteAuthPanel({
         <div
           style={{
             display: 'flex',
-            gap: t.spacing.sm,
+            gap: themeTokens.spacing.sm,
             alignItems: 'center',
             flexWrap: 'wrap',
-            marginBottom: t.spacing.md,
+            marginBottom: themeTokens.spacing.md,
           }}
         >
           {status !== 'connected'
@@ -226,11 +226,11 @@ export default function RemoteAuthPanel({
               ...s.text.body,
               color:
                 status === 'connected'
-                  ? t.colors.success
+                  ? themeTokens.colors.success
                   : status === 'error'
-                    ? t.colors.error
-                    : t.colors.text.secondary,
-              fontWeight: t.typography.fontWeight.medium,
+                    ? themeTokens.colors.error
+                    : themeTokens.colors.text.secondary,
+              fontWeight: themeTokens.typography.fontWeight.medium,
             }}
           >
             {status === 'connected'
@@ -246,12 +246,12 @@ export default function RemoteAuthPanel({
         {status === 'error' && error && (
           <div
             style={{
-              padding: t.spacing.sm,
-              backgroundColor: t.colors.error + '15',
-              borderLeft: `4px solid ${t.colors.error}`,
-              borderRadius: t.borderRadius.sm,
+              padding: themeTokens.spacing.sm,
+              backgroundColor: themeTokens.colors.error + '15',
+              borderLeft: `4px solid ${themeTokens.colors.error}`,
+              borderRadius: themeTokens.borderRadius.sm,
               ...s.text.body,
-              color: t.colors.text.primary,
+              color: themeTokens.colors.text.primary,
             }}
           >
             {error}
@@ -264,12 +264,12 @@ export default function RemoteAuthPanel({
       </div>
 
       {/* The flow */}
-      <div style={subheading(s, t)}>How the handshake works</div>
+      <div style={subheading(s, themeTokens)}>How the handshake works</div>
       <ol
         style={{
           ...s.text.body,
-          paddingLeft: t.spacing.lg,
-          marginBottom: t.spacing.lg,
+          paddingLeft: themeTokens.spacing.lg,
+          marginBottom: themeTokens.spacing.lg,
         }}
       >
         <li>
@@ -301,16 +301,16 @@ export default function RemoteAuthPanel({
       </ol>
 
       {/* Client snippet */}
-      <div style={subheading(s, t)}>In the app</div>
-      <div style={{ marginBottom: t.spacing.lg }}>
+      <div style={subheading(s, themeTokens)}>In the app</div>
+      <div style={{ marginBottom: themeTokens.spacing.lg }}>
         <CodeBlock>{CLIENT_SNIPPET}</CodeBlock>
       </div>
 
       {/* Backend snippet */}
-      <div style={subheading(s, t)}>In your backend</div>
+      <div style={subheading(s, themeTokens)}>In your backend</div>
       <CodeBlock>{BACKEND_SNIPPET}</CodeBlock>
 
-      <p style={{ ...s.text.muted, marginTop: t.spacing.md }}>
+      <p style={{ ...s.text.muted, marginTop: themeTokens.spacing.md }}>
         Admin setup (per app, in Registered Apps): enable remote auth, list the
         allowed callback hostname(s), and set the callback signing secret your
         backend uses to verify <code>X-NS-Signature</code>.

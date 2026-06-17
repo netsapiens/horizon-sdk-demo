@@ -3,15 +3,15 @@ import type { DemoStyles, DemoTheme } from './styles';
 import { ZONES } from '../../content/demoContent';
 import { accentColors, subheading } from './styles';
 
-export default function ZonesPanel({ s, t }: { s: DemoStyles; t: DemoTheme }) {
-  const accents = accentColors(t);
+export default function ZonesPanel({ s, themeTokens }: { s: DemoStyles; themeTokens: DemoTheme }) {
+  const accents = accentColors(themeTokens);
 
   return (
     <div style={s.surface.card}>
-      <h2 style={{ ...s.text.subheading, marginBottom: t.spacing.xs }}>
+      <h2 style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.xs }}>
         Extension zones used by this demo
       </h2>
-      <p style={{ ...s.text.muted, marginBottom: t.spacing.lg }}>
+      <p style={{ ...s.text.muted, marginBottom: themeTokens.spacing.lg }}>
         Generic zones the host mounts on its pages. A single registration
         targets a zone plus one or more route patterns — see the Code tab.
       </p>
@@ -32,8 +32,8 @@ export default function ZonesPanel({ s, t }: { s: DemoStyles; t: DemoTheme }) {
             }}
           >
             <div style={{ flex: 1 }}>
-              <h4 style={subheading(s, t)}>{z.zone}</h4>
-              <p style={{ ...s.text.muted, marginBottom: t.spacing.xs }}>
+              <h4 style={subheading(s, themeTokens)}>{z.zone}</h4>
+              <p style={{ ...s.text.muted, marginBottom: themeTokens.spacing.xs }}>
                 {z.desc}
               </p>
               <p style={{ ...s.text.body, fontStyle: 'italic' }}>

@@ -1,5 +1,5 @@
 /**
- * Shared inline-style helpers and types for the DemoPage tab panels. `t` is the
+ * Shared inline-style helpers and types for the DemoPage tab panels. `themeTokens` is the
  * host theme tokens and `s` the host style presets, both from
  * `horizonContext.ui` — passed into each panel so they track the host theme.
  */
@@ -13,37 +13,37 @@ export type DemoStyles = NonNullable<Ui['styles']>;
 export type DemoTheme = NonNullable<Ui['theme']>;
 
 /** Tab button styling, with an active (selected) state. */
-export function tabStyle(t: DemoTheme, active: boolean): CSSProperties {
+export function tabStyle(themeTokens: DemoTheme, active: boolean): CSSProperties {
   return {
-    padding: `${t.spacing.sm} ${t.spacing.lg}`,
+    padding: `${themeTokens.spacing.sm} ${themeTokens.spacing.lg}`,
     backgroundColor: 'transparent',
-    color: active ? t.colors.primary : t.colors.text.secondary,
+    color: active ? themeTokens.colors.primary : themeTokens.colors.text.secondary,
     border: 'none',
-    borderBottom: `3px solid ${active ? t.colors.primary : 'transparent'}`,
+    borderBottom: `3px solid ${active ? themeTokens.colors.primary : 'transparent'}`,
     cursor: 'pointer',
-    fontSize: t.typography.fontSize.sm,
+    fontSize: themeTokens.typography.fontSize.sm,
     fontWeight: active
-      ? t.typography.fontWeight.semibold
-      : t.typography.fontWeight.medium,
-    fontFamily: t.typography.fontFamily.sans,
+      ? themeTokens.typography.fontWeight.semibold
+      : themeTokens.typography.fontWeight.medium,
+    fontFamily: themeTokens.typography.fontFamily.sans,
     transition: 'all 0.2s',
-    borderRadius: `${t.borderRadius.sm} ${t.borderRadius.sm} 0 0`,
+    borderRadius: `${themeTokens.borderRadius.sm} ${themeTokens.borderRadius.sm} 0 0`,
   };
 }
 
 /** Consistent style for the small card/section headings. */
-export function subheading(s: DemoStyles, t: DemoTheme): CSSProperties {
+export function subheading(s: DemoStyles, themeTokens: DemoTheme): CSSProperties {
   return {
     ...s.text.subheading,
-    fontSize: t.typography.fontSize.base,
-    fontWeight: t.typography.fontWeight.semibold,
-    marginBottom: t.spacing.xs,
+    fontSize: themeTokens.typography.fontSize.base,
+    fontWeight: themeTokens.typography.fontWeight.semibold,
+    marginBottom: themeTokens.spacing.xs,
   };
 }
 
 /** Accent colors cycled through the capability/zone cards. */
-export const accentColors = (t: DemoTheme): string[] => [
-  t.colors.primary,
-  t.colors.success,
-  t.colors.warning,
+export const accentColors = (themeTokens: DemoTheme): string[] => [
+  themeTokens.colors.primary,
+  themeTokens.colors.success,
+  themeTokens.colors.warning,
 ];

@@ -52,9 +52,9 @@ export default function DemoPage() {
   const Box = ui?.Box as UIComponent | undefined;
   const Typography = ui?.Typography as UIComponent | undefined;
   const s = ui?.styles;
-  const t = ui?.theme;
+  const themeTokens = ui?.theme;
 
-  if (!PageTemplate || !Paper || !Stack || !Box || !Typography || !s || !t) {
+  if (!PageTemplate || !Paper || !Stack || !Box || !Typography || !s || !themeTokens) {
     return (
       <div style={{ padding: '24px' }}>
         <h1>Horizon SDK Demo</h1>
@@ -72,7 +72,7 @@ export default function DemoPage() {
         { label: 'Horizon SDK Demo' },
       ]}
     >
-      {/* SDK version badge — host ui components, theme palette via sx tokens. */}
+      {/* SDK version badge — host ui components, theme palette via sx themeTokens. */}
       <Paper
         variant='outlined'
         sx={{
@@ -110,7 +110,7 @@ export default function DemoPage() {
           {TABS.map(([key, label]) => (
             <button
               key={key}
-              style={tabStyle(t, activeTab === key)}
+              style={tabStyle(themeTokens, activeTab === key)}
               onClick={() => setActiveTab(key)}
             >
               {label}
@@ -118,13 +118,13 @@ export default function DemoPage() {
           ))}
         </Stack>
 
-        {activeTab === 'overview' && <OverviewPanel s={s} t={t} />}
-        {activeTab === 'zones' && <ZonesPanel s={s} t={t} />}
-        {activeTab === 'patterns' && <PatternsPanel s={s} t={t} />}
-        {activeTab === 'code' && <CodePanel s={s} t={t} />}
-        {activeTab === 'remote-auth' && <RemoteAuthPanel s={s} t={t} />}
+        {activeTab === 'overview' && <OverviewPanel s={s} themeTokens={themeTokens} />}
+        {activeTab === 'zones' && <ZonesPanel s={s} themeTokens={themeTokens} />}
+        {activeTab === 'patterns' && <PatternsPanel s={s} themeTokens={themeTokens} />}
+        {activeTab === 'code' && <CodePanel s={s} themeTokens={themeTokens} />}
+        {activeTab === 'remote-auth' && <RemoteAuthPanel s={s} themeTokens={themeTokens} />}
         {activeTab === 'walkthrough' && (
-          <WalkthroughPanel s={s} t={t} onNavigate={horizonContext.navigate} />
+          <WalkthroughPanel s={s} themeTokens={themeTokens} onNavigate={horizonContext.navigate} />
         )}
       </Box>
     </PageTemplate>
