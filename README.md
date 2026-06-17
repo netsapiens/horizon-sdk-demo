@@ -69,7 +69,20 @@ A sortable/filterable **Priority** column merged into the host's Call Logs table
 Subscribes to the live SIP call stream (`call-started` / `-answered` / `-missed`
 / `-ended`) through the capability-gated, app-scoped SDK path (declaring the
 `call-events:subscribe` capability), enriches each inbound call with CRM data,
-and broadcasts it to the `CallerInfoWidget`.
+and hands it to the `CallerInfoWidget`.
+
+Call events are the `call-events` specialization of the host **data-stream**
+contract: every host stream is consumed through the SDK, never the raw bus.
+`subscribeToCallEvents` delegates to `sdk.subscribeToStream('call-events', …)`;
+other host streams (`subscriber`, `device`, `registration`) use
+`subscribeToStream(streamId, eventTypes, cb)` directly. Each is gated by its
+`<streamId>:listen` capability and attributed to the app on the Registered Apps
+page — host streams are not delivered on the raw `eventBus`.
+
+The enriched call is passed to `CallerInfoWidget` over a **custom event**
+(`demo:call-updated`). The host scopes each app's event bus, so that event stays
+within this app (reaching its own pages/extensions) and never leaks to another —
+the supported pattern for an app talking to its own components.
 
 ### Remote auth — `auth.requestRemoteAuth()`
 
@@ -188,14 +201,14 @@ The exposed `./App` component receives a `HorizonContext` and initializes the SD
 via `useRemoteApp()`. Page components read the live context with
 `useHorizonContext()` (wrapped in `HorizonContextProvider`). Key fields:
 
-| Field              | Purpose                                                               |
-| ------------------ | --------------------------------------------------------------------- |
-| `user`             | Signed-in user (`displayName`, `domain`, `extension`, `scope`, …)     |
-| `api`              | Authenticated NetSapiens v2 API client (`get`/`post`/`put`/`delete`)  |
-| `theme` / `locale` | Host theme (`light`/`dark`) and i18next translation function          |
-| `navigate`         | Navigate the host router                                              |
-| `eventBus`         | Pub/sub across the host/remote boundary                               |
-| `ui`               | Themed MUI Aurora components + templates (PageTemplate, SidePanel, …) |
+| Field              | Purpose                                                                                                                                             |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user`             | Signed-in user (`displayName`, `domain`, `extension`, `scope`, …)                                                                                   |
+| `api`              | Authenticated NetSapiens v2 API client (`get`/`post`/`put`/`delete`)                                                                                |
+| `theme` / `locale` | Host theme (`light`/`dark`) and i18next translation function                                                                                        |
+| `navigate`         | Navigate the host router                                                                                                                            |
+| `eventBus`         | Per-app **scoped** pub/sub — your custom events stay within your app; host streams use `subscribeToStream`/`subscribeToCallEvents`, not raw `.on()` |
+| `ui`               | Themed MUI Aurora components + templates (PageTemplate, SidePanel, …)                                                                               |
 
 ## Project structure
 
