@@ -16,11 +16,11 @@ against its published JWKS.
 
 ```
 NetSapiens API ── POST callbackUrl (signed code) ──▶  this server
-                                                       │ 1. verify X-NS-Signature HMAC
-                                                       │    (+ X-NS-Cluster-Verification JWT)
+                                                       │ 1. verify X-NS-Signature HMAC (required)
+                                                       │    + X-NS-Cluster-Verification JWT (if present)
                                                        │ 2. exchange code (PKCE) at
                                                        │    validation_endpoint → NS token
-                                                       │ 3. mint VENDOR token for that user
+                                                       │ 3. mint VENDOR token for the PROVEN user
                                                        ▼
 NetSapiens API ◀──── 2xx { access_token, ... } ───────┘
    │ shapes into RemoteAuthResponse, resolves the extension's promise
@@ -58,15 +58,20 @@ Body:
 
 ### The three things you MUST do
 
-1. **Verify authenticity — both signals** (`lib/verify.js`). The HMAC proves the
-   sender holds your app's shared secret; the cluster JWT (verified against
-   INSight's JWKS) proves it's a real NetSapiens cluster. Either alone is
-   insufficient. The HMAC is computed over the **string**
-   `request_id + code + timestamp`, **not** the raw body.
+1. **Verify authenticity** (`lib/verify.js`). The HMAC (`X-NS-Signature`) is the
+   **required** gate — it proves the sender holds your app's shared secret, and a
+   webhook that fails or omits it is rejected. It's computed over the **string**
+   `request_id + code + timestamp`, **not** the raw body. The cluster JWT
+   (`X-NS-Cluster-Verification`, verified against INSight's JWKS) is an
+   **optional** additive attestation that the caller is a genuine NetSapiens
+   cluster; the platform sends it best-effort, so verify it **when present**
+   (reject on failure) and proceed on HMAC alone when it's absent.
 2. **Exchange the code with PKCE** (`lib/exchange.js`) — `POST
 validation_endpoint` form-encoded with `grant_type=authorization_code`,
-   `code`, `code_verifier`, `username=user.uid`. No `client_id`/`client_secret`.
-   The NS token it returns proves the user's identity.
+   `code`, `code_verifier`, `username=user.uid`, and `redirect_uri` (when
+   configured). No `client_id`/`client_secret`. The NS token it returns proves
+   the user's identity — **use the identity from this response**, not from the
+   webhook body.
 3. **Mint your own vendor token** (`lib/token.js`) and return it as
    `{ access_token, token_type, expires_in, refresh_token? }`. The platform maps
    that onto the SDK's `RemoteAuthResponse` via an **explicit allow-list**:
@@ -78,15 +83,17 @@ validation_endpoint` form-encoded with `grant_type=authorization_code`,
    **Any other field you return is dropped** — there is no generic `metadata`
    pass-through today.
 
-> Identity is bound server-side to the caller's **trusted session**, never to the
-> request's `user.uid` (which is attacker-controllable). You receive the already
-> validated identity — don't trust a `user.uid` from anywhere else.
+> **Identity comes from the code exchange, not the webhook body.** ns-api pins
+> the auth code to the caller's **trusted session** and validates `username` at
+> exchange, so the exchange response is the authoritative identity. The body's
+> `user.uid` is attacker-influenceable — this reference uses it only as a
+> display-name fallback and binds the minted token to `nsToken.uid`/`login`.
 
 ## Run
 
 ```bash
 npm install
-cp .env.example .env   # fill in HORIZON_CALLBACK_SECRET, HORIZON_APP_ID, VENDOR_JWT_SECRET
+cp .env.example .env   # fill in HORIZON_CALLBACK_SECRET, HORIZON_APP_ID, VENDOR_JWT_SECRET (required)
 node --env-file=.env server.js   # Node 20+ ; or: export the vars and `npm start`
 ```
 
@@ -97,9 +104,9 @@ list in Registered Apps.
 
 ## Local smoke test (no NetSapiens cluster)
 
-`MOCK_MODE=1` skips the cluster-JWT verification and the live code exchange so
-you can exercise signature verification + response shaping locally. **Never set
-it in production.**
+`MOCK_MODE=1` skips the live code exchange (and, with no cluster, runs without a
+cluster-JWT header) so you can exercise HMAC verification + response shaping
+locally. **Never set it in production.**
 
 ```bash
 # terminal 1 — server in mock mode
@@ -121,8 +128,10 @@ Expected: `status: 200` and a JSON body with a freshly minted
   promptly and return within the platform's `remote_timeout_seconds`.
 - This issues a self-signed JWT for illustration. Swap `lib/token.js` for however
   your product really issues tokens/sessions.
-- The platform sends `X-NS-Signature` and `X-NS-Cluster-Verification`
-  **best-effort** (e.g. the cluster JWT depends on a live INSight fetch). This
-  reference requires **both** for defense in depth, so a degraded webhook missing
-  one is rejected. That's the secure default; relax it only with a deliberate
-  reason.
+- `VENDOR_JWT_SECRET` is **required**: the server refuses to start if it's unset
+  or a well-known default, since a weak secret lets anyone forge trusted tokens.
+- The HMAC is the required gate; the `X-NS-Cluster-Verification` JWT is sent
+  **best-effort** (it depends on a live INSight fetch and cluster config). Verify
+  it **when present** and reject on failure — a genuine cluster sends a valid one
+  — but don't require its presence, or you'll reject legitimate webhooks from
+  clusters that don't emit it.

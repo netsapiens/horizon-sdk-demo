@@ -119,7 +119,8 @@ a **single-use auth code** (not a token) to your `callbackUrl`. Your backend:
    `X-NS-Cluster-Verification` signed JWT can be verified against the platform's
    published JWKS for secret-less proof.)
 2. Exchanges the code (PKCE) at the `validation_endpoint` from the payload for a
-   token that proves the user's identity.
+   token that proves the user's identity — and uses the identity from **that
+   response**, not the webhook body.
 3. Mints its **own** vendor token and returns it — which resolves the promise as
    the `RemoteAuthResponse`.
 
@@ -130,8 +131,9 @@ snippet. A runnable reference backend lives in [`examples/vendor-backend/`](exam
 > callback delivery, code exchange, and response shaping server-side. Two things
 > to know: the response is mapped through an explicit allow-list (`access_token`,
 > `token_type`, `expires_in`, `refresh_token` — no generic `metadata`
-> pass-through today), and the platform sends `X-NS-Signature` /
-> `X-NS-Cluster-Verification` best-effort while a secure backend requires both. It
+> pass-through today), and the platform sends the `X-NS-Signature` HMAC (the
+> required gate) plus a best-effort `X-NS-Cluster-Verification` JWT the backend
+> verifies when present. It
 > also needs per-app admin config (remote auth enabled, allowed callback
 > hostnames, signing secret). Against a host without it the request rejects/times
 > out and the panel

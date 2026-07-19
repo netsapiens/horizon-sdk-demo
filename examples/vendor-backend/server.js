@@ -7,10 +7,10 @@
  * JSON response into the SDK's `RemoteAuthResponse` and resolves the
  * extension's `auth.requestRemoteAuth(...)` promise.
  *
- * This implements the NetSapiens remote-auth webhook contract (HMAC + cluster
- * JWT verification, PKCE code exchange, vendor-token minting). Run with
- * MOCK_MODE=1 to exercise it end-to-end with no cluster (see README +
- * scripts/sign.js).
+ * This implements the NetSapiens remote-auth webhook contract (HMAC as the
+ * required gate, optional cluster-JWT attestation, PKCE code exchange, and
+ * vendor-token minting). Run with MOCK_MODE=1 to exercise it end-to-end with no
+ * cluster (see README + scripts/sign.js).
  */
 import express from 'express';
 
@@ -25,13 +25,28 @@ const {
   HORIZON_APP_ID = 'horizon-extension-demo',
   INSIGHT_JWKS_URL = 'https://insight.netsapiens.com/.well-known/jwks.json',
   INSIGHT_ISSUER = 'https://insight.netsapiens.com',
-  VENDOR_JWT_SECRET = 'dev-only-insecure-secret',
+  VENDOR_JWT_SECRET,
   VENDOR_TOKEN_TTL_SECONDS = '3600',
+  // Your registered callback URL, sent as `redirect_uri` in the code exchange
+  // when set (some token endpoints require it to match). Optional.
+  PUBLIC_CALLBACK_URL,
   MOCK_MODE = '0',
 } = process.env;
 
 const mock = MOCK_MODE === '1';
 const ttlSeconds = Number(VENDOR_TOKEN_TTL_SECONDS);
+
+// Fail fast on an unset or well-known-insecure signing secret. Unlike a missing
+// callback secret (which just rejects every webhook), a bad VENDOR_JWT_SECRET
+// silently signs REAL, trusted tokens anyone could forge — so refuse to boot.
+const INSECURE_SECRETS = new Set(['', 'dev-only-insecure-secret', 'changeme']);
+if (!VENDOR_JWT_SECRET || INSECURE_SECRETS.has(VENDOR_JWT_SECRET)) {
+  console.error(
+    'FATAL: VENDOR_JWT_SECRET is unset or set to a known insecure default. ' +
+      'Set it to a long random string before starting.',
+  );
+  process.exit(1);
+}
 
 const app = express();
 app.use(express.json());
@@ -45,50 +60,63 @@ app.post(CALLBACK_PATH, async (req, res) => {
     console.log(`[${requestId ?? 'no-request-id'}] ${msg}`, extra ?? '');
 
   try {
-    // --- 1. Verify authenticity (BOTH signals; either alone is insufficient) ---
+    // --- 1. Verify authenticity ---
+    // 1a. HMAC — the required gate. No valid HMAC, no further processing.
     const hmac = verifyHmacSignature(
       body,
       req.get('X-NS-Signature'),
       HORIZON_CALLBACK_SECRET,
     );
     if (!hmac.ok) {
+      // Log the specific reason server-side; return a generic error only.
       log('HMAC verification failed', hmac.reason);
-      return res
-        .status(401)
-        .json({ error: 'invalid_signature', reason: hmac.reason });
+      return res.status(401).json({ error: 'invalid_signature' });
     }
     log('HMAC verified');
 
-    if (mock) {
-      log('MOCK_MODE: skipping cluster-JWT verification');
-    } else {
-      await verifyClusterToken(req.get('X-NS-Cluster-Verification'), {
+    // 1b. Cluster JWT — optional attestation. Verify WHEN PRESENT (reject on
+    //     failure); skip cleanly when absent. In MOCK_MODE there is no cluster,
+    //     so the header is simply absent and this is a no-op.
+    const clusterToken = req.get('X-NS-Cluster-Verification');
+    if (clusterToken && !mock) {
+      await verifyClusterToken(clusterToken, {
         jwksUri: INSIGHT_JWKS_URL,
         issuer: INSIGHT_ISSUER,
         expectedAppId: HORIZON_APP_ID,
       });
       log('cluster JWT verified');
+    } else {
+      log('no cluster JWT present — proceeding on HMAC (expected in some setups)');
     }
 
     // --- 2. Exchange the code (PKCE) for a NetSapiens token proving identity ---
     let nsToken;
     if (mock) {
       log('MOCK_MODE: skipping live code exchange');
+      // Fabricate a proof carrying identity so downstream minting works with no
+      // real cluster. Clearly labelled mock — never trust this shape for real.
       nsToken = {
         access_token: `mock-ns-token-for-${body.user?.uid}`,
+        uid: body.user?.uid,
+        domain: body.user?.domain,
+        displayName: body.user?.displayName,
         mock: true,
       };
     } else {
-      nsToken = await exchangeCodeForNsToken(body);
+      nsToken = await exchangeCodeForNsToken(body, {
+        redirectUri: PUBLIC_CALLBACK_URL,
+      });
       log('code exchanged for NS token');
     }
 
-    // --- 3. Mint the vendor's OWN token for that verified user and return it ---
-    const vendorToken = mintVendorToken(body.user, nsToken, {
+    // --- 3. Mint the vendor's OWN token for the PROVEN user and return it ---
+    // Identity is taken from `nsToken` (the exchange result), not body.user.
+    const vendorToken = mintVendorToken(nsToken, {
       secret: VENDOR_JWT_SECRET,
       ttlSeconds,
+      fallbackUser: body.user,
     });
-    log('minted vendor token', { sub: body.user?.uid });
+    log('minted vendor token', { sub: nsToken.uid || nsToken.login });
 
     // 2xx + JSON. The platform maps { access_token, token_type, expires_in,
     // refresh_token? } onto RemoteAuthResponse via an explicit allow-list —
@@ -96,11 +124,10 @@ app.post(CALLBACK_PATH, async (req, res) => {
     return res.status(200).json(vendorToken);
   } catch (err) {
     // Non-2xx / timeout / unparseable -> the platform returns 502 RA009 to the
-    // SDK and the extension's promise rejects.
+    // SDK and the extension's promise rejects. Log detail server-side; return a
+    // generic message so upstream/internal detail isn't echoed to the caller.
     log('callback failed', err.message);
-    return res
-      .status(401)
-      .json({ error: 'verification_failed', message: err.message });
+    return res.status(401).json({ error: 'verification_failed' });
   }
 });
 

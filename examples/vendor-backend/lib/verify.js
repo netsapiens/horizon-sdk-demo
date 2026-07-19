@@ -1,15 +1,19 @@
 /**
  * Webhook authenticity verification for the Horizon remoteAuth callback.
  *
- * The vendor MUST verify BOTH signals before processing the payload — either
- * one alone is insufficient:
+ * Two signals, with different roles:
  *
- *   1. HMAC (`X-NS-Signature`) — proves the sender holds this app's shared
- *      callback secret. Defends against forgery by anyone without the secret.
- *   2. Cluster JWT (`X-NS-Cluster-Verification`) — RS256, signed by INSight,
- *      verified against INSight's published JWKS. Proves the webhook came from a
- *      real NetSapiens cluster. Defends against a stolen-HMAC-secret forgery and
- *      cross-deployment replay.
+ *   1. HMAC (`X-NS-Signature`) — the PRIMARY, always-required gate. Proves the
+ *      sender holds this app's shared callback secret. A webhook that fails (or
+ *      omits) the HMAC is rejected outright.
+ *   2. Cluster JWT (`X-NS-Cluster-Verification`) — an OPTIONAL, additive
+ *      attestation. RS256, signed by INSight, verified against INSight's
+ *      published JWKS. Proves the webhook came from a real NetSapiens cluster and
+ *      names the client/cluster — without any pre-shared secret. The platform
+ *      sends it best-effort (it depends on a live INSight fetch and cluster
+ *      config), so it can legitimately be absent. Policy here: verify it WHEN
+ *      PRESENT and reject on failure (a genuine cluster sends a valid one); skip
+ *      cleanly when absent, since the HMAC already authenticated the sender.
  */
 import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';

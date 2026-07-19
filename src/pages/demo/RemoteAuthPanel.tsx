@@ -62,7 +62,7 @@ const BACKEND_SNIPPET = `// Your backend webhook — the NetSapiens API POSTs a 
 //   { request_id, code, user: { uid, domain, displayName },
 //     expires_in, validation_endpoint, timestamp, signature }
 app.post('/horizon/callback', express.json(), async (req, res) => {
-  const { request_id, code, timestamp, validation_endpoint, user } = req.body;
+  const { request_id, code, timestamp, validation_endpoint } = req.body;
 
   // 1. Verify the HMAC. It signs the STRING request_id + code + timestamp
   //    (not the raw body), SHA-256, hex. The header is "sha256=" prefixed.
@@ -76,20 +76,22 @@ app.post('/horizon/callback', express.json(), async (req, res) => {
     sig?.length === expected.length &&
     crypto.timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'));
   if (!ok) return res.status(401).json({ error: 'invalid_signature' });
-  // (Optionally also verify the X-NS-Cluster-Verification JWT via INSight JWKS.)
+  // HMAC is the required gate. The X-NS-Cluster-Verification JWT is optional:
+  // verify it via INSight JWKS WHEN PRESENT (reject on failure), skip if absent.
 
   // 2. Exchange the code (PKCE) at the validation_endpoint for an NS token
   //    that cryptographically proves the user's identity.
   const nsToken = await exchangeCodeWithPkce(validation_endpoint, code);
 
-  // 3. Mint YOUR OWN vendor token and return it in OAuth snake_case. The
-  //    NetSapiens API maps these onto RemoteAuthResponse via an explicit
-  //    allow-list: access_token->accessToken, token_type->tokenType,
+  // 3. Mint YOUR OWN vendor token, bound to the identity the exchange PROVED
+  //    (nsToken.uid) — never the request body's user.uid. Return OAuth
+  //    snake_case; the NetSapiens API maps it onto RemoteAuthResponse via an
+  //    explicit allow-list: access_token->accessToken, token_type->tokenType,
   //    expires_in->expiresAt (absolute unix: time()+expires_in),
   //    refresh_token->refreshToken. vendorId + a user block are added by the
   //    platform. Extra keys are dropped (no metadata pass-through today).
   res.json({
-    access_token: mintVendorToken(nsToken, user),
+    access_token: mintVendorToken(nsToken),
     token_type: 'Bearer',
     expires_in: 3600,
   });

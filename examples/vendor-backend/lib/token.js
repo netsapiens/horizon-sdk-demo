@@ -6,23 +6,36 @@
  * wherever your product issues sessions/tokens (your OAuth server, a DB-backed
  * opaque token, a real Salesforce/HubSpot token from your own OAuth app, etc.).
  * The key point: it is YOUR token, scoped to the user the NS exchange proved.
+ *
+ * IDENTITY: bind the token to the identity the code exchange RETURNED
+ * (`nsToken`), never to the webhook body's `user.uid`. ns-api pins the auth code
+ * to the caller's trusted session and validates `username` at exchange, so the
+ * exchange response is the authoritative identity; the request body's `user` is
+ * attacker-influenceable and only used as a display-name fallback.
  */
 import jwt from 'jsonwebtoken';
 
 /**
- * @param {object} user      the user block from the webhook (uid/domain/displayName)
- * @param {object} nsToken   the NS token response from the code exchange (proof)
- * @param {object} opts      { secret, ttlSeconds }
+ * @param {object} nsToken   NS token-exchange response (the PROVEN identity):
+ *                           { access_token, uid?/login?, domain?, ... }
+ * @param {object} opts      { secret, ttlSeconds, fallbackUser? }
  * @returns {{ access_token: string, token_type: string, expires_in: number }}
  */
-export function mintVendorToken(user, nsToken, { secret, ttlSeconds }) {
+export function mintVendorToken(nsToken, { secret, ttlSeconds, fallbackUser }) {
+  // Identity comes from the exchange response, NOT the webhook body.
+  const sub = nsToken?.uid || nsToken?.login;
+  if (!sub) {
+    throw new Error(
+      'code exchange returned no user identity (uid/login) to bind the token to',
+    );
+  }
+
   const accessToken = jwt.sign(
     {
-      sub: user.uid,
-      domain: user.domain,
-      name: user.displayName,
-      // Carry a reference to the NS proof if useful for your audit trail.
-      ns_verified: Boolean(nsToken?.access_token),
+      sub,
+      domain: nsToken.domain,
+      // Display name isn't security-sensitive; fall back to the webhook body.
+      name: nsToken.displayName || fallbackUser?.displayName,
     },
     secret,
     { expiresIn: ttlSeconds, issuer: 'horizon-remote-auth-vendor-backend' },
