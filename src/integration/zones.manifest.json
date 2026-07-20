@@ -1,0 +1,114 @@
+{
+  "$comment": "Canonical map of every surface this demo contributes to a Horizon host: SDK zone extensions, full-page routes, and dynamic columns. Single source of truth shared by the app (src/integration/zones.ts drives registration from it) and the netsapiens-horizon-testing Playwright suite (asserts each testId mounts). testId scheme: extensions 'sdk-demo-ext-<id minus demo- prefix>', routes 'sdk-demo-page-<slug>', columns 'sdk-demo-col-<field>'. Each injected extension is also tagged with data-zone. Markers use display:contents (no layout box), so assert PRESENCE (toBeAttached / count>0), not visibility, on the marker itself.",
+  "appId": "horizon-extension-demo",
+  "webpackModule": "horizonExtensionDemo",
+  "remoteEntryUrl": "https://netsapiens.github.io/horizon-sdk-demo/remoteEntry.js",
+  "extensions": [
+    {
+      "id": "demo-export-button",
+      "zone": "page-header-actions",
+      "routes": [
+        "/manage/call-logs",
+        "/manage/*/call-logs",
+        "/manage/*/contacts",
+        "/manage/*/devices/registrations",
+        "/manage/*/users"
+      ],
+      "priority": 10,
+      "testId": "sdk-demo-ext-export-button"
+    },
+    {
+      "id": "demo-analytics-widget",
+      "zone": "page-content-after",
+      "routes": ["/manage/call-logs", "/manage/:domain/call-logs"],
+      "priority": 100,
+      "requiredPermissions": ["call-events:subscribe"],
+      "testId": "sdk-demo-ext-analytics-widget"
+    },
+    {
+      "id": "demo-quick-action",
+      "zone": "table-row-actions",
+      "routes": ["/manage/call-logs", "/manage/*/call-logs"],
+      "testId": "sdk-demo-ext-quick-action"
+    },
+    {
+      "id": "demo-caller-info-widget",
+      "zone": "inbound-call-content",
+      "routes": ["/*"],
+      "priority": 100,
+      "requiredPermissions": ["call-events:listen"],
+      "testId": "sdk-demo-ext-caller-info-widget"
+    },
+    {
+      "id": "demo-contact-form-banner",
+      "zone": "form-section-before",
+      "routes": ["/manage/*/contacts", "/home/contacts"],
+      "priority": 100,
+      "testId": "sdk-demo-ext-contact-form-banner"
+    },
+    {
+      "id": "demo-compliance-checkbox",
+      "zone": "form-section-after",
+      "routes": ["/manage/*/contacts", "/home/contacts"],
+      "priority": 50,
+      "testId": "sdk-demo-ext-compliance-checkbox"
+    },
+    {
+      "id": "demo-active-calls-recording-filter",
+      "zone": "table-filter-bar",
+      "routes": ["/manage/active-calls", "/manage/*/active-calls"],
+      "priority": 10,
+      "testId": "sdk-demo-ext-active-calls-recording-filter"
+    },
+    {
+      "id": "demo-header-status-badge",
+      "zone": "page-header-secondary",
+      "routes": ["/*"],
+      "testId": "sdk-demo-ext-header-status-badge"
+    },
+    {
+      "id": "demo-table-toolbar-info",
+      "zone": "table-toolbar",
+      "routes": ["/manage/call-logs", "/manage/*/call-logs"],
+      "testId": "sdk-demo-ext-table-toolbar-info"
+    },
+    {
+      "id": "demo-topbar-help",
+      "zone": "topbar-actions",
+      "routes": ["/*"],
+      "testId": "sdk-demo-ext-topbar-help"
+    }
+  ],
+  "routes": [
+    {
+      "id": "ucaas-demo-page",
+      "parentPath": "/apps",
+      "path": "horizon-sdk-demo",
+      "fullPath": "/apps/horizon-sdk-demo",
+      "testId": "sdk-demo-page-demo"
+    },
+    {
+      "id": "ucaas-component-showcase",
+      "parentPath": "/apps",
+      "path": "component-showcase",
+      "fullPath": "/apps/component-showcase",
+      "testId": "sdk-demo-page-component-showcase"
+    },
+    {
+      "id": "ucaas-crm-integration",
+      "parentPath": "/manage",
+      "path": "crm-integration",
+      "fullPath": "/manage/crm-integration",
+      "testId": "sdk-demo-page-crm-integration"
+    }
+  ],
+  "columns": [
+    {
+      "id": "demo-call-priority-column",
+      "zone": "call-logs-columns",
+      "field": "call-priority",
+      "routes": ["/manage/call-logs", "/manage/*/call-logs"],
+      "testId": "sdk-demo-col-call-priority"
+    }
+  ]
+}

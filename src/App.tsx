@@ -22,16 +22,12 @@ import {
 } from '@netsapiens/horizon-sdk';
 
 import { CallPriorityCell } from './columns/CallPriorityColumn';
-import { ActiveCallsRecordingFilter } from './extensions/ActiveCallsRecordingFilter';
-import { AnalyticsWidget } from './extensions/AnalyticsWidget';
-import { CallerInfoWidget } from './extensions/CallerInfoWidget';
-import ComplianceCheckbox from './extensions/ComplianceCheckbox';
-import ContactFormBanner from './extensions/ContactFormBanner';
-import { ExportButton } from './extensions/ExportButton';
-import { HeaderStatusBadge } from './extensions/HeaderStatusBadge';
-import { QuickActionButton } from './extensions/QuickActionButton';
-import { TableToolbarInfo } from './extensions/TableToolbarInfo';
-import { TopbarHelpButton } from './extensions/TopbarHelpButton';
+import {
+  columnTestId,
+  extensionRegistrations,
+  routeTestId,
+} from './integration/zones';
+import { withZoneTestId } from './integration/withZoneTestId';
 import ComponentShowcasePage from './pages/ComponentShowcasePage';
 import CrmIntegrationPage from './pages/CrmIntegrationPage';
 import DemoPage from './pages/DemoPage';
@@ -101,7 +97,10 @@ export default function App(horizonContext: HorizonContext) {
         label: 'Horizon SDK Demo',
         icon: 'mdi:rocket-launch',
         placement: { last: true },
-        component: DemoPageWithContext,
+        component: withZoneTestId(
+          DemoPageWithContext,
+          routeTestId('ucaas-demo-page'),
+        ),
       })
       .catch((error) =>
         console.error('[Demo App] Failed to register demo page:', error),
@@ -115,7 +114,10 @@ export default function App(horizonContext: HorizonContext) {
         label: 'Component Showcase',
         icon: 'mdi:palette',
         placement: { first: true },
-        component: ComponentShowcasePageWithContext,
+        component: withZoneTestId(
+          ComponentShowcasePageWithContext,
+          routeTestId('ucaas-component-showcase'),
+        ),
       })
       .catch((error) =>
         console.error(
@@ -136,7 +138,10 @@ export default function App(horizonContext: HorizonContext) {
         label: 'CRM Integration',
         icon: 'mdi:account-sync',
         placement: { after: 'call-logs' },
-        component: CrmIntegrationPageWithContext,
+        component: withZoneTestId(
+          CrmIntegrationPageWithContext,
+          routeTestId('ucaas-crm-integration'),
+        ),
       })
       .catch((error) =>
         console.error('[Demo App] Failed to register CRM Integration:', error),
@@ -159,53 +164,22 @@ export default function App(horizonContext: HorizonContext) {
     );
 
     // ============================================================
-    // 3. DYNAMIC EXTENSIONS — inject components into host zones
+    // 3. DYNAMIC EXTENSIONS + COLUMN — inject into host zones
     // ============================================================
-
-    // Export button across several list pages (matched by route pattern).
-    sdk.registerDynamicExtension({
-      id: 'demo-export-button',
-      zone: 'page-header-actions',
-      routes: [
-        { pattern: '/manage/call-logs' },
-        { pattern: '/manage/*/call-logs' },
-        { pattern: '/manage/*/contacts' },
-        { pattern: '/manage/*/devices/registrations' },
-        { pattern: '/manage/*/users' },
-      ],
-      priority: 10,
-      component: ExportButton,
-    });
-
-    // Call analytics summary — only on call-logs.
-    sdk.registerDynamicExtension({
-      id: 'demo-analytics-widget',
-      zone: 'page-content-after',
-      routes: [
-        { pattern: '/manage/call-logs' },
-        { pattern: '/manage/:domain/call-logs' },
-      ],
-      priority: 100,
-      component: AnalyticsWidget,
-      // Aggregates live call metrics — declares the call-events capability so the
-      // platform can gate it and surface it on the Registered Apps table.
-      requiredPermissions: ['call-events:subscribe'],
-    });
-
-    // Per-row quick action on call-logs → opens a Call details side panel.
-    sdk.registerDynamicExtension({
-      id: 'demo-quick-action',
-      zone: 'table-row-actions',
-      routes: [
-        { pattern: '/manage/call-logs' },
-        { pattern: '/manage/*/call-logs' },
-      ],
-      component: QuickActionButton,
-    });
+    // The 10 zone extensions are declared in integration/zones.manifest.json
+    // (zone, route patterns, priority, permissions, testId) and registered by
+    // iterating that manifest. Each component is wrapped with withZoneTestId so
+    // the netsapiens-horizon-testing Playwright suite can locate the zone it
+    // mounts into. Add/remove an extension by editing the manifest + the
+    // COMPONENTS map in integration/zones.ts.
+    for (const ext of extensionRegistrations) {
+      sdk.registerDynamicExtension(ext);
+    }
 
     // Dynamic "Priority" column merged into the call-logs table. The host's
     // DataTable derives the `call-logs-columns` zone from the route and merges
-    // registered columns into the grid.
+    // registered columns into the grid. Each rendered cell is tagged with the
+    // manifest testId so the suite can assert the column mounted.
     sdk.registerDynamicColumn({
       id: 'demo-call-priority-column',
       zone: 'call-logs-columns',
@@ -222,7 +196,15 @@ export default function App(horizonContext: HorizonContext) {
         type: 'string',
         // Alignment is handled by the SDK — registered columns default to
         // right-aligned (matching native columns) unless a column overrides it.
-        renderCell: (params) => <CallPriorityCell params={params} />,
+        renderCell: (params) => (
+          <span
+            style={{ display: 'contents' }}
+            data-testid={columnTestId('demo-call-priority-column')}
+            data-zone='call-logs-columns'
+          >
+            <CallPriorityCell params={params} />
+          </span>
+        ),
         valueGetter: (value, row) => {
           const duration = Number(row['call-total-duration-seconds']) || 0;
           const direction = row['call-direction'];
@@ -232,79 +214,6 @@ export default function App(horizonContext: HorizonContext) {
           return 'Low';
         },
       },
-    });
-
-    // Enriched caller card in the inbound-call widget (every route).
-    sdk.registerDynamicExtension({
-      id: 'demo-caller-info-widget',
-      zone: 'inbound-call-content',
-      routes: [{ pattern: '/*' }],
-      priority: 100,
-      component: CallerInfoWidget,
-      // Enriches inbound calls from the live call-event stream — declares the
-      // call-events capability so it is gated and shown on the Registered Apps table.
-      requiredPermissions: ['call-events:listen'],
-    });
-
-    // CRM context banner + GDPR consent checkboxes in the Contacts form.
-    sdk.registerDynamicExtension({
-      id: 'demo-contact-form-banner',
-      zone: 'form-section-before',
-      routes: [
-        { pattern: '/manage/*/contacts' },
-        { pattern: '/home/contacts' },
-      ],
-      priority: 100,
-      component: ContactFormBanner,
-    });
-    sdk.registerDynamicExtension({
-      id: 'demo-compliance-checkbox',
-      zone: 'form-section-after',
-      routes: [
-        { pattern: '/manage/*/contacts' },
-        { pattern: '/home/contacts' },
-      ],
-      priority: 50,
-      component: ComplianceCheckbox,
-    });
-
-    // Recording filter chip on the Active Calls page.
-    sdk.registerDynamicExtension({
-      id: 'demo-active-calls-recording-filter',
-      zone: 'table-filter-bar',
-      routes: [
-        { pattern: '/manage/active-calls' },
-        { pattern: '/manage/*/active-calls' },
-      ],
-      priority: 10,
-      component: ActiveCallsRecordingFilter,
-    });
-
-    // "● Live (Demo Extension)" status badge beside the page title — registered
-    // on every route (`/*`) so the secondary-header zone is visible across the
-    // whole app, showcasing how one zone + catch-all pattern blankets the UI.
-    sdk.registerDynamicExtension({
-      id: 'demo-header-status-badge',
-      zone: 'page-header-secondary',
-      routes: [{ pattern: '/*' }],
-      component: HeaderStatusBadge,
-    });
-    // Triage tips button in the call-logs table toolbar.
-    sdk.registerDynamicExtension({
-      id: 'demo-table-toolbar-info',
-      zone: 'table-toolbar',
-      routes: [
-        { pattern: '/manage/call-logs' },
-        { pattern: '/manage/*/call-logs' },
-      ],
-      component: TableToolbarInfo,
-    });
-    // Global topbar Help button — opens the shared side panel (every route).
-    sdk.registerDynamicExtension({
-      id: 'demo-topbar-help',
-      zone: 'topbar-actions',
-      routes: [{ pattern: '/*' }],
-      component: TopbarHelpButton,
     });
 
     return () => {
