@@ -6,9 +6,12 @@
 import { useEffect, useState } from 'react';
 import { type ExtensionComponentProps } from '@netsapiens/horizon-sdk';
 
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
+
 export default function ComplianceCheckbox({
   context,
-}: ExtensionComponentProps) {
+  ...marker
+}: ExtensionComponentProps & ZoneMarkerProps) {
   const { Stack, FormControlLabel, Checkbox, Typography, Paper, Alert } =
     context.ui ?? {};
 
@@ -45,7 +48,7 @@ export default function ComplianceCheckbox({
   const checkboxSx = { pt: 0, mr: 1 } as const;
 
   return (
-    <Paper variant='outlined' sx={{ p: 3, width: '100%' }}>
+    <Paper {...marker} variant='outlined' sx={{ p: 3, width: '100%' }}>
       <Stack spacing={2}>
         <Stack spacing={0.5}>
           <Typography variant='subtitle1' fontWeight={600}>

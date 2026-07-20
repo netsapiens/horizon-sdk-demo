@@ -5,13 +5,19 @@
  */
 import type { ExtensionComponentProps } from '@netsapiens/horizon-sdk';
 
-export function HeaderStatusBadge({ context }: ExtensionComponentProps) {
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
+
+export function HeaderStatusBadge({
+  context,
+  ...marker
+}: ExtensionComponentProps & ZoneMarkerProps) {
   const { Chip } = context.ui ?? {};
 
   // Fallback if the host UI surface is unavailable
   if (!Chip) {
     return (
       <span
+        {...marker}
         style={{
           padding: '2px 8px',
           borderRadius: 12,
@@ -28,6 +34,7 @@ export function HeaderStatusBadge({ context }: ExtensionComponentProps) {
 
   return (
     <Chip
+      {...marker}
       size='small'
       color='success'
       variant='outlined'

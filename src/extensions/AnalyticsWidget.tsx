@@ -6,6 +6,8 @@
 import type { ExtensionComponentProps } from '@netsapiens/horizon-sdk';
 import { useMemo } from 'react';
 
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
+
 // Shape of a CDR row as published by the call-logs DataTable
 interface CdrRow {
   'call-total-duration-seconds'?: number;
@@ -37,7 +39,10 @@ const STAT_CONFIGS = [
 
 type StatKey = (typeof STAT_CONFIGS)[number]['key'];
 
-export function AnalyticsWidget({ context }: ExtensionComponentProps) {
+export function AnalyticsWidget({
+  context,
+  ...marker
+}: ExtensionComponentProps & ZoneMarkerProps) {
   const { Paper, Typography } = context.ui ?? {};
   const rows =
     (context.pageContext as CallLogsPageContext | undefined)?.rows ?? [];
@@ -96,6 +101,7 @@ export function AnalyticsWidget({ context }: ExtensionComponentProps) {
 
   return (
     <Paper
+      {...marker}
       variant='outlined'
       sx={{
         p: 2.5,

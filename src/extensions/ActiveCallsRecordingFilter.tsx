@@ -4,6 +4,8 @@ import type {
 } from '@netsapiens/horizon-sdk';
 import React, { useState } from 'react';
 
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
+
 type Row = Record<string, unknown>;
 
 /**
@@ -47,7 +49,8 @@ const FILTERS: { value: string; label: string; match: (r: Row) => boolean }[] = 
 
 export function ActiveCallsRecordingFilter({
   context,
-}: ExtensionComponentProps) {
+  ...marker
+}: ExtensionComponentProps & ZoneMarkerProps) {
   const filterCtx = context.pageContext as TableFilterBarContext | undefined;
   const { ToggleButtonGroup } = context.ui ?? {};
   const [selected, setSelected] = useState<string | null>(null);
@@ -62,6 +65,7 @@ export function ActiveCallsRecordingFilter({
 
   return (
     <ToggleButtonGroup
+      {...marker}
       value={selected}
       exclusive
       onChange={handleChange}

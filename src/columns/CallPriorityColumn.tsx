@@ -4,12 +4,17 @@
  */
 import React from 'react';
 
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
+
 interface CallPriorityProps {
   /** DataGrid renderCell params — only the row record is read here. */
   params: { row: Record<string, unknown> };
 }
 
-export function CallPriorityCell({ params }: CallPriorityProps) {
+export function CallPriorityCell({
+  params,
+  ...marker
+}: CallPriorityProps & ZoneMarkerProps) {
   // Calculate priority based on call data
   const duration = Number(params.row['call-total-duration-seconds'] ?? 0);
   const direction = params.row['call-direction'];
@@ -34,6 +39,7 @@ export function CallPriorityCell({ params }: CallPriorityProps) {
 
   return (
     <div
+      {...marker}
       style={{
         display: 'inline-flex',
         alignItems: 'center',

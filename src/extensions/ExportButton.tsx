@@ -5,7 +5,12 @@
 import type { ExtensionComponentProps } from '@netsapiens/horizon-sdk';
 import React from 'react';
 
-export function ExportButton({ context }: ExtensionComponentProps) {
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
+
+export function ExportButton({
+  context,
+  ...marker
+}: ExtensionComponentProps & ZoneMarkerProps) {
   const { Button, Icon } = context.ui || {};
 
   const handleExport = () => {
@@ -38,12 +43,17 @@ export function ExportButton({ context }: ExtensionComponentProps) {
 
   // Fallback if UI components not available
   if (!Button || !Icon) {
-    return <button onClick={handleExport}>📥 Export Data</button>;
+    return (
+      <button {...marker} onClick={handleExport}>
+        📥 Export Data
+      </button>
+    );
   }
 
   // Use Horizon's Button and Icon components for consistent styling
   return (
     <Button
+      {...marker}
       variant='text'
       sx={{ px: 1 }}
       onClick={handleExport}

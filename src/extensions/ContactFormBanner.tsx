@@ -10,6 +10,7 @@
  */
 import { type ExtensionComponentProps } from '@netsapiens/horizon-sdk';
 
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import type { CrmRecord } from '../mocks/crm';
 import {
   lookupCrmRecord,
@@ -41,7 +42,8 @@ function findCrmRecord(
 
 export default function ContactFormBanner({
   context,
-}: ExtensionComponentProps) {
+  ...marker
+}: ExtensionComponentProps & ZoneMarkerProps) {
   const { Alert, Stack, Typography, Divider } = context.ui ?? {};
   if (!Alert || !Stack || !Typography) return null;
 
@@ -59,7 +61,7 @@ export default function ContactFormBanner({
   // Edit + matched: show the contact's Example CRM record.
   if (record) {
     return (
-      <Alert severity='info' sx={{ width: '100%' }}>
+      <Alert {...marker} severity='info' sx={{ width: '100%' }}>
         <Typography variant='body2' fontWeight={600}>
           {VENDOR_NAME} record
         </Typography>

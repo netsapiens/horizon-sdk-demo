@@ -197,13 +197,11 @@ export default function App(horizonContext: HorizonContext) {
         // Alignment is handled by the SDK — registered columns default to
         // right-aligned (matching native columns) unless a column overrides it.
         renderCell: (params) => (
-          <span
-            style={{ display: 'contents' }}
+          <CallPriorityCell
+            params={params}
             data-testid={columnTestId('demo-call-priority-column')}
             data-zone='call-logs-columns'
-          >
-            <CallPriorityCell params={params} />
-          </span>
+          />
         ),
         valueGetter: (value, row) => {
           const duration = Number(row['call-total-duration-seconds']) || 0;

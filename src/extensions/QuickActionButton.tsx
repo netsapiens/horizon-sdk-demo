@@ -4,6 +4,7 @@ import type {
 } from '@netsapiens/horizon-sdk';
 import { useSidePanel } from '@netsapiens/horizon-sdk';
 
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import { CallDetailsPanel } from '../panels/CallDetailsPanel';
 
 /**
@@ -14,7 +15,10 @@ import { CallDetailsPanel } from '../panels/CallDetailsPanel';
  * row) via `useSidePanel()`, populated with row-specific content.
  */
 
-export function QuickActionButton({ context }: ExtensionComponentProps) {
+export function QuickActionButton({
+  context,
+  ...marker
+}: ExtensionComponentProps & ZoneMarkerProps) {
   const row = context.pageContext?.row as Record<string, unknown> | undefined;
   const { IconButton } = context.ui || {};
   // Pass context.eventBus: extension components render outside HorizonContextProvider.
@@ -39,7 +43,11 @@ export function QuickActionButton({ context }: ExtensionComponentProps) {
   // Fallback if UI components not available
   if (!IconButton) {
     return (
-      <button onClick={handleAction} title='Quick Action (Demo Extension)'>
+      <button
+        {...marker}
+        onClick={handleAction}
+        title='Quick Action (Demo Extension)'
+      >
         ⚡
       </button>
     );
@@ -47,6 +55,7 @@ export function QuickActionButton({ context }: ExtensionComponentProps) {
 
   return (
     <IconButton
+      {...marker}
       icon='material-symbols:bolt'
       iconSize={18}
       aria-label='quick-action'

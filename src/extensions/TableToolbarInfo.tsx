@@ -5,7 +5,12 @@
  */
 import type { ExtensionComponentProps } from '@netsapiens/horizon-sdk';
 
-export function TableToolbarInfo({ context }: ExtensionComponentProps) {
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
+
+export function TableToolbarInfo({
+  context,
+  ...marker
+}: ExtensionComponentProps & ZoneMarkerProps) {
   const { Tooltip, IconButton } = context.ui ?? {};
 
   const handleClick = () => {
@@ -16,7 +21,11 @@ export function TableToolbarInfo({ context }: ExtensionComponentProps) {
 
   if (!Tooltip || !IconButton) {
     return (
-      <button onClick={handleClick} title='Table tips (Demo Extension)'>
+      <button
+        {...marker}
+        onClick={handleClick}
+        title='Table tips (Demo Extension)'
+      >
         ℹ️
       </button>
     );
@@ -25,6 +34,7 @@ export function TableToolbarInfo({ context }: ExtensionComponentProps) {
   return (
     <Tooltip title='Table tips (Demo Extension)'>
       <IconButton
+        {...marker}
         icon='material-symbols:info-outline'
         iconSize={18}
         size='small'

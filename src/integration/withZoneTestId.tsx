@@ -3,30 +3,31 @@
  * Playwright suite in netsapiens-horizon-testing can assert the SDK mounted it
  * into the right host zone.
  *
- * The marker is a `display: contents` <span>: it carries the `data-testid` /
- * `data-zone` attributes but contributes NO box to layout, so wrapping never
- * disturbs the host's toolbars, flex rows, or grid cells — the child renders
- * exactly as if unwrapped.
+ * The marker rides on the wrapped component's OWN root element: this HOC injects
+ * `data-testid` / `data-zone` as props, and each extension component spreads
+ * them onto its root (host UI components forward `data-*` to their root DOM
+ * node). There is no wrapper element, so layout is untouched AND the marker sits
+ * on a real box — a normal DevTools hover highlight, and tests can assert
+ * visibility. A component that renders `null` (an inactive zone) simply has no
+ * marker, which is the accurate signal.
  *
- * Because a `display: contents` node has no bounding box, tests assert PRESENCE
- * (`toBeAttached()` / `count > 0`) on the marker — which already proves the
- * remote loaded, registered, matched the route, and mounted into the zone — and
- * assert visibility on the widget's own inner content where needed. The testId
- * strings are defined once in `zones.manifest.json`.
+ * The testId strings are defined once in `zones.manifest.json`.
  */
 import type { ComponentType } from 'react';
 
+/** data-* attributes the SDK test suite locates zones by. */
+export interface ZoneMarkerProps {
+  'data-testid'?: string;
+  'data-zone'?: string;
+}
+
 export function withZoneTestId<P extends object>(
-  Component: ComponentType<P>,
+  Component: ComponentType<P & ZoneMarkerProps>,
   testId: string,
   zone?: string,
 ): ComponentType<P> {
   function ZoneTagged(props: P) {
-    return (
-      <span style={{ display: 'contents' }} data-testid={testId} data-zone={zone}>
-        <Component {...props} />
-      </span>
-    );
+    return <Component {...props} data-testid={testId} data-zone={zone} />;
   }
   ZoneTagged.displayName = `withZoneTestId(${Component.displayName || Component.name || 'Component'})`;
   return ZoneTagged;

@@ -1,6 +1,7 @@
 import type { ExtensionComponentProps } from '@netsapiens/horizon-sdk';
 import { useSidePanel } from '@netsapiens/horizon-sdk';
 
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import { QuickLinksPanel } from '../panels/QuickLinksPanel';
 
 /**
@@ -12,7 +13,10 @@ import { QuickLinksPanel } from '../panels/QuickLinksPanel';
  * showing the panel can be opened from a global, app-wide entry point.
  */
 
-export function TopbarHelpButton({ context }: ExtensionComponentProps) {
+export function TopbarHelpButton({
+  context,
+  ...marker
+}: ExtensionComponentProps & ZoneMarkerProps) {
   const { Button, Icon, Tooltip } = context.ui ?? {};
   // Pass context.eventBus: extension components render outside HorizonContextProvider.
   const { open } = useSidePanel(context.eventBus);
@@ -30,7 +34,11 @@ export function TopbarHelpButton({ context }: ExtensionComponentProps) {
   // Fallback if the host UI surface is unavailable
   if (!Button || !Icon) {
     return (
-      <button onClick={handleClick} title='Help & docs (Demo Extension)'>
+      <button
+        {...marker}
+        onClick={handleClick}
+        title='Help & docs (Demo Extension)'
+      >
         ?
       </button>
     );
@@ -40,6 +48,7 @@ export function TopbarHelpButton({ context }: ExtensionComponentProps) {
   // soft-filled, circular, icon-only.
   const button = (
     <Button
+      {...marker}
       color='primary'
       variant='soft'
       shape='circle'

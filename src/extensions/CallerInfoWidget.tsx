@@ -6,6 +6,7 @@
 import type { ExtensionComponentProps } from '@netsapiens/horizon-sdk';
 import { useEffect, useState } from 'react';
 
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import type { CallerInfo } from '../services/callEnrichment';
 import {
   activeCallsStore,
@@ -13,7 +14,10 @@ import {
   CALL_UPDATED_EVENT,
 } from '../services/callEnrichment';
 
-export function CallerInfoWidget({ context }: ExtensionComponentProps) {
+export function CallerInfoWidget({
+  context,
+  ...marker
+}: ExtensionComponentProps & ZoneMarkerProps) {
   // context.theme is injected by DynamicExtensionRenderer via useColorScheme()
   // and updated as a prop whenever the host theme changes — always correct on
   // first render, no event subscription needed.
@@ -64,7 +68,7 @@ export function CallerInfoWidget({ context }: ExtensionComponentProps) {
   }
 
   return (
-    <Paper variant='outlined' sx={{ p: 1.5, mb: 2 }}>
+    <Paper {...marker} variant='outlined' sx={{ p: 1.5, mb: 2 }}>
       <Stack spacing={1}>
         {ringingCall.company && (
           <Stack direction='row' spacing={1} alignItems='center'>
