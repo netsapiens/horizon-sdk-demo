@@ -1,7 +1,7 @@
 /**
  * Compliance Checkbox Extension
  * Zone: `form-section-after` — injected below the contact form's fields.
- * Adds GDPR / marketing consent checkboxes to the contact form.
+ * Adds consent / marketing opt-in checkboxes to the contact form.
  */
 import { useEffect, useState } from 'react';
 import { type ExtensionComponentProps } from '@netsapiens/horizon-sdk';
@@ -18,7 +18,7 @@ export default function ComplianceCheckbox({
   // Emit consent changes to the host form for integration.
   useEffect(() => {
     context.eventBus?.emit('form-data:updated', {
-      field: 'gdpr-consent',
+      field: 'data-consent',
       value: consented,
     });
   }, [consented, context.eventBus]);
@@ -70,7 +70,7 @@ export default function ComplianceCheckbox({
           label={
             <Typography variant='body2'>
               I have obtained consent to store this contact&rsquo;s personal
-              information in compliance with GDPR.
+              information.
             </Typography>
           }
         />

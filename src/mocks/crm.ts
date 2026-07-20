@@ -35,8 +35,8 @@ const EXTERNAL_CALLERS: Record<string, CrmRecord> = {
     callCount: 3,
   },
   '+15555555555': {
-    name: 'Acme Corp Support',
-    company: 'Acme Corporation',
+    name: 'Example Corp Support',
+    company: 'Example Corporation',
     lastContact: '3 hours ago',
     notes: 'Support escalation — ticket #12345',
     callCount: 47,

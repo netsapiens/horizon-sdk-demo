@@ -15,8 +15,8 @@ import type { CrmRecord } from '../mocks/crm';
 import { lookupCrmRecord, normalizePhoneNumber } from '../mocks/crm';
 
 /** The vendor CRM this demo "calls" to enrich a caller. */
-const VENDOR_NAME = 'Acme CRM';
-const VENDOR_CRM_BASE_URL = 'https://app.acmecrm.example';
+const VENDOR_NAME = 'Example CRM';
+const VENDOR_CRM_BASE_URL = 'https://app.example-crm.example';
 
 /**
  * Resolve a caller from the CRM, logging the request/response.

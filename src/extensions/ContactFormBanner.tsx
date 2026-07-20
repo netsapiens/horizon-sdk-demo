@@ -2,11 +2,11 @@
  * Contact Form Banner Extension
  * Zone: `form-section-before` — injected at the top of the Contacts add/edit form.
  *
- * Surfaces Acme CRM (mock) data above the form:
+ * Surfaces Example CRM (mock) data above the form:
  *  - edit: the matched contact's CRM record, resolved from the shared mock
  *    directory (the same source the CallerInfoWidget uses);
- *  - add:  there's no contact yet, so we show recently-added Acme CRM contacts
- *    for context.
+ *  - add:  there's no contact yet, so we show recently-added Example CRM
+ *    contacts for context.
  */
 import { type ExtensionComponentProps } from '@netsapiens/horizon-sdk';
 
@@ -17,7 +17,7 @@ import {
   normalizePhoneNumber,
 } from '../mocks/crm';
 
-const VENDOR_NAME = 'Acme CRM';
+const VENDOR_NAME = 'Example CRM';
 
 /** Contacts surfaced as "recently added" on the add form. */
 const RECENT_CONTACT_KEYS = ['+15551234567', '+15559876543', '2009'];
@@ -56,7 +56,7 @@ export default function ContactFormBanner({
       ? findCrmRecord(pageContext.formData)
       : undefined;
 
-  // Edit + matched: show the contact's Acme CRM record.
+  // Edit + matched: show the contact's Example CRM record.
   if (record) {
     return (
       <Alert severity='info' sx={{ width: '100%' }}>
@@ -82,7 +82,7 @@ export default function ContactFormBanner({
     );
   }
 
-  // Add (or edit with no match): show recently-added Acme CRM contacts.
+  // Add (or edit with no match): show recently-added Example CRM contacts.
   const recent = RECENT_CONTACT_KEYS.map((k) => MOCK_CRM_DIRECTORY[k]).filter(
     Boolean,
   ) as CrmRecord[];

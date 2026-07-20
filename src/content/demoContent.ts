@@ -104,7 +104,7 @@ export const ZONES: ZoneInfo[] = [
   {
     zone: 'form-section-after',
     desc: 'Below a form’s fields, before the actions.',
-    usedFor: 'GDPR / consent checkboxes on the Contacts form.',
+    usedFor: 'Consent / opt-in checkboxes on the Contacts form.',
   },
   {
     zone: 'inbound-call-content',
@@ -133,12 +133,12 @@ export const PATTERNS: PatternInfo[] = [
   {
     pattern: '/manage/*/call-logs',
     kind: 'Wildcard segment',
-    matches: '/manage/acme/call-logs',
+    matches: '/manage/example/call-logs',
   },
   {
     pattern: '/manage/:domain/contacts',
     kind: 'Named param',
-    matches: '/manage/acme/contacts (domain=acme)',
+    matches: '/manage/example/contacts (domain=example)',
   },
   { pattern: '/manage/*', kind: 'Prefix', matches: 'Any page under /manage' },
   { pattern: '/*', kind: 'Global', matches: 'Every page — use sparingly' },

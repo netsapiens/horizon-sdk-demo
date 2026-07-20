@@ -28,12 +28,12 @@ import { fetchRecentCalls } from '../api/callsApi';
 import { lookupCrmRecord, normalizePhoneNumber } from '../mocks/crm';
 import { formatDuration, SAMPLE_RECENT_CALLS } from '../mocks/recentCalls';
 
-const VENDOR_NAME = 'Acme CRM';
+const VENDOR_NAME = 'Example CRM';
 /**
  * Where the vendor CRM lives. A real integration would deep-link to the matched
  * contact in your CRM; this demo opens an illustrative per-contact URL.
  */
-const VENDOR_CRM_BASE_URL = 'https://app.acmecrm.example';
+const VENDOR_CRM_BASE_URL = 'https://app.example-crm.example';
 
 /**
  * REAL CRM FETCH (stubbed) — how the "Matched CRM record" pane would be filled
@@ -48,7 +48,7 @@ const VENDOR_CRM_BASE_URL = 'https://app.acmecrm.example';
  * Uncomment and wire `selectedRecord` to this (in an effect, keyed on the
  * selected call's party) once a vendor backend + callbackUrl exist:
  *
- *   const VENDOR_ID = 'acme-crm';
+ *   const VENDOR_ID = 'example-crm';
  *
  *   async function fetchCrmRecord(
  *     auth: ReturnType<typeof useHorizonContext>['auth'],
@@ -105,7 +105,7 @@ export default function CrmIntegrationPage() {
   const [liveCalls, setLiveCalls] = useState<RecentCall[]>([]);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>('loading');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // The deep-link the "Open in Acme CRM" button reveals (demo doesn't navigate).
+  // The deep-link the "Open in Example CRM" button reveals (demo doesn't navigate).
   const [deepLink, setDeepLink] = useState<string | null>(null);
 
   useEffect(() => {
