@@ -90,7 +90,7 @@ export default function ContactFormBanner({
   ) as CrmRecord[];
 
   return (
-    <Alert severity='info' sx={{ width: '100%' }}>
+    <Alert {...marker} severity='info' sx={{ width: '100%' }}>
       <Typography variant='body2' fontWeight={600}>
         Recently added in {VENDOR_NAME}
       </Typography>
