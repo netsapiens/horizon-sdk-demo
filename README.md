@@ -18,6 +18,13 @@ This single app registers **3 full-page routes**, **10 zone extensions**, **1
 dynamic table column**, **1 live call-event subscription**, an **on-demand
 side panel**, and a **remote-auth handshake** with a backend.
 
+> **Building a data table?** Read **[DATAGRID.md](./DATAGRID.md)** — the
+> page-layout anatomy, and the `height` rule that otherwise leaves your pagination
+> footer below the fold. The same guide ships inside the installed package at
+> `node_modules/@netsapiens/horizon-sdk/DATAGRID.md`. The live example is the
+> `DatagridTemplate` section of the Component Showcase page
+> (`src/pages/showcase/sections/DataGridSection.tsx`).
+
 ### Full-page routes — `sdk.registerRoute()`
 
 | Page               | Menu location              | Notes                                                                                                                                                                                                                 |

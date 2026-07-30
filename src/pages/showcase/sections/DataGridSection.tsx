@@ -47,8 +47,13 @@ export default function DataGridSection() {
             enableExport: true,
             enableFilter: true,
             enableColumns: true,
+            enableRefresh: true,
+            onRefresh: () => console.log('Refresh'),
           }}
+          getRowId={(row) => row.id}
           defaultPageSize={5}
+          pageSizeOptions={[5, 10, 25]}
+          height='420px'
         />
       </Box>
 
@@ -68,8 +73,15 @@ export default function DataGridSection() {
     { label: 'Edit', icon: 'mdi:pencil', onClick: (row) => edit(row) },
     { label: 'Delete', icon: 'mdi:delete', onClick: (row) => remove(row), color: 'error' },
   ]}
-  toolbar={{ enableSearch: true, enableExport: true, enableFilter: true, enableColumns: true }}
+  toolbar={{
+    enableSearch: true, enableExport: true, enableFilter: true, enableColumns: true,
+    enableRefresh: true, onRefresh: refetch,
+  }}
+  getRowId={(row) => row.id}
+  loading={isLoading}
   defaultPageSize={5}
+  pageSizeOptions={[5, 10, 25]}
+  height="420px"
 />`}
       </CodeBlock>
 
@@ -80,6 +92,23 @@ export default function DataGridSection() {
       >
         💡 Used in: User lists, device tables, call logs, any tabular data
         (e.g., User Management, Device Management, Reports)
+      </Typography>
+
+      <Typography
+        variant='caption'
+        color='info.main'
+        sx={{ mt: 2, display: 'block' }}
+      >
+        📄 <strong>Pagination:</strong> the footer (row count, rows-per-page,
+        page arrows) is always rendered — it is client-side over the rows you
+        pass in. Two things make it look absent: passing fewer rows than{' '}
+        <code>defaultPageSize</code>, which leaves every control disabled, and
+        leaving <code>height</code> unset. The host default height assumes the
+        host's own page chrome, so a page that renders a heading above the grid
+        pushes the footer below the fold. Set an explicit <code>height</code>{' '}
+        (e.g. <code>&quot;420px&quot;</code>, <code>&quot;60vh&quot;</code>) —
+        never <code>&quot;auto&quot;</code>, which collapses the grid to zero
+        height.
       </Typography>
 
       <Typography
