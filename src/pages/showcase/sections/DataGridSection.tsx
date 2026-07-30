@@ -101,14 +101,18 @@ export default function DataGridSection() {
       >
         📄 <strong>Pagination:</strong> the footer (row count, rows-per-page,
         page arrows) is always rendered — it is client-side over the rows you
-        pass in. Two things make it look absent: passing fewer rows than{' '}
-        <code>defaultPageSize</code>, which leaves every control disabled, and
-        leaving <code>height</code> unset. The host default height assumes the
-        host's own page chrome, so a page that renders a heading above the grid
-        pushes the footer below the fold. Set an explicit <code>height</code>{' '}
-        (e.g. <code>&quot;420px&quot;</code>, <code>&quot;60vh&quot;</code>) —
-        never <code>&quot;auto&quot;</code>, which collapses the grid to zero
-        height.
+        pass in. The usual reason it looks absent is{' '}
+        <code>height=&quot;auto&quot;</code>: that sizes the grid to its rows,
+        so the footer follows the last row — roughly{' '}
+        <code>rows × rowHeight</code> down the page, about 1600px at{' '}
+        <code>defaultPageSize=25</code> with 64px rows, so it is two screens
+        below the fold. Use <code>&quot;auto&quot;</code> only with a small{' '}
+        <code>defaultPageSize</code>. A bounded height (the default{' '}
+        <code>calc(100vh - 377px)</code>, or <code>&quot;420px&quot;</code> as
+        here) pins the footer to the bottom of the grid and keeps it visible —
+        raise the offset if you render anything above the grid. Passing fewer
+        rows than <code>defaultPageSize</code> also leaves every control
+        correctly disabled.
       </Typography>
 
       <Typography

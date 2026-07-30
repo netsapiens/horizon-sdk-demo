@@ -152,28 +152,50 @@ export default function DevicesPage() {
 to be missing, it is one of the four causes below — in rough order of how often
 they come up.
 
-### 1. `height` is unset, so the footer is below the fold
+### 1. `height="auto"` pushes the footer far below the fold
 
-The default is the host's `calc(100vh - 377px)` — an offset tuned to the _host's_
-page chrome. Your app renders its own heading, description, or cards above the
-grid, and every pixel of that pushes the bottom of the grid (and therefore the
-footer) further down. The grid still works; the pagination is simply off-screen.
-
-**Always pass an explicit `height`** when the grid is not the first thing on the
-page:
+**This is the most common cause, and the one that surprises people.** `auto` makes
+the grid as tall as its rows, and the footer sits directly beneath the last row —
+not pinned to the bottom of a fixed box. So the footer's distance down the page is
+`rows × rowHeight`:
 
 ```text
-height="520px"                  → fixed
-height="60vh"                   → viewport-relative
-height="calc(100vh - 320px)"    → viewport minus your own chrome
+defaultPageSize={25} × rowHeight 64px  ≈ 1,600px of rows
+                                       → the footer is ~1,600px down the page
 ```
 
-### 2. `height="auto"` collapses the grid
+On a 900px-tall viewport that is roughly two screens of scrolling before the
+pagination is visible. Nothing is broken — the controls are simply far off-screen,
+and it reads as "this grid has no pagination".
 
-The grid runs with MUI's `autoHeight` disabled, so an auto-height parent gives it
-nothing to measure and it collapses to zero — no rows, no footer. Never pass
-`'auto'`. If you want the grid to size to a container, give that container a real
-height and pass `height="100%"`.
+`auto` is still a legitimate choice: it is right when you want the grid to grow
+with its rows and let the page scroll, e.g. a short table embedded in a longer
+page. Just pair it with a small `defaultPageSize` (5–10) so the footer stays
+reachable.
+
+If you want the footer always visible without scrolling, use a bounded height
+instead — see below.
+
+### 2. A bounded `height` that is too tall for your page
+
+A bounded height pins the footer to the bottom of the grid box and scrolls the rows
+inside it. That is what host pages do, and it is the default:
+
+```text
+height="calc(100vh - 377px)"    → the default: viewport minus standard page chrome
+height="calc(100vh - 320px)"    → viewport minus your own chrome
+height="60vh"                   → viewport-relative
+height="520px"                  → fixed
+height="100%"                   → fill a parent that has a real height
+```
+
+The default offset (377px) accounts for the standard chrome above a table —
+breadcrumbs, title row, content padding, grid toolbar — so a grid that is the
+**first thing** in your page content ends flush with the viewport bottom.
+
+Every extra pixel you render above the grid pushes the bottom of the box (and the
+footer with it) that much further down. If your page adds its own heading,
+description, cards, or a filter row, increase the offset to match.
 
 ### 3. Fewer rows than `defaultPageSize`
 
