@@ -24,6 +24,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useHorizonContext, useLocale } from '@netsapiens/horizon-sdk';
 
 import type { RecentCall } from '../mocks/recentCalls';
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import { fetchRecentCalls } from '../api/callsApi';
 import { lookupCrmRecord, normalizePhoneNumber } from '../mocks/crm';
 import { formatDuration, SAMPLE_RECENT_CALLS } from '../mocks/recentCalls';
@@ -96,7 +97,7 @@ const VENDOR_CRM_BASE_URL = 'https://app.example-crm.example';
 /** How the live CDR fetch resolved — drives the apiProxy status banner. */
 type LiveStatus = 'loading' | 'live' | 'empty' | 'error';
 
-export default function CrmIntegrationPage() {
+export default function CrmIntegrationPage({ ...marker }: ZoneMarkerProps) {
   const horizonContext = useHorizonContext();
   const { t } = useLocale();
   const { user, api } = horizonContext;
@@ -164,7 +165,11 @@ export default function CrmIntegrationPage() {
     horizonContext.ui || {};
 
   if (!PageTemplate || !Paper || !Stack || !Typography || !Chip || !Box) {
-    return <div style={{ padding: 24 }}>UI components not available</div>;
+    return (
+      <div {...marker} style={{ padding: 24 }}>
+        UI components not available
+      </div>
+    );
   }
 
   const callLabel = (c: RecentCall) => {
@@ -175,6 +180,7 @@ export default function CrmIntegrationPage() {
 
   return (
     <PageTemplate
+      {...marker}
       title={`${VENDOR_NAME} Integration`}
       subtitle="The signed-in user's NetSapiens calls, matched to their CRM record"
       breadcrumbs={[

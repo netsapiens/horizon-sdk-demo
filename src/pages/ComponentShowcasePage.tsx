@@ -8,6 +8,7 @@
  */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import {
   AlertSection,
   AvatarSection,
@@ -28,17 +29,22 @@ import {
   TypographySection,
 } from './showcase/sections';
 
-export default function ComponentShowcasePage() {
+export default function ComponentShowcasePage({ ...marker }: ZoneMarkerProps) {
   const { ui } = useHorizonContext();
   const { PageTemplate } = ui?.templates || {};
   const { Stack } = ui || {};
 
   if (!PageTemplate || !Stack) {
-    return <div style={{ padding: 24 }}>UI components not available</div>;
+    return (
+      <div {...marker} style={{ padding: 24 }}>
+        UI components not available
+      </div>
+    );
   }
 
   return (
     <PageTemplate
+      {...marker}
       title='Component Showcase'
       subtitle='Visual reference for all available MUI Aurora shared components'
       breadcrumbs={[

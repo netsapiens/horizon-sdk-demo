@@ -27,7 +27,7 @@ import {
   extensionRegistrations,
   routeTestId,
 } from './integration/zones';
-import { withZoneTestId } from './integration/withZoneTestId';
+import { type ZoneMarkerProps, withZoneTestId } from './integration/withZoneTestId';
 import ComponentShowcasePage from './pages/ComponentShowcasePage';
 import CrmIntegrationPage from './pages/CrmIntegrationPage';
 import DemoPage from './pages/DemoPage';
@@ -48,10 +48,12 @@ export default function App(horizonContext: HorizonContext) {
   // HorizonContext (theme/locale/ui) available via useHorizonContext().
   const DemoPageWithContext = useMemo(
     () =>
-      function DemoPageWithContext() {
+      // Forward the marker props withZoneTestId injects (data-testid/data-zone)
+      // into the page so it can tag its own root — otherwise they're dropped.
+      function DemoPageWithContext(props: ZoneMarkerProps) {
         return (
           <HorizonContextProvider context={horizonContext}>
-            <DemoPage />
+            <DemoPage {...props} />
           </HorizonContextProvider>
         );
       },
@@ -61,10 +63,10 @@ export default function App(horizonContext: HorizonContext) {
 
   const ComponentShowcasePageWithContext = useMemo(
     () =>
-      function ComponentShowcasePageWithContext() {
+      function ComponentShowcasePageWithContext(props: ZoneMarkerProps) {
         return (
           <HorizonContextProvider context={horizonContext}>
-            <ComponentShowcasePage />
+            <ComponentShowcasePage {...props} />
           </HorizonContextProvider>
         );
       },
@@ -74,10 +76,10 @@ export default function App(horizonContext: HorizonContext) {
 
   const CrmIntegrationPageWithContext = useMemo(
     () =>
-      function CrmIntegrationPageWithContext() {
+      function CrmIntegrationPageWithContext(props: ZoneMarkerProps) {
         return (
           <HorizonContextProvider context={horizonContext}>
-            <CrmIntegrationPage />
+            <CrmIntegrationPage {...props} />
           </HorizonContextProvider>
         );
       },

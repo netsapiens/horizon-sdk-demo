@@ -13,6 +13,7 @@
 import { type ComponentType, type CSSProperties, useState } from 'react';
 import { useHorizonContext, VERSION } from '@netsapiens/horizon-sdk';
 
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import CodePanel from './demo/CodePanel';
 import OverviewPanel from './demo/OverviewPanel';
 import PatternsPanel from './demo/PatternsPanel';
@@ -38,7 +39,7 @@ const TABS: [TabKey, string][] = [
   ['walkthrough', 'Walkthrough'],
 ];
 
-export default function DemoPage() {
+export default function DemoPage({ ...marker }: ZoneMarkerProps) {
   const horizonContext = useHorizonContext();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
@@ -56,7 +57,7 @@ export default function DemoPage() {
 
   if (!PageTemplate || !Paper || !Stack || !Box || !Typography || !s || !themeTokens) {
     return (
-      <div style={{ padding: '24px' }}>
+      <div {...marker} style={{ padding: '24px' }}>
         <h1>Horizon SDK Demo</h1>
         <p>UI context not available.</p>
       </div>
@@ -65,6 +66,7 @@ export default function DemoPage() {
 
   return (
     <PageTemplate
+      {...marker}
       title='Horizon SDK Demo'
       subtitle='One federated app, extending Horizon in every supported way'
       breadcrumbs={[
