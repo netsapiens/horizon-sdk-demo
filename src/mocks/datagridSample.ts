@@ -43,4 +43,55 @@ export const DATAGRID_SAMPLE_USERS: SampleUser[] = [
     role: 'User',
     status: 'Active',
   },
+  // Rows 6+ exist so the showcase pages: with only one page of rows every
+  // pagination control renders disabled, which reads as "pagination is missing".
+  {
+    id: 6,
+    name: 'Dana Scully',
+    email: 'dana@example.com',
+    role: 'Admin',
+    status: 'Active',
+  },
+  {
+    id: 7,
+    name: 'Evan Wright',
+    email: 'evan@example.com',
+    role: 'User',
+    status: 'Inactive',
+  },
+  {
+    id: 8,
+    name: 'Fiona Chen',
+    email: 'fiona@example.com',
+    role: 'Editor',
+    status: 'Active',
+  },
+  {
+    id: 9,
+    name: 'Gabriel Ortiz',
+    email: 'gabriel@example.com',
+    role: 'User',
+    status: 'Active',
+  },
+  {
+    id: 10,
+    name: 'Hannah Patel',
+    email: 'hannah@example.com',
+    role: 'User',
+    status: 'Inactive',
+  },
+  {
+    id: 11,
+    name: 'Ibrahim Khan',
+    email: 'ibrahim@example.com',
+    role: 'Editor',
+    status: 'Active',
+  },
+  {
+    id: 12,
+    name: 'Julia Moreau',
+    email: 'julia@example.com',
+    role: 'User',
+    status: 'Active',
+  },
 ];
