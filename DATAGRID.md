@@ -226,6 +226,103 @@ keeps jumping:
 `totalCount` is the real total, `progress` is 0–100, and `isLoadingAny` is true
 while any page is in flight.
 
+## Keep `columns` and `actions` stable
+
+**Define `columns` and `actions` outside the render, or wrap them in `useMemo`.**
+Passing a fresh array literal makes the grid reprocess every column on every
+render of your component, which is the single most common cause of a slow table.
+
+This is the one performance contract the template asks of you. The grid derives
+its internal column set from the `columns` and `actions` you pass and caches it
+against their **identity**, not their contents — so a new array with identical
+contents still invalidates the cache and triggers a full column rebuild.
+
+That is cheap when your component only re-renders on new data. It is expensive
+when your component re-renders often, and the case that bites hardest is a table
+and a form on the same page:
+
+```text
+form state lives on the page component
+  → each keystroke re-renders the page
+    → columns={[…]} is a new array
+      → grid reprocesses every column
+        → 150-300ms per character typed
+```
+
+Nothing looks wrong in review — the form is fine, the table is fine, and the cost
+only appears when they share a component.
+
+```tsx
+// ✅ Constant columns: hoist to module scope. Zero identity churn, no hook.
+const COLUMNS: DatagridColumn<Device>[] = [
+  { field: 'name', headerName: 'Name', flex: 1, minWidth: 160 },
+  { field: 'mac', headerName: 'MAC Address', width: 160 },
+];
+
+export default function DevicesPage() {
+  const [search, setSearch] = useState('');
+
+  // ✅ Columns that close over component state or handlers: useMemo.
+  const actions = useMemo<DatagridAction<Device>[]>(
+    () => [{ label: 'Edit', icon: 'mdi:pencil', onClick: handleEdit }],
+    [handleEdit],
+  );
+
+  return <DatagridTemplate data={devices} columns={COLUMNS} actions={actions} />;
+}
+```
+
+```tsx
+// ❌ Rebuilt every render — including on every keystroke in `search`.
+return (
+  <DatagridTemplate
+    data={devices}
+    columns={[{ field: 'name', headerName: 'Name', flex: 1 }]}
+    actions={[{ label: 'Edit', icon: 'mdi:pencil', onClick: (r) => edit(r) }]}
+  />
+);
+```
+
+### The handlers your memo depends on must be stable too
+
+A `useMemo` whose dependency changes every render does nothing. If `actions`
+depends on a handler, that handler needs `useCallback` — otherwise you have paid
+for a memo that never holds:
+
+```tsx
+// ❌ handleEdit is a new function each render, so `actions` rebuilds anyway.
+function handleEdit(row: Device) { … }
+const actions = useMemo(() => [{ …, onClick: handleEdit }], [handleEdit]);
+
+// ✅
+const handleEdit = useCallback((row: Device) => { … }, []);
+const actions = useMemo(() => [{ …, onClick: handleEdit }], [handleEdit]);
+```
+
+If your project has `react-hooks/exhaustive-deps` disabled, nothing will warn you
+about a wrong dependency array — check it by hand. Watch for identifiers that
+appear only inside comments in the memoised block; they are not dependencies.
+
+### The same applies to every object-valued prop
+
+`toolbar`, `initialState`, `pageContext`, `getDetailPanelContent`,
+`getDetailPanelHeight`, and `getRowId` are all read the same way. Inline object
+and arrow literals give each a new identity per render:
+
+```tsx
+// ❌ four new identities every render
+<DatagridTemplate
+  toolbar={{ enableSearch: true, onRefresh: refetch }}
+  getRowId={(row) => row.id}
+  getDetailPanelContent={({ row }) => <DeviceDetail id={row.id} />}
+  getDetailPanelHeight={() => 'auto'}
+/>
+```
+
+`getRowId` and `getDetailPanelHeight` are usually constant — hoist them to module
+scope. `toolbar` normally depends on a little state (`refreshing`), so `useMemo`
+it. `getDetailPanelContent` wants `useCallback`.
+
 ## Columns
 
 `DatagridColumn` mirrors the subset of MUI X `GridColDef` the shared DataTable
@@ -357,8 +454,11 @@ own `columnVisibilityVariant` so their saved choices don't overwrite each other:
 - `dynamicColumnsZone="<zone-id>"` lets other federated apps contribute columns
   to your table (they participate fully in sorting, filtering, and export).
 - `pageContext={memoizedObject}` merges state into the shared page-context store
-  so other apps' extensions can read it. Memoize it, or it re-publishes every
-  render.
+  so other apps' extensions can read it. Memoize it — see
+  [Keep `columns` and `actions` stable](#keep-columns-and-actions-stable). The
+  store now ignores a write whose payload is unchanged, so a fresh literal
+  holding equal primitives no longer republishes; but any nested value with a new
+  identity does, and every republish re-renders the host layout.
 
 ## Hierarchy and detail panels
 

@@ -4,6 +4,47 @@ import { useHorizonContext } from '@netsapiens/horizon-sdk';
 import { CodeBlock } from '../../../components/CodeBlock';
 import { DATAGRID_SAMPLE_USERS } from '../../../mocks/datagridSample';
 
+// Hoisted to module scope on purpose. The grid caches its internal column set
+// against the identity of `columns`/`actions`/`toolbar`, so a fresh literal per
+// render makes it reprocess every column — the cost that turns a table sharing a
+// component with a form into 150-300ms per keystroke. These close over nothing,
+// so they never need to be rebuilt. See DATAGRID.md § "Keep columns and actions
+// stable".
+const COLUMNS = [
+  { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
+  { field: 'email', headerName: 'Email', flex: 1, minWidth: 200 },
+  { field: 'role', headerName: 'Role', width: 120 },
+  { field: 'status', headerName: 'Status', width: 100 },
+];
+
+const ACTIONS = [
+  {
+    label: 'Edit',
+    icon: 'mdi:pencil',
+    onClick: (row: unknown) => console.log('Edit:', row),
+  },
+  {
+    label: 'Delete',
+    icon: 'mdi:delete',
+    onClick: (row: unknown) => console.log('Delete:', row),
+    color: 'error' as const,
+  },
+];
+
+const TOOLBAR = {
+  enableSearch: true,
+  searchPlaceholder: 'Search users...',
+  enableExport: true,
+  enableFilter: true,
+  enableColumns: true,
+  enableRefresh: true,
+  onRefresh: () => console.log('Refresh'),
+};
+
+const PAGE_SIZE_OPTIONS = [5, 10, 25];
+
+const getRowId = (row: { id: string | number }) => row.id;
+
 export default function DataGridSection() {
   const { ui } = useHorizonContext();
   const { Box, Typography, Paper, Divider } = ui || {};
@@ -22,37 +63,12 @@ export default function DataGridSection() {
       <Box>
         <DatagridTemplate
           data={DATAGRID_SAMPLE_USERS}
-          columns={[
-            { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
-            { field: 'email', headerName: 'Email', flex: 1, minWidth: 200 },
-            { field: 'role', headerName: 'Role', width: 120 },
-            { field: 'status', headerName: 'Status', width: 100 },
-          ]}
-          actions={[
-            {
-              label: 'Edit',
-              icon: 'mdi:pencil',
-              onClick: (row) => console.log('Edit:', row),
-            },
-            {
-              label: 'Delete',
-              icon: 'mdi:delete',
-              onClick: (row) => console.log('Delete:', row),
-              color: 'error',
-            },
-          ]}
-          toolbar={{
-            enableSearch: true,
-            searchPlaceholder: 'Search users...',
-            enableExport: true,
-            enableFilter: true,
-            enableColumns: true,
-            enableRefresh: true,
-            onRefresh: () => console.log('Refresh'),
-          }}
-          getRowId={(row) => row.id}
+          columns={COLUMNS}
+          actions={ACTIONS}
+          toolbar={TOOLBAR}
+          getRowId={getRowId}
           defaultPageSize={5}
-          pageSizeOptions={[5, 10, 25]}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
           height='420px'
         />
       </Box>
@@ -61,28 +77,49 @@ export default function DataGridSection() {
       <CodeBlock>
         {`const { DatagridTemplate } = horizonContext.ui.templates;
 
-<DatagridTemplate
-  data={users}
-  columns={[
-    { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
-    { field: 'email', headerName: 'Email', flex: 1, minWidth: 200 },
-    { field: 'role', headerName: 'Role', width: 120 },
-    { field: 'status', headerName: 'Status', width: 100 },
-  ]}
-  actions={[
-    { label: 'Edit', icon: 'mdi:pencil', onClick: (row) => edit(row) },
-    { label: 'Delete', icon: 'mdi:delete', onClick: (row) => remove(row), color: 'error' },
-  ]}
-  toolbar={{
-    enableSearch: true, enableExport: true, enableFilter: true, enableColumns: true,
-    enableRefresh: true, onRefresh: refetch,
-  }}
-  getRowId={(row) => row.id}
-  loading={isLoading}
-  defaultPageSize={5}
-  pageSizeOptions={[5, 10, 25]}
-  height="420px"
-/>`}
+// Define these OUTSIDE the render. The grid caches its column set against the
+// identity of columns/actions/toolbar, so a fresh array literal per render makes
+// it reprocess every column. On a page that also holds a form, that turns into
+// 150-300ms per keystroke. See DATAGRID.md § "Keep columns and actions stable".
+const COLUMNS = [
+  { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
+  { field: 'email', headerName: 'Email', flex: 1, minWidth: 200 },
+  { field: 'role', headerName: 'Role', width: 120 },
+  { field: 'status', headerName: 'Status', width: 100 },
+];
+const getRowId = (row) => row.id;
+
+function UsersPage() {
+  // Anything closing over state or handlers goes in useMemo/useCallback instead.
+  const actions = useMemo(
+    () => [
+      { label: 'Edit', icon: 'mdi:pencil', onClick: edit },
+      { label: 'Delete', icon: 'mdi:delete', onClick: remove, color: 'error' },
+    ],
+    [edit, remove],
+  );
+  const toolbar = useMemo(
+    () => ({
+      enableSearch: true, enableExport: true, enableFilter: true,
+      enableColumns: true, enableRefresh: true, onRefresh: refetch,
+    }),
+    [refetch],
+  );
+
+  return (
+    <DatagridTemplate
+      data={users}
+      columns={COLUMNS}
+      actions={actions}
+      toolbar={toolbar}
+      getRowId={getRowId}
+      loading={isLoading}
+      defaultPageSize={5}
+      pageSizeOptions={[5, 10, 25]}
+      height="420px"
+    />
+  );
+}`}
       </CodeBlock>
 
       <Typography
