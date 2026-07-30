@@ -100,6 +100,13 @@
       "path": "crm-integration",
       "fullPath": "/manage/crm-integration",
       "testId": "sdk-demo-page-crm-integration"
+    },
+    {
+      "id": "ucaas-call-recordings",
+      "parentPath": "/home",
+      "path": "call-recordings",
+      "fullPath": "/home/call-recordings",
+      "testId": "sdk-demo-page-call-recordings"
     }
   ],
   "columns": [

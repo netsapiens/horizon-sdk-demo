@@ -14,24 +14,28 @@ light and dark mode.
 
 ## What it demonstrates
 
-This single app registers **3 full-page routes**, **10 zone extensions**, **1
+This single app registers **4 full-page routes**, **10 zone extensions**, **1
 dynamic table column**, **1 live call-event subscription**, an **on-demand
 side panel**, and a **remote-auth handshake** with a backend.
 
-> **Building a data table?** Read **[DATAGRID.md](./DATAGRID.md)** — the
-> page-layout anatomy, and the `height` rule that otherwise leaves your pagination
-> footer below the fold. The same guide ships inside the installed package at
-> `node_modules/@netsapiens/horizon-sdk/DATAGRID.md`. The live example is the
-> `DatagridTemplate` section of the Component Showcase page
+> **Building a data table?** Start with the **Call Recordings** page
+> (`pages/CallRecordingsPage.tsx`) — a complete list page built the way a native
+> Horizon page is built, and the thing to copy. Then read
+> **[DATAGRID.md](./DATAGRID.md)** for the page-layout anatomy and the `height`
+> rule that otherwise leaves your pagination footer below the fold. The same guide
+> ships inside the installed package at
+> `node_modules/@netsapiens/horizon-sdk/DATAGRID.md`. There is also a minimal
+> `DatagridTemplate` section on the Component Showcase page
 > (`src/pages/showcase/sections/DataGridSection.tsx`).
 
 ### Full-page routes — `sdk.registerRoute()`
 
-| Page               | Menu location              | Notes                                                                                                                                                                                                                 |
-| ------------------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Horizon SDK Demo   | Apps                       | The overview/walkthrough page (`pages/DemoPage.tsx`).                                                                                                                                                                 |
-| Component Showcase | Apps                       | Reference for every shared MUI Aurora component (`pages/ComponentShowcasePage.tsx`).                                                                                                                                  |
-| CRM Integration    | Manage (after _Call Logs_) | Lists the user's calls from a **live** NetSapiens v2 API call, matched to their CRM record — registered into the Manage menu to show the Manage tree can be extended, not just Apps (`pages/CrmIntegrationPage.tsx`). |
+| Page               | Menu location                  | Notes                                                                                                                                                                                                                                                                                                                     |
+| ------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Horizon SDK Demo   | Apps                           | The overview/walkthrough page (`pages/DemoPage.tsx`).                                                                                                                                                                                                                                                                     |
+| Component Showcase | Apps                           | Reference for every shared MUI Aurora component (`pages/ComponentShowcasePage.tsx`).                                                                                                                                                                                                                                      |
+| CRM Integration    | Manage (after _Call Logs_)     | Lists the user's calls from a **live** NetSapiens v2 API call, matched to their CRM record — registered into the Manage menu to show the Manage tree can be extended, not just Apps (`pages/CrmIntegrationPage.tsx`).                                                                                                     |
+| Call Recordings    | My Account (after _Call Logs_) | **The reference list page.** Everything — search, filter, columns, export, refresh, checkbox selection, master-detail and the pagination footer — comes from `DatagridTemplate`; the primary action sits in `PageTemplate`'s header `actions`. Shows the /home tree can be extended too (`pages/CallRecordingsPage.tsx`). |
 
 ### Zone extensions — `sdk.registerDynamicExtension()`
 
