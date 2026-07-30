@@ -3,7 +3,7 @@
  *
  * This is the orchestrator: it initializes the SDK and, in a single effect,
  * registers everything the demo contributes to the host —
- *   - 3 full-page routes       (sdk.registerRoute)
+ *   - 4 full-page routes       (sdk.registerRoute)
  *   - 10 zone extensions        (sdk.registerDynamicExtension)
  *   - 1 dynamic table column    (sdk.registerDynamicColumn)
  *   - 1 call-event subscription (sdk.subscribeToCallEvents)
@@ -21,13 +21,15 @@ import {
   useRemoteApp,
 } from '@netsapiens/horizon-sdk';
 
+import type { ZoneMarkerProps } from './integration/withZoneTestId';
 import { CallPriorityCell } from './columns/CallPriorityColumn';
+import { withZoneTestId } from './integration/withZoneTestId';
 import {
   columnTestId,
   extensionRegistrations,
   routeTestId,
 } from './integration/zones';
-import { type ZoneMarkerProps, withZoneTestId } from './integration/withZoneTestId';
+import CallRecordingsPage from './pages/CallRecordingsPage';
 import ComponentShowcasePage from './pages/ComponentShowcasePage';
 import CrmIntegrationPage from './pages/CrmIntegrationPage';
 import DemoPage from './pages/DemoPage';
@@ -87,9 +89,22 @@ export default function App(horizonContext: HorizonContext) {
     [],
   );
 
+  const CallRecordingsPageWithContext = useMemo(
+    () =>
+      function CallRecordingsPageWithContext(props: ZoneMarkerProps) {
+        return (
+          <HorizonContextProvider context={horizonContext}>
+            <CallRecordingsPage {...props} />
+          </HorizonContextProvider>
+        );
+      },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   useEffect(() => {
     // ============================================================
-    // 1. FULL PAGE ROUTES — added to the Apps and Manage menus
+    // 1. FULL PAGE ROUTES — added to the Apps, Manage and My Account menus
     // ============================================================
     sdk
       .registerRoute({
@@ -147,6 +162,31 @@ export default function App(horizonContext: HorizonContext) {
       })
       .catch((error) =>
         console.error('[Demo App] Failed to register CRM Integration:', error),
+      );
+
+    sdk
+      .registerRoute({
+        id: 'ucaas-call-recordings',
+        // Mounts under the host's /home/$ dynamic-route outlet (→
+        // /home/call-recordings), which puts it in the My Account menu — the
+        // third menu tree this app extends, alongside Apps and Manage.
+        //
+        // Placed right after Call Logs, which recordings pair naturally with.
+        // The anchor is matched by normalizing the menu item's name, so
+        // 'call-logs' resolves the My Account item whose name is 'CALL_LOGS'
+        // (both normalize to 'calllogs') even though its path is /home/inbox/call.
+        parentPath: '/home',
+        path: 'call-recordings',
+        label: 'Call Recordings',
+        icon: 'mdi:record-rec',
+        placement: { after: 'call-logs' },
+        component: withZoneTestId(
+          CallRecordingsPageWithContext,
+          routeTestId('ucaas-call-recordings'),
+        ),
+      })
+      .catch((error) =>
+        console.error('[Demo App] Failed to register Call Recordings:', error),
       );
 
     // ============================================================
