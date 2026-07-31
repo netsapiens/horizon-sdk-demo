@@ -238,9 +238,13 @@ export default function App(horizonContext: HorizonContext) {
         type: 'string',
         // Alignment is handled by the SDK — registered columns default to
         // right-aligned (matching native columns) unless a column overrides it.
-        renderCell: (params) => (
+        // Second argument is the host-built extension context — the same `ui`,
+        // `theme`, `t` and app-scoped `eventBus` a zone extension receives. The
+        // cell renders from `context.ui`, so it re-themes with the host toggle.
+        renderCell: (params, context) => (
           <CallPriorityCell
             params={params}
+            context={context}
             data-testid={columnTestId('demo-call-priority-column')}
             data-zone='call-logs-columns'
           />

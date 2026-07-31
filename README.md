@@ -75,6 +75,13 @@ the **global topbar Help button** (`QuickLinksPanel`).
 A sortable/filterable **Priority** column merged into the host's Call Logs table
 (`columns/CallPriorityColumn.tsx`), zone `call-logs-columns`.
 
+`renderCell` receives `(params, context)` — the second argument is the same
+`ExtensionContext` a zone extension gets (`ui`, `theme`, `t`, app-scoped
+`eventBus`). This cell renders through `context.ui.Chip`, so it re-colours with
+the host's light/dark toggle; its fallback branch shows the alternative for
+app-owned colours (branch on `context.theme`, never on the `ui.theme` snapshot).
+One-argument renderers stay valid — the context is purely additive.
+
 ### Call events — `sdk.subscribeToCallEvents()`
 
 Subscribes to the live SIP call stream (`call-started` / `-answered` / `-missed`
