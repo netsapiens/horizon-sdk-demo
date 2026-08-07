@@ -171,6 +171,12 @@ export default function App(horizonContext: HorizonContext) {
         // /home/call-recordings), which puts it in the My Account menu — the
         // third menu tree this app extends, alongside Apps and Manage.
         //
+        // '/home' is the right prefix even though the menu reads "My Account":
+        // the label, the host's section id ('myaccount') and the URL prefix are
+        // three different strings for one tree. '/myaccount' is not a route.
+        // Older hosts resolve this URL but show no menu entry for it; see
+        // "Choosing a menu — parentPath" in the README.
+        //
         // Placed right after Call Logs, which recordings pair naturally with.
         // The anchor is matched by normalizing the menu item's name, so
         // 'call-logs' resolves the My Account item whose name is 'CALL_LOGS'
