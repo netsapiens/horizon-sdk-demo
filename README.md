@@ -37,6 +37,63 @@ side panel**, and a **remote-auth handshake** with a backend.
 | CRM Integration    | Manage (after _Call Logs_)     | Lists the user's calls from a **live** NetSapiens v2 API call, matched to their CRM record — registered into the Manage menu to show the Manage tree can be extended, not just Apps (`pages/CrmIntegrationPage.tsx`).                                                                                                     |
 | Call Recordings    | My Account (after _Call Logs_) | **The reference list page.** Everything — search, filter, columns, export, refresh, checkbox selection, master-detail and the pagination footer — comes from `DatagridTemplate`; the primary action sits in `PageTemplate`'s header `actions`. Shows the /home tree can be extended too (`pages/CallRecordingsPage.tsx`). |
 
+#### Choosing a menu — `parentPath`
+
+`parentPath` is a **URL prefix**, not a menu name. Four prefixes are routable —
+each has a splat route in the host that renders federated pages, and each maps
+to one menu tree:
+
+| `parentPath` | Menu it appears in | Host sitemap section id |
+| ------------ | ------------------ | ----------------------- |
+| `/apps`      | Apps               | `apps`                  |
+| `/manage`    | Manage             | `manage`                |
+| `/platform`  | Platform           | `platform`              |
+| `/home`      | **My Account**     | `myaccount`             |
+
+`/home` is the one to watch. The menu is labelled _My Account_, its internal
+section id is `myaccount`, and its URL prefix is `/home` — three different
+strings for the same tree. Use `/home`; `/myaccount` is not a route and will
+render a menu entry pointing at a URL that 404s.
+
+Registering Call Recordings under `/home` is what puts it in My Account:
+
+```ts
+sdk.registerRoute({
+  id: 'ucaas-call-recordings',
+  parentPath: '/home', // → My Account, at /home/call-recordings
+  path: 'call-recordings',
+  label: 'Call Recordings',
+  placement: { after: 'call-logs' },
+  component: CallRecordingsPage,
+});
+```
+
+**Only direct children of a routable prefix work.** The host resolves a URL one
+segment at a time and every segment must itself be a registered dynamic route,
+so nesting under a host page does not work even when that page exists:
+
+```ts
+parentPath: '/home'; // ✅ → /home/call-recordings
+parentPath: '/home/settings'; // ❌ 'settings' is a static host page, not a
+//    dynamic route — the URL cannot resolve
+```
+
+A nested `parentPath` fails in a confusing way: the menu entry renders (the host
+matches it to the static parent) but the URL 404s. If you want a page to sit
+visually beneath an existing item, register it at the prefix and position it
+with `placement` instead.
+
+`placement` anchors match on a **normalized** menu label, not a path. In the
+example above `after: 'call-logs'` resolves the My Account item whose name is
+`CALL_LOGS` — both normalize to `calllogs` — even though that item's own path is
+`/home/inbox/call`. Unmatched anchors fall back to the end of the menu.
+
+> **Host version:** menu entries for `/home` require the host-side fix that
+> maps the `myaccount` section to the `/home` prefix. On earlier hosts the route
+> still resolves — `/home/call-recordings` loads if entered directly — but no
+> menu entry appears, and nothing is logged to say why. `/apps`, `/manage` and
+> `/platform` are unaffected.
+
 ### Zone extensions — `sdk.registerDynamicExtension()`
 
 Each registration targets a **zone** plus one or more **route patterns**. The
