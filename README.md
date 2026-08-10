@@ -265,12 +265,60 @@ exposes: {
 }
 ```
 
-`react`, `react-dom`, and `@netsapiens/horizon-sdk` are shared as singletons so
-the host and remote use one instance each.
+`react`, `react-dom` and `loglevel` are shared as singletons so the host and
+remote use one instance each. React and React DOM in particular **must** stay
+singletons: your component renders inside the host's React tree, and a second
+copy fails as an invalid-hook-call that names nothing useful.
 
-> Do **not** add `@mui/material` to `shared`. Use MUI components via
-> `horizonContext.ui` / `context.ui` instead so extensions inherit the host
-> theme.
+> Do **not** add `@netsapiens/horizon-sdk` to `shared`. The host registers
+> `react`, `react-dom`, `loglevel`, `i18next` and `react-i18next` and nothing
+> else, so declaring the SDK shared cannot resolve to a host copy — and since
+> SDK 0.2.x, bundle verification **rejects** a bundle that declares it. Let it
+> bundle normally.
+
+> Do **not** add `@mui/material` or i18next to `shared` either. They are not
+> registered by the host, and declaring them as singletons fails at load with
+> "Unsatisfied version". Use MUI via `horizonContext.ui` / `context.ui` so
+> extensions inherit the host theme, and translations via `useLocale()`.
+
+### Bundle verification (SDK 0.2.x)
+
+Horizon verifies an extension bundle before it will load it: it fetches
+`remoteEntry.js`, every chunk and every source map, hashes them, runs a content
+analyser and records a verdict. A version that passes is promoted, and the host
+pins a SHA-384 of the exact bytes it verified. `webpack.config.js` carries the
+four settings that satisfy this:
+
+| Setting                                                            | Why                                                                                                              |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `SubresourceIntegrityPlugin({ hashFuncNames: ['sha384'] })`        | Emits chunk integrity values — the platform pins the entry, and without these nothing the entry loads is covered |
+| `output.crossOriginLoading: 'anonymous'`                           | Required for the browser to verify those values at all; SRI cannot check an opaque cross-origin response         |
+| `devtool: 'source-map'` (with `sourcesContent`, never `noSources`) | **A bundle with no source maps is rejected outright**, not warned about                                          |
+| `@netsapiens/horizon-sdk` absent from `shared`                     | See above                                                                                                        |
+
+Check a build before publishing — these are the same checks the platform runs:
+
+```bash
+npm run build
+npm run verify     # horizon-verify-bundle ./dist
+```
+
+⚠️ **The remote entry URL is stable, so the version field is load-bearing.** This
+app republishes over the same
+`https://netsapiens.github.io/horizon-sdk-demo/remoteEntry.js` on every deploy.
+Publish new bytes without changing the version and _nothing re-verifies_ — the
+platform goes on enforcing the previous bytes' hash against the new ones at the
+same URL, every host fails its integrity check, and the extension simply stops
+appearing with no verdict and no finding to explain it. Because that failure is
+silent, the deploy workflow guards it: it fails the build if `src`,
+`webpack.config.js`, `package.json` or `package-lock.json` changed without a
+version bump, and again if `package.json` and
+`src/integration/zones.manifest.json` disagree on the version.
+
+So: **bump `version` in both `package.json` and `zones.manifest.json` with every
+change to the bundle**, and release in a maintenance window — between the deploy
+and re-verification the CDN serves new bytes while the platform still pins the
+old hash.
 
 ## HorizonContext
 
@@ -375,11 +423,28 @@ know about. In the host's **Registered Apps** UI (or the platform API):
    `window[<webpack_module>]` after loading the script; a mismatch fails with
    `Container '<name>' not found`. This value is **immutable** — it's baked into
    the deployed bundle and is the root the server derives the app id from.
-3. **`integrity_hash`** _(optional, recommended for production)_ — an SRI hash of
-   `remoteEntry.js`. If set, the host verifies it before executing the script.
-   Because each build emits content-hashed filenames, **re-register the hash on
-   every deploy** or loads will fail with `Integrity check failed`. Leave it
-   blank while iterating.
+3. **`version`** → the `version` from `package.json`. Since SDK 0.2.x this is
+   what tells the platform to re-verify the bytes at the (stable) remote entry
+   URL. Registration alone verifies nothing: an app that has never had a version
+   submitted sits at `verification_status: none`, and the host filters it out of
+   `/ui-extensions?purpose=runtime` before the browser ever sees it — so it
+   registers no routes and no zones while looking perfectly healthy in the list.
+   Saving the **same** version again is a no-op; the platform refuses to
+   re-verify a pair it has already judged. Bump it.
+
+> **Do not send `integrity_hash`.** Earlier revisions of this README described it
+> as an optional SRI hash you computed and registered yourself. That is
+> withdrawn: the platform now computes the pin from the bytes it fetched at
+> verification time, the field is ignored if sent, and accepting a caller-supplied
+> value would make the pin self-attested.
+
+Read the verdict after saving — **expand the row** to see the findings. Three
+outcomes, and the middle one is not a failure: `approved` loads, `flagged` also
+**loads** (findings were recorded, so read their _severity_ — an `info` finding
+contributes nothing), and only `rejected` blocks. Expect a `size-delta` flag on
+the first 0.2.x submission: taking the SDK out of `shared` moves it into the
+bundle, and the analyser notes sharp size changes against the last approved
+version. That is correct behaviour and needs no action.
 
 The host also gates remotes by an **approved-domains** allowlist (defense in
 depth, on top of registration). The Horizon host approves **`*.github.io`**, so
