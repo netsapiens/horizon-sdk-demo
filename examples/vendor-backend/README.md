@@ -135,3 +135,27 @@ Expected: `status: 200` and a JSON body with a freshly minted
   it **when present** and reject on failure — a genuine cluster sends a valid one
   — but don't require its presence, or you'll reject legitimate webhooks from
   clusters that don't emit it.
+
+## If the webhook never arrives
+
+Your server not being called at all is the common first failure, and it is
+almost always registration rather than code — the platform validates the request
+before it makes any outbound call.
+
+Check, in this order:
+
+1. **Allowed callback hostnames** — a **comma-separated** list of origins, not a
+   JSON array. `https://api.example.com`, not `["https://api.example.com"]`; the
+   latter is read as one hostname including the brackets and matches nothing.
+   Origin only — no path.
+2. **Remote auth enabled** on the app registration.
+3. **Callback secret** matches the value this server verifies with. A mismatch
+   _does_ reach your server, and shows up as `401 invalid_signature` — so if you
+   see that, the wiring is right and only the secret is wrong.
+4. **Reachability** — the platform calls you from the internet, so the endpoint
+   has to resolve publicly over HTTPS. `curl https://<host>/health` from
+   somewhere outside your network before assuming anything else.
+
+If the JWT header is absent but the HMAC passes, that is not your bug: the
+cluster could not obtain a verification token, which is operator-side
+configuration. Verify when present, don't require it.

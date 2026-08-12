@@ -214,6 +214,32 @@ snippet. A runnable reference backend lives in [`examples/vendor-backend/`](exam
 > out and the panel
 > renders the error.
 
+#### Admin config on the app registration
+
+Three fields, and all three must be right or the request fails **before** your
+backend is contacted — so an untouched backend log is the expected symptom, not
+evidence your server is broken.
+
+| Field                      | Value                                               |
+| -------------------------- | --------------------------------------------------- |
+| Remote auth enabled        | `yes`                                               |
+| Allowed callback hostnames | the callback **origin** — `https://api.example.com` |
+| Callback secret            | the same value your backend verifies the HMAC with  |
+
+**Allowed hostnames is a comma-separated list, not JSON.** Write
+`https://api.example.com`, or `https://a.example.com,https://b.example.com` for
+several. A JSON array (`["https://api.example.com"]`) is read as a single
+hostname _including the brackets and quotes_, matches nothing, and the request is
+rejected with **403 "Callback URL not allowed"** — which reads like the origin
+was wrong when the format was.
+
+Match the **origin only**: scheme + host (+ port if non-standard). A full path
+such as `https://api.example.com/horizon/callback` will not match.
+
+If a request fails with a **500** and your backend was never called, check
+whether your portal session has expired — reload the host and retry before
+looking at the registration.
+
 ## Route patterns
 
 Patterns decide which host routes an extension applies to:
