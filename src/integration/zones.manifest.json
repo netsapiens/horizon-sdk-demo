@@ -3,7 +3,8 @@
   "appId": "horizon-extension-demo",
   "webpackModule": "horizonExtensionDemo",
   "remoteEntryUrl": "https://netsapiens.github.io/horizon-sdk-demo/remoteEntry.js",
-  "version": "1.1.0",
+  "$comment_requiredScopes": "Where a route or column declares `requiredScopes`, it is recorded here so the Playwright suite knows which signed-in scope can assert that surface — but the manifest is NOT what registers it. The enforcing value is an inline string literal at the registerRoute/registerDynamicColumn call site in App.tsx, because the platform analyser extracts an app's declared surface by reading string literals out of submitted source and cannot follow a constant or a loop. The duplication is deliberate; keep the two in step.",
+  "version": "1.2.0",
   "extensions": [
     {
       "id": "demo-export-button",
@@ -93,6 +94,7 @@
       "parentPath": "/apps",
       "path": "component-showcase",
       "fullPath": "/apps/component-showcase",
+      "requiredScopes": "DOMAIN_MANAGERS",
       "testId": "sdk-demo-page-component-showcase"
     },
     {
@@ -116,6 +118,7 @@
       "zone": "call-logs-columns",
       "field": "call-priority",
       "routes": ["/manage/call-logs", "/manage/*/call-logs"],
+      "requiredScopes": "PLATFORM",
       "testId": "sdk-demo-col-call-priority"
     }
   ]

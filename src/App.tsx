@@ -12,6 +12,22 @@
  * registration targets a zone plus one or more route patterns, and the host
  * mounts the matching zones on its own pages. The component itself renders
  * nothing visible (it's a headless remote); all UI is injected into the host.
+ *
+ * ── Scope declarations (SDK 0.2.4) ────────────────────────────────────────
+ * Two surfaces here declare `requiredScopes`, chosen to show the two cases that
+ * behave differently:
+ *
+ *   - Component Showcase sits under `/apps`, which has NO section floor, so its
+ *     'DOMAIN_MANAGERS' declaration is the only thing gating the page.
+ *   - The Priority column sits on a `/manage` page whose floor is already
+ *     ADMINS, and asks for 'PLATFORM' — narrowing a gate the host enforces, so a
+ *     Reseller sees Call Logs without that column.
+ *
+ * The rule underneath both: a declaration is intersected with the host's floor,
+ * so it can only ever restrict further. Declaring a wider audience grants
+ * nothing. Prefer a tier name over a scope list — the host resolves the name
+ * against its current membership, while a list is a snapshot that silently loses
+ * access as tiers change.
  */
 import type { CallEvent } from '@netsapiens/horizon-sdk';
 import { useEffect, useMemo } from 'react';
@@ -131,6 +147,23 @@ export default function App(horizonContext: HorizonContext) {
         label: 'Component Showcase',
         icon: 'mdi:palette',
         placement: { first: true },
+        // `/apps` carries no section floor, so this declaration is the ONLY
+        // thing gating the page — the case where `requiredScopes` does real
+        // work rather than narrowing something the host already enforces. It
+        // governs the nav entry and the URL together, so a Basic User neither
+        // sees the menu item nor reaches /apps/component-showcase by typing it.
+        //
+        // A tier NAME, not a scope list: the host resolves 'DOMAIN_MANAGERS'
+        // against its own current membership when access is checked, so if the
+        // platform re-members the tier this page follows with nothing to
+        // rebuild. A literal list would be a snapshot of today, and because the
+        // host intersects, a stale one quietly LOSES access rather than failing.
+        //
+        // Written inline rather than pulled from a constant on purpose: the
+        // platform analyser extracts an app's declared surface by reading string
+        // literals out of the submitted source, so a constant extracts as
+        // nothing and the Registered Apps page shows an empty Routes column.
+        requiredScopes: 'DOMAIN_MANAGERS',
         component: withZoneTestId(
           ComponentShowcasePageWithContext,
           routeTestId('ucaas-component-showcase'),
@@ -235,6 +268,17 @@ export default function App(horizonContext: HorizonContext) {
         { pattern: '/manage/call-logs' },
         { pattern: '/manage/*/call-logs' },
       ],
+      // Narrower than the page it appears on. Call Logs lives under `/manage`,
+      // whose section floor is ADMINS (Admin, Super User, Reseller); this column
+      // asks for PLATFORM, so a Reseller opens the page and sees every native
+      // column but not this one. That is the intended shape of a column gate —
+      // `renderCell` below is where action controls live, so a column reaches a
+      // user exactly as a zone extension does, and deserves the same thought.
+      //
+      // The host intersects this with the page's floor, so it can only subtract.
+      // Declaring a WIDER audience here (say 'END_USERS') would grant nothing —
+      // it would intersect to the empty set and hide the column from everyone.
+      requiredScopes: 'PLATFORM',
       column: {
         field: 'call-priority',
         headerName: 'Priority',

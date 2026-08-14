@@ -5,6 +5,7 @@
  * hand-writing each call. Adding/removing a zone extension is a manifest edit
  * plus a component entry in COMPONENTS below.
  */
+import type { ScopeRequirement } from '@netsapiens/horizon-sdk';
 import type { ComponentType } from 'react';
 
 import { ActiveCallsRecordingFilter } from '../extensions/ActiveCallsRecordingFilter';
@@ -17,8 +18,8 @@ import { HeaderStatusBadge } from '../extensions/HeaderStatusBadge';
 import { QuickActionButton } from '../extensions/QuickActionButton';
 import { TableToolbarInfo } from '../extensions/TableToolbarInfo';
 import { TopbarHelpButton } from '../extensions/TopbarHelpButton';
-import manifestJson from './zones.manifest.json';
 import { withZoneTestId } from './withZoneTestId';
+import manifestJson from './zones.manifest.json';
 
 interface ExtensionManifestEntry {
   id: string;
@@ -33,6 +34,13 @@ interface RouteManifestEntry {
   parentPath: string;
   path: string;
   fullPath: string;
+  /**
+   * Documentation only — the enforcing declaration is an inline literal at the
+   * `registerRoute` call site in App.tsx. Recorded here so the Playwright suite
+   * knows which signed-in scope can reach the page. See the manifest's
+   * `$comment_requiredScopes` for why it is duplicated rather than read from here.
+   */
+  requiredScopes?: ScopeRequirement;
   testId: string;
 }
 interface ColumnManifestEntry {
@@ -40,6 +48,8 @@ interface ColumnManifestEntry {
   zone: string;
   field: string;
   routes: string[];
+  /** Documentation only, as on RouteManifestEntry. */
+  requiredScopes?: ScopeRequirement;
   testId: string;
 }
 interface ZonesManifest {
@@ -98,13 +108,15 @@ export const extensionRegistrations: ExtensionRegistration[] =
 /** testId for a full-page route, by manifest id (used to tag the page root). */
 export function routeTestId(id: string): string {
   const testId = manifest.routes.find((r) => r.id === id)?.testId;
-  if (!testId) throw new Error(`zones.manifest.json: no route testId for "${id}"`);
+  if (!testId)
+    throw new Error(`zones.manifest.json: no route testId for "${id}"`);
   return testId;
 }
 
 /** testId for a dynamic column, by manifest id (used to tag each cell). */
 export function columnTestId(id: string): string {
   const testId = manifest.columns.find((c) => c.id === id)?.testId;
-  if (!testId) throw new Error(`zones.manifest.json: no column testId for "${id}"`);
+  if (!testId)
+    throw new Error(`zones.manifest.json: no column testId for "${id}"`);
   return testId;
 }
