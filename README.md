@@ -12,6 +12,14 @@ light and dark mode.
 > of everything below (Overview / Extension Zones / Route Patterns / Code /
 > Walkthrough). This README is the engineering companion to it.
 
+> **Upgrading an app built against SDK 0.1.x?** Read
+> **[MIGRATION-0.1.x-TO-0.2.x.md](./MIGRATION-0.1.x-TO-0.2.x.md)** first. It covers
+> the whole of 0.2.x — bundle verification and SRI, the reversed remote-entry URL
+> policy, the new `horizonContext.ui` surfaces, and `requiredScopes` — and leads
+> with the host-side changes that already affect a bundle you published months ago
+> and have not rebuilt. It replaces `MIGRATION_BUNDLE_VERIFICATION.md`, which
+> covered only the 0.2.1 half.
+
 ## What it demonstrates
 
 This single app registers **4 full-page routes**, **10 zone extensions**, **1
