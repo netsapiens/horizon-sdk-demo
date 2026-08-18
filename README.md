@@ -528,12 +528,16 @@ Then, on the platform:
 5. Wait for the Pages deploy to finish — the platform fetches the bytes at
    submission time, so submitting before Pages has published verifies the _old_
    bundle.
-6. In **Platform → UI SDK Management → Registered Apps**, open the app and press
-   **Save**. There is **no Deploy button** — a save submits for verification every
-   time, unconditionally. Set the Version field to the new number, or leave it and
-   the platform assigns the next free one. Submission, verification and promotion
-   are one action: it fetches, analyses and hashes the bundle, then promotes on
-   `approved` or `flagged`.
+6. In **Platform → UI SDK Management → Registered Apps**, press **Deploy** on the
+   app's row. Nothing else needs changing — that is the point of this action, and
+   it assigns the next free version itself. (Saving the app form also deploys, for
+   when you have edited the Remote Entry URL or Version by hand.) Submission,
+   verification and promotion are one step: it fetches, analyses and hashes the
+   bundle, then promotes on `approved` or `flagged`.
+
+   If the published bytes are identical to the verified ones you get "already up
+   to date" — a success, not a no-op.
+
 7. If it comes back `rejected`, fix the bundle and save again. The rejected version
    keeps its number and the auto-bump skips it.
 

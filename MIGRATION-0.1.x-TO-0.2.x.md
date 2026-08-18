@@ -472,6 +472,17 @@ default) applies **per fetch, not in total**, so a slow CDN stretches it.
 version. The platform refuses to re-verify an `(extension, version)` pair it has
 already judged, so you cannot roll back by re-submitting the old number.
 
+### Where the button is
+
+In **Platform → UI SDK Management → Registered Apps**, each row has a **Deploy**
+action. That is the submission: it fetches your bundle, verifies it, and promotes
+it on `approved` or `flagged`. There is no separate promote step, and you do not
+have to touch the version — Deploy assigns the next free one.
+
+Saving the app form **also** deploys. Use that when you have edited the Remote
+Entry URL or the Version by hand, so the edit and its submission go together.
+Use Deploy when only the bytes moved, which is the usual case.
+
 ## 2.6 Reading a verdict
 
 Three outcomes, and the middle one is not a failure:
@@ -900,15 +911,22 @@ causes, in the order worth checking:
    scheme+host+port match on the portal origin. If you are serving from a
    _different_ private-resolving name, give it a name that resolves publicly.
 
-**Saving the same version again returns 409.** The platform refuses to re-verify a
-version already on file for the extension: `This version has already been
-submitted; publish a new version instead`.
+**Submitting the same version again returns 409.** The platform refuses to
+re-verify a version already on file for the extension: `This version has already
+been submitted; publish a new version instead`.
 
 Note this includes versions **burned by a rejection** — a version row is written
-for every verdict. The auto-bump skips those, so pressing Save again after a
-rejection now picks the next free number rather than colliding with the rejected
-one. On an older build it collided and 409'd, and the recovery was to type a
-version two ahead of the one displayed.
+for every verdict. The auto-bump skips those, so deploying again after a rejection
+picks the next free number rather than colliding with the rejected one. On an
+older build it collided and 409'd, and the recovery was to type a version two
+ahead of the one displayed.
+
+**Nothing happened when I pressed Deploy, and no version appeared.** Look for
+"already up to date". The deploy endpoint is idempotent at the byte level: a
+published bundle that hashes to the pin already in force writes nothing and
+promotes nothing, and reports that as a success. If you expected a new version,
+your CDN is still serving the old bytes — check the deploy that publishes them
+finished before you submitted.
 
 **The app loads but renders nothing.** Check `exposes` includes `'./App'` exactly
 ([2.3](#23-exposes-must-be-exactly-app)).
