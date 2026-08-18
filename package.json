@@ -1,6 +1,6 @@
 {
   "name": "@netsapiens/horizon-sdk-demo",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Demo app showing how to extend NetSapiens Horizon with @netsapiens/horizon-sdk. A Module Federation remote loaded by the Horizon host.",
   "scripts": {
@@ -13,7 +13,7 @@
     "format:fix": "prettier --write ."
   },
   "dependencies": {
-    "@netsapiens/horizon-sdk": "^0.2.1",
+    "@netsapiens/horizon-sdk": "^0.2.4",
     "loglevel": "^1.9.2",
     "react": "19.2.0",
     "react-dom": "19.2.0"
