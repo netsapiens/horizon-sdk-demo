@@ -204,7 +204,20 @@ Only reachable if you adopt the new field, but worth knowing before you do. See
 
 # Part 2 — The bundle-verification contract (0.2.0)
 
-An 0.1.x bundle does not satisfy this. You cannot publish again without it.
+A bundle produced by an 0.1.x-era **build config** does not satisfy this, and you
+cannot publish again without the three build changes in
+[2.2](#22-the-build-changes).
+
+> **What is actually enforced is the BUILD OUTPUT, not your SDK version.** The
+> verifier inspects the bytes: chunk integrity, source maps, whether the SDK was
+> federated as `shared`. It has no view of your `package.json`, so a bundle still
+> depending on `@netsapiens/horizon-sdk` 0.1.x can and does pass every check once
+> the build config is fixed.
+>
+> That is deliberate, not an oversight — but it means upgrading the dependency is
+> separable work you can schedule independently of getting verified again. Do
+> upgrade it (0.2.x is where `requiredScopes`, `declareCapabilityScopes` and
+> `useRemoteAuth` live), just not because verification demands it.
 
 ## 2.1 Bump the version every time the bytes change
 
@@ -320,6 +333,16 @@ out: **missing source maps are a rejection, not a warning**, and no operator can
 relax it. No maps, no verdict, no load.
 
 ### 3. Take the SDK out of `shared`
+
+> **The error you will actually see**, which names neither the SDK nor `shared`:
+>
+> ```
+> ERROR in webpack-subresource-integrity: Asset remoteEntry.js
+>        contains unresolved integrity placeholders
+> ```
+>
+> Removing the SDK from `shared` resolves it immediately. Quoted here because it
+> is what you will paste into a search box.
 
 ```js
 shared: {
@@ -859,14 +882,33 @@ bumping the version ([2.1](#21-bump-the-version-every-time-the-bytes-change)). A
 your operator to check Sentry for an `sdk.integrity_mismatch` tag on your URL — that
 confirms it rather than leaving you guessing.
 
-**`rejected` with `fetch-failed`.** The platform could not read the URL. Check the
-stored remote entry URL character by character — a stray character from a
-copy-paste produces a 404, and nothing readable means nothing pinnable. Also confirm
-your origin is on the approved-origins list.
+**`rejected` with `fetch-failed`.** The platform could not read the URL. Three
+causes, in the order worth checking:
 
-**Saving the same version again does nothing.** The platform refuses to re-verify an
-`(extension, version)` pair it has already judged, and stays quiet about it because
-that normally means "already verified". Bump the version.
+1. **The URL.** Check the stored remote entry URL character by character — a stray
+   character from a copy-paste produces a 404, and nothing readable means nothing
+   pinnable.
+2. **The origin.** Confirm it is on the approved-origins list.
+3. **The resolved address.** The platform refuses a host that resolves to a
+   private, reserved or link-local address. On a **single-box install this
+   includes the portal's own FQDN**: `/etc/hosts` maps it to loopback, so the API
+   resolves its own portal name to `127.0.1.1` even though public DNS answers with
+   the WAN address. The finding carries `resolved_ip`, which tells you this
+   immediately.
+
+   Serving from the portal's own origin is supported — the guard exempts an exact
+   scheme+host+port match on the portal origin. If you are serving from a
+   _different_ private-resolving name, give it a name that resolves publicly.
+
+**Saving the same version again returns 409.** The platform refuses to re-verify a
+version already on file for the extension: `This version has already been
+submitted; publish a new version instead`.
+
+Note this includes versions **burned by a rejection** — a version row is written
+for every verdict. The auto-bump skips those, so pressing Save again after a
+rejection now picks the next free number rather than colliding with the rejected
+one. On an older build it collided and 409'd, and the recovery was to type a
+version two ahead of the one displayed.
 
 **The app loads but renders nothing.** Check `exposes` includes `'./App'` exactly
 ([2.3](#23-exposes-must-be-exactly-app)).
