@@ -38,16 +38,6 @@ import { subheading } from './styles';
 const VENDOR_ID = 'horizon-demo-backend';
 const SCOPES = ['contacts:read'];
 
-// ⚠️ VESTIGIAL, and only here to compile.
-//
-// The API ignores any callbackUrl in the request — the destination is
-// registration data now. But this demo depends on @netsapiens/horizon-sdk 0.2.4,
-// whose `RemoteAuthRequest.callbackUrl` is still REQUIRED, so the live call below
-// cannot omit it yet. Drop this constant (and the property at its call site) at
-// the next SDK bump, once the field is optional. The snippets on this page
-// already show the current shape, because that is what a partner should copy.
-const LEGACY_IGNORED_CALLBACK_URL = 'https://demo.example.com/horizon/callback';
-
 const CLIENT_SNIPPET = `// Simplest form: authenticate as soon as the app loads, no button.
 const { token, status, error, retry } = useRemoteAuth(
   horizonContext,
@@ -154,11 +144,7 @@ export default function RemoteAuthPanel({
     setError(null);
     try {
       const res = await auth.requestRemoteAuth(
-        {
-          vendorId: VENDOR_ID,
-          scopes: SCOPES,
-          callbackUrl: LEGACY_IGNORED_CALLBACK_URL, // ignored by the API; see above
-        },
+        { vendorId: VENDOR_ID, scopes: SCOPES },
         { timeout: 60000 },
       );
       setToken(res);
