@@ -494,6 +494,51 @@ depth, on top of registration). The Horizon host approves **`*.github.io`**, so
 any GitHub Pages origin is accepted without a host-side change — clients can
 self-host their remote on their own `*.github.io` and just register it.
 
+## Releasing a new version
+
+The partner-facing contract is in the SDK README under **Managing your app**. What
+follows is what this repo specifically requires — the parts CI enforces and a
+person will otherwise forget.
+
+**Two version fields must move together**, and the workflow fails the build if
+either is wrong:
+
+| File                                  | Why                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `package.json`                        | The remote entry URL is stable, so this is the only thing that tells the platform to re-verify. New bytes under an unchanged version leave it enforcing the **old** hash at the same URL — every host fails its integrity check and the extension silently stops appearing, with no verdict to explain it. |
+| `src/integration/zones.manifest.json` | Carries the version the Playwright suite registers the app under. If it drifts, the suite registers a version the deployed bytes were never published as.                                                                                                                                                  |
+
+The steps, start to finish:
+
+```bash
+# 1. bump BOTH version fields (package.json + zones.manifest.json)
+# 2. if the SDK dependency changed, install it
+npm install
+
+# 3. the same gates CI runs — fail here, not in Actions
+npm run build
+npm run verify        # expect PASS; version-bump / cors / submit are `note` by design
+npx tsc --noEmit      # baseline is 389 errors; adding none is the bar
+
+# 4. commit and merge to main. Pushing main triggers the Pages deploy.
+```
+
+Then, on the platform:
+
+5. Wait for the Pages deploy to finish — the platform fetches the bytes at
+   submission time, so submitting before Pages has published verifies the _old_
+   bundle.
+6. In **Platform → UI SDK Management → Registered Apps**, press **Deploy** on the
+   app. Submission and promotion are one action: the platform fetches, analyses
+   and hashes the bundle, and promotes it on `approved` or `flagged`. There is no
+   separate promote step.
+7. If it comes back `rejected`, fix the bundle and press Deploy again. The
+   rejected version keeps its number and the auto-bump skips it.
+
+⚠️ **Between the Pages deploy and the Deploy press**, the CDN serves new bytes
+while the platform still pins the old hash. Anyone starting a fresh session in
+that window will not see the extension. Keep the gap short.
+
 ## Notes
 
 - **Live data on the CRM Integration page.** On load it calls
