@@ -178,12 +178,17 @@ contract live — request a token, reuse the session-cached token, and clear it:
 ```tsx
 const { auth } = horizonContext;
 
-const token = await auth.requestRemoteAuth(
-  {
-    vendorId: 'horizon-demo-backend',
-    callbackUrl: 'https://demo.example.com/horizon/callback',
-    scopes: ['contacts:read'],
-  },
+// Authenticate on load — no button. `status`: idle | pending | ready | error.
+const { token, status, error, retry } = useRemoteAuth(
+  horizonContext,
+  'horizon-demo-backend',
+  { scopes: ['contacts:read'] },
+);
+
+// Or on demand, for a "Connect X" button. No callbackUrl: the destination is
+// registration data, set by an administrator.
+const onDemand = await auth.requestRemoteAuth(
+  { vendorId: 'horizon-demo-backend', scopes: ['contacts:read'] },
   { timeout: 60000 },
 );
 // token: { vendorId, accessToken, tokenType?, expiresAt?, refreshToken?, metadata? }
@@ -193,14 +198,18 @@ auth.clearRemoteAuthToken('horizon-demo-backend'); // sign out of the vendor
 ```
 
 The NetSapiens platform binds the identity to the caller's **trusted session**
-(never the request's `user.uid`, which is attacker-controllable), checks the app
-is remote-auth enabled and the `callbackUrl` hostname is allow-listed, then POSTs
-a **single-use auth code** (not a token) to your `callbackUrl`. Your backend:
+(never the request's `user.uid`, which is attacker-controllable), checks the
+signed-in user is entitled to the app, then POSTs a **single-use auth code** (not a
+token) to the callback endpoint(s) **registered for the app** — never a URL from
+the request. Your backend:
 
-1. Verifies the `X-NS-Signature` HMAC — `sha256=<hex>` over the string
-   `request_id + code + timestamp`, using the shared callback secret. (A second
-   `X-NS-Cluster-Verification` signed JWT can be verified against the platform's
-   published JWKS for secret-less proof.)
+1. Verifies the `X-NS-Signature` HMAC — `sha256=<hex>` over
+   `"<X-NS-Timestamp>." + the raw request body`, using the shared callback secret.
+   Hash the bytes **before parsing**; `JSON.stringify(req.body)` will not match.
+   (Two RS256 JWTs give secret-less proof against published JWKS:
+   `X-NS-Platform-Assertion`, always present, says which cluster is calling;
+   `X-NS-Cluster-Verification`, which may be absent, adds NetSapiens' own
+   attestation.)
 2. Exchanges the code (PKCE) at the `validation_endpoint` from the payload for a
    token that proves the user's identity — and uses the identity from **that
    response**, not the webhook body.

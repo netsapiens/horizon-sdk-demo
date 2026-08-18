@@ -4,7 +4,7 @@
  * Demonstrates the full `horizonContext.auth` contract live: request a token,
  * read the session-cached token, and clear it. The NetSapiens platform binds the
  * identity to the caller's trusted session, issues a single-use auth *code*, and
- * POSTs it (signed) to the backend's `callbackUrl`. The backend verifies the
+ * POSTs it (signed) to the backend's registered callback endpoint. The backend verifies the
  * signature, exchanges the code (PKCE) for a token proving the user, mints its
  * own vendor token, and returns it — which resolves the promise.
  *
@@ -28,23 +28,41 @@ import type { DemoStyles, DemoTheme } from './styles';
 import { CodeBlock } from '../../components/CodeBlock';
 import { subheading } from './styles';
 
-// Demo vendor identity. In a real app these come from your backend + the app's
-// admin config: the callbackUrl hostname must be on the app's allowed list.
+// Demo vendor identity. `vendorId` names which backend to authenticate against
+// and is the key the token is cached under.
+//
+// There is deliberately NO callbackUrl here: where the webhook is sent is
+// registration data, set by an administrator in Registered Apps. It used to be a
+// request field, which meant browser-side code chose where a redeemable
+// authorization code was POSTed.
 const VENDOR_ID = 'horizon-demo-backend';
-const CALLBACK_URL = 'https://demo.example.com/horizon/callback';
 const SCOPES = ['contacts:read'];
 
-const CLIENT_SNIPPET = `const { auth } = horizonContext;
+// ⚠️ VESTIGIAL, and only here to compile.
+//
+// The API ignores any callbackUrl in the request — the destination is
+// registration data now. But this demo depends on @netsapiens/horizon-sdk 0.2.4,
+// whose `RemoteAuthRequest.callbackUrl` is still REQUIRED, so the live call below
+// cannot omit it yet. Drop this constant (and the property at its call site) at
+// the next SDK bump, once the field is optional. The snippets on this page
+// already show the current shape, because that is what a partner should copy.
+const LEGACY_IGNORED_CALLBACK_URL = 'https://demo.example.com/horizon/callback';
 
-// Reuse a token cached for the session, or broker a new handshake.
-let token = auth.getRemoteAuthToken('${VENDOR_ID}');
-if (!token) {
-  token = await auth.requestRemoteAuth(
-    {
-      vendorId: '${VENDOR_ID}',
-      callbackUrl: '${CALLBACK_URL}',
-      scopes: ${JSON.stringify(SCOPES)},
-    },
+const CLIENT_SNIPPET = `// Simplest form: authenticate as soon as the app loads, no button.
+const { token, status, error, retry } = useRemoteAuth(
+  horizonContext,
+  '${VENDOR_ID}',
+  { scopes: ${JSON.stringify(SCOPES)} },
+);
+// status: 'idle' | 'pending' | 'ready' | 'error'
+
+// Or drive it yourself — for a "Connect X" button, where the user picks which
+// integration to authenticate against.
+const { auth } = horizonContext;
+let onDemand = auth.getRemoteAuthToken('${VENDOR_ID}');
+if (!onDemand) {
+  onDemand = await auth.requestRemoteAuth(
+    { vendorId: '${VENDOR_ID}', scopes: ${JSON.stringify(SCOPES)} },
     { timeout: 60000 },
   );
 }
@@ -57,27 +75,42 @@ await fetch('https://demo.example.com/api/contacts', {
 auth.clearRemoteAuthToken('${VENDOR_ID}'); // sign out of the vendor`;
 
 const BACKEND_SNIPPET = `// Your backend webhook — the NetSapiens API POSTs a single-use CODE here
-// (not a token). Headers: X-NS-Request-ID, X-NS-Signature: sha256=<hex>,
-// X-NS-Cluster-Verification: <RS256 JWT>. Body:
-//   { request_id, code, user: { uid, domain, displayName },
-//     expires_in, validation_endpoint, timestamp, signature }
-app.post('/horizon/callback', express.json(), async (req, res) => {
-  const { request_id, code, timestamp, validation_endpoint } = req.body;
+// (not a token). Headers: X-NS-Request-ID, X-NS-Timestamp,
+// X-NS-Signature: sha256=<hex>, X-NS-Signature-Version: 2,
+// X-NS-Platform-Assertion: <RS256 JWT>, X-NS-Cluster-Verification: <RS256 JWT>.
+// Body: { request_id, code, code_verifier, user: { uid, domain, displayName },
+//   vendor_id, app_id, platform: { client_id, client, cluster_id, ... },
+//   expires_in, validation_endpoint, timestamp, pkce_enabled }
+//
+// Capture the RAW body — signature v2 is an HMAC over the exact bytes, so
+// JSON.stringify(req.body) will not match.
+app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = buf; } }));
 
-  // 1. Verify the HMAC. It signs the STRING request_id + code + timestamp
-  //    (not the raw body), SHA-256, hex. The header is "sha256=" prefixed.
+app.post('/horizon/callback', async (req, res) => {
+  const { code, validation_endpoint } = req.body;
+  const timestamp = req.get('X-NS-Timestamp');
+
+  // 1. Verify the HMAC (v2). It signs "<timestamp>." + the RAW request body.
+  //    There is no 'signature' field in the body: a signature cannot cover a
+  //    body containing it.
   const [algo, sig] = (req.get('X-NS-Signature') ?? '').split('=');
   const expected = crypto
     .createHmac('sha256', process.env.HORIZON_CALLBACK_SECRET)
-    .update(\`\${request_id}\${code}\${timestamp}\`)
+    .update(\`\${timestamp}.\`)
+    .update(req.rawBody)
     .digest('hex');
   const ok =
     algo === 'sha256' &&
     sig?.length === expected.length &&
     crypto.timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'));
   if (!ok) return res.status(401).json({ error: 'invalid_signature' });
-  // HMAC is the required gate. The X-NS-Cluster-Verification JWT is optional:
-  // verify it via INSight JWKS WHEN PRESENT (reject on failure), skip if absent.
+  // Reject a stale timestamp too — it is inside the signed string, so this is
+  // what stops a captured webhook being replayed.
+  if (Math.abs(Date.now() / 1000 - Number(timestamp)) > 300)
+    return res.status(401).json({ error: 'stale_timestamp' });
+  // HMAC is the required gate. X-NS-Platform-Assertion (always available, signed
+  // by the calling cluster) and X-NS-Cluster-Verification (NetSapiens-issued,
+  // may be absent) are RS256 JWTs verified against published JWKS.
 
   // 2. Exchange the code (PKCE) at the validation_endpoint for an NS token
   //    that cryptographically proves the user's identity.
@@ -121,7 +154,11 @@ export default function RemoteAuthPanel({
     setError(null);
     try {
       const res = await auth.requestRemoteAuth(
-        { vendorId: VENDOR_ID, callbackUrl: CALLBACK_URL, scopes: SCOPES },
+        {
+          vendorId: VENDOR_ID,
+          scopes: SCOPES,
+          callbackUrl: LEGACY_IGNORED_CALLBACK_URL, // ignored by the API; see above
+        },
         { timeout: 60000 },
       );
       setToken(res);
@@ -169,7 +206,9 @@ export default function RemoteAuthPanel({
         style={{
           padding: `${themeTokens.spacing.sm} ${themeTokens.spacing.lg}`,
           backgroundColor:
-            opts.color === 'error' ? themeTokens.colors.error : themeTokens.colors.primary,
+            opts.color === 'error'
+              ? themeTokens.colors.error
+              : themeTokens.colors.primary,
           color: '#fff',
           border: 'none',
           borderRadius: themeTokens.borderRadius.sm,
@@ -185,7 +224,9 @@ export default function RemoteAuthPanel({
 
   return (
     <div style={s.surface.card}>
-      <h2 style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.md }}>
+      <h2
+        style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.md }}
+      >
         Remote authentication
       </h2>
       <p style={{ ...s.text.muted, marginBottom: themeTokens.spacing.lg }}>
@@ -197,7 +238,9 @@ export default function RemoteAuthPanel({
       </p>
 
       {/* Live demo */}
-      <div style={{ ...s.surface.elevated, marginBottom: themeTokens.spacing.lg }}>
+      <div
+        style={{ ...s.surface.elevated, marginBottom: themeTokens.spacing.lg }}
+      >
         <div style={subheading(s, themeTokens)}>Try it</div>
         <p style={{ ...s.text.muted, marginBottom: themeTokens.spacing.md }}>
           Requests a token from <code>{VENDOR_ID}</code> via{' '}
@@ -277,21 +320,24 @@ export default function RemoteAuthPanel({
         <li>
           App calls{' '}
           <code>
-            auth.requestRemoteAuth(&#123; vendorId, callbackUrl, scopes &#125;)
+            useRemoteAuth(context, vendorId)&nbsp;— or{' '}
+            <code>auth.requestRemoteAuth(&#123; vendorId, scopes &#125;)</code>
           </code>{' '}
           and awaits the promise. The host relays it to the NetSapiens platform.
         </li>
         <li>
           The API binds the identity to the caller's <em>trusted session</em>{' '}
           (not the request's <code>user.uid</code>, which is
-          attacker-controllable), checks the app is remote-auth-enabled and the{' '}
-          <code>callbackUrl</code> hostname is allow-listed, issues a single-use
-          PKCE <strong>code</strong>, and POSTs it — signed — to your{' '}
-          <code>callbackUrl</code>.
+          attacker-controllable), checks the signed-in user is entitled to this
+          app, reads your <strong>registered</strong> callback endpoint(s),
+          issues a single-use PKCE <strong>code</strong>, and POSTs it — signed
+          — to the first endpoint that answers. The destination is never taken
+          from the request.
         </li>
         <li>
-          Backend verifies the <code>X-NS-Signature</code> HMAC (over{' '}
-          <code>request_id + code + timestamp</code>), exchanges the code at the{' '}
+          Backend verifies the <code>X-NS-Signature</code> HMAC (v2 — over{' '}
+          <code>&quot;&lt;X-NS-Timestamp&gt;.&quot; + the raw body</code>, so
+          hash the bytes before parsing), exchanges the code at the{' '}
           <code>validation_endpoint</code> for an NS token proving the user,
           then mints its own vendor token.
         </li>

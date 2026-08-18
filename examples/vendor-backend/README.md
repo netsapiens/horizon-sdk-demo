@@ -3,11 +3,11 @@
 A runnable reference for the **vendor/server side** of the Horizon `remoteAuth`
 flow. The browser-side extension calls `auth.requestRemoteAuth(...)` (see the
 **Remote Auth** tab in the demo app); the NetSapiens API then POSTs a signed,
-single-use authorization **code** to your `callbackUrl`. This server is what
+single-use authorization **code** to your registered callback endpoint. This server is what
 receives that webhook and turns it into a vendor token.
 
 It implements the NetSapiens remote-auth webhook contract: the `sha256=` HMAC
-over `request_id + code + timestamp`, the PKCE code exchange (with an `S256`
+over `"<X-NS-Timestamp>." + the raw body` (signature v2), the PKCE code exchange (with an `S256`
 `code_challenge` check), and the response shaping. The webhook also carries an
 `X-NS-Cluster-Verification` JWT, signed by NetSapiens INSight and verifiable
 against its published JWKS.
@@ -15,7 +15,7 @@ against its published JWKS.
 ## What it does
 
 ```
-NetSapiens API ── POST callbackUrl (signed code) ──▶  this server
+NetSapiens API ── POST registered callback (signed code) ──▶  this server
                                                        │ 1. verify X-NS-Signature HMAC (required)
                                                        │    + X-NS-Cluster-Verification JWT (if present)
                                                        │ 2. exchange code (PKCE) at
@@ -32,8 +32,11 @@ Headers:
 
 ```
 X-NS-Request-ID: remauth_<uniqid>
-X-NS-Signature: sha256=<HMAC_SHA256(request_id + code + timestamp, secret)>
-X-NS-Cluster-Verification: <RS256 JWT signed by INSight>
+X-NS-Timestamp: <unix seconds>
+X-NS-Signature: sha256=<HMAC_SHA256("<X-NS-Timestamp>." + <raw body>, secret)>
+X-NS-Signature-Version: 2
+X-NS-Platform-Assertion: <RS256 JWT signed by the calling cluster>
+X-NS-Cluster-Verification: <RS256 JWT signed by INSight — may be absent>
 ```
 
 Body:
@@ -60,12 +63,17 @@ Body:
 
 1. **Verify authenticity** (`lib/verify.js`). The HMAC (`X-NS-Signature`) is the
    **required** gate — it proves the sender holds your app's shared secret, and a
-   webhook that fails or omits it is rejected. It's computed over the **string**
-   `request_id + code + timestamp`, **not** the raw body. The cluster JWT
-   (`X-NS-Cluster-Verification`, verified against INSight's JWKS) is an
-   **optional** additive attestation that the caller is a genuine NetSapiens
-   cluster; the platform sends it best-effort, so verify it **when present**
-   (reject on failure) and proceed on HMAC alone when it's absent.
+   webhook that fails or omits it is rejected. **Signature v2:** it is computed
+   over `"<X-NS-Timestamp>." + the RAW request body` — see the `verify` callback in
+   `server.js`, which captures the bytes before parsing, because
+   `JSON.stringify(req.body)` re-serializes and will not match. A stale timestamp
+   is rejected too; it is inside the signed string, so that is what stops a
+   captured webhook being replayed. Two RS256 JWTs add secret-less proof:
+   `X-NS-Platform-Assertion` (signed by the calling cluster, verified against its
+   published JWKS — says _which_ cluster) and `X-NS-Cluster-Verification` (signed
+   by INSight — says the cluster is _entitled_ to the app). The second needs a
+   live INSight call and can legitimately be absent, so verify it **when present**
+   (reject on failure) and proceed on the HMAC when it is not.
 2. **Exchange the code with PKCE** (`lib/exchange.js`) — `POST
 validation_endpoint` form-encoded with `grant_type=authorization_code`,
    `code`, `code_verifier`, `username=user.uid`, and `redirect_uri` (when

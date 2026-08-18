@@ -49,7 +49,16 @@ if (!VENDOR_JWT_SECRET || INSECURE_SECRETS.has(VENDOR_JWT_SECRET)) {
 }
 
 const app = express();
-app.use(express.json());
+// ⚠️ CAPTURE THE RAW BODY. Signature v2 is an HMAC over the exact bytes received,
+// so the parsed object is not enough — JSON.stringify(req.body) re-serializes and
+// will not match. `verify` runs before parsing and hands us the buffer.
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+);
 
 app.get('/healthz', (_req, res) => res.json({ ok: true, mock }));
 
@@ -63,8 +72,9 @@ app.post(CALLBACK_PATH, async (req, res) => {
     // --- 1. Verify authenticity ---
     // 1a. HMAC — the required gate. No valid HMAC, no further processing.
     const hmac = verifyHmacSignature(
-      body,
+      req.rawBody,
       req.get('X-NS-Signature'),
+      req.get('X-NS-Timestamp'),
       HORIZON_CALLBACK_SECRET,
     );
     if (!hmac.ok) {

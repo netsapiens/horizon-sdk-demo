@@ -705,6 +705,117 @@ reaches your app without a republish.
 
 ---
 
+# Part 6 — Remote authentication changed shape
+
+Two breaking changes, and one is **server-side** — it affects your deployed
+backend regardless of which SDK version you built against.
+
+## 6.1 The webhook signature now covers the whole body (BREAKING, server-side)
+
+`X-NS-Signature` used to be an HMAC over the string
+`request_id + code + timestamp`. It is now an HMAC over:
+
+```
+"<X-NS-Timestamp>." + <the exact raw request body>
+```
+
+**A verifier written against the old scheme rejects every webhook.** There is no
+dual-send period and no version negotiation — the header
+`X-NS-Signature-Version: 2` tells you which scheme produced it.
+
+Why it changed: the old signed string covered neither the PKCE verifier, nor the
+user identity, nor the scopes. A backend that verified it had verified almost
+nothing about the request it was about to act on.
+
+Two things break this silently, so check both:
+
+```js
+// ✅ capture the RAW bytes — before parsing
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+);
+
+const expected = crypto
+  .createHmac('sha256', SECRET)
+  .update(`${req.get('X-NS-Timestamp')}.`)
+  .update(req.rawBody) // ❌ NOT JSON.stringify(req.body)
+  .digest('hex');
+```
+
+- **Hash the bytes as received.** `JSON.stringify(req.body)` re-serializes — key
+  order, whitespace and unicode escaping can all differ — and will not match.
+- **There is no `signature` field in the body any more.** A signature cannot cover
+  a body that contains it, which is why it moved to a header.
+
+Also reject a stale `X-NS-Timestamp` (a 5-minute window is reasonable). The
+timestamp is inside the signed string, so it cannot be altered without breaking
+the signature — checking it is what makes a captured webhook unusable later.
+
+A working implementation, with the raw-body capture wired up, is in
+[`examples/vendor-backend`](examples/vendor-backend). `npm run sign` posts a
+correctly-signed v2 webhook at it.
+
+## 6.2 `callbackUrl` is no longer yours to choose (BREAKING, but silent)
+
+`RemoteAuthRequest.callbackUrl` is ignored. Where the webhook is sent is
+registration data — an administrator sets it in **Registered Apps**, and it may be
+several endpoints, tried in order for redundancy.
+
+Nothing errors if you keep passing it, which is the trap: your app looks fine and
+the webhook goes somewhere you did not specify in the request. Set the real
+destination in the app's registration, and drop the property.
+
+It moved because that field decided where a redeemable authorization code — plus
+its PKCE verifier — was POSTed. That made the destination of a credential a
+browser-side choice.
+
+**If you register several endpoints:** each attempt carries its own code, and a
+failed attempt's code is revoked immediately, so no two of your servers receive
+the same credential. Only "no answer" fails over — connection, TLS, timeout, or
+`5xx`. **A `4xx` stops the attempt**, because it is read as your considered
+rejection. Do not return `4xx` for a transient fault, or you will suppress your
+own redundancy.
+
+## 6.3 Two more headers, and one that can be absent
+
+| Header                      | Answers                                                                                                                                  | Availability                                  |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `X-NS-Platform-Assertion`   | Which cluster is calling. RS256, signed by the instance, verified against its published JWKS. `aud` is your vendor id, `sub` the app id. | Always, for a configured cluster              |
+| `X-NS-Cluster-Verification` | Whether that cluster is entitled to this app. Issued by NetSapiens Insight.                                                              | Needs a live Insight call — **may be absent** |
+
+Previously only the second existed, and because it can legitimately be missing, a
+backend could neither require it nor safely ignore it. If you want a public-key
+check that is always there, verify the platform assertion.
+
+The same cluster identity (`client_id`, `client`, `cluster_id`, `cluster_name`,
+`tenant`, `hostname`) is also in the signed body under `platform`, so an
+HMAC-only backend receives it verifiably too.
+
+⚠️ **Key your records on `(platform.cluster_id, user.uid)`, not `uid` alone.**
+`uid` is unique only within one Horizon instance.
+
+## 6.4 New: authenticate on load
+
+`useRemoteAuth` runs the handshake as soon as your app mounts — no button:
+
+```tsx
+const { token, status, error, retry } = useRemoteAuth(
+  horizonContext,
+  'my-backend',
+);
+```
+
+Once per mount, and skipped when a valid token is already stored. Both are
+correctness rather than caching: each run mints an authorization code and posts it
+to your backend. `auth.requestRemoteAuth()` remains for apps that broker several
+vendors and need the user to pick one.
+
+---
+
 # Publishing through the API
 
 Only relevant if you call `/ui-extensions` directly rather than using the admin UI.
@@ -787,6 +898,7 @@ has to be added by an operator.
 | 0.2.2   | Remote-entry URL policy corrected — stable URL, not immutable paths (docs + one CLI note)                                  | Read it; may undo work. [3.2](#32-the-remote-entry-url-policy-was-reversed-022)                                     |
 | 0.2.3   | New `horizonContext.ui` types — SearchField, Autocomplete, CarouselTemplate, HostDataset, Tabs, Card, KitOption            | Optional. [Part 4](#part-4--new-ui-surfaces-023)                                                                    |
 | 0.2.4   | Scope-declaration contract — `requiredScopes`, `declareCapabilityScopes`, `horizonContext.scopes`, the exported vocabulary | Optional, but see [Part 1](#part-1--already-affecting-your-deployed-app). [Part 5](#part-5--scope-declarations-024) |
+| —       | Remote auth: webhook signature v2, `callbackUrl` moved to registration, two new headers, `useRemoteAuth`                   | **Required if you use remote auth.** [Part 6](#part-6--remote-authentication-changed-shape)                         |
 
 Host-side changes in [Part 1](#part-1--already-affecting-your-deployed-app) are not
 tied to an SDK version — they apply to every app on the server regardless of what it
@@ -796,9 +908,13 @@ was built against.
 
 # What this does not change
 
-Nothing here requires changes to your app's features, its zone extensions, its event
-handling, or how it uses the SDK at runtime. Parts 1–3 are the build and publish
-contract plus host-side access enforcement; Parts 4–5 are additive.
+Nothing here requires changes to your app's features, its zone extensions, or its
+event handling. Parts 1–3 are the build and publish contract plus host-side access
+enforcement; Parts 4–5 are additive.
+
+**Part 6 is the exception** — if your app uses remote authentication, your
+_backend_ must change, and it is not tied to an SDK version: the signature change
+is server-side and applies to your deployed app now.
 
 If one of your app's behaviours appears to conflict with a requirement here, raise it
 rather than removing the behaviour.
