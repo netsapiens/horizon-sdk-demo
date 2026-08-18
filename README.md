@@ -528,12 +528,14 @@ Then, on the platform:
 5. Wait for the Pages deploy to finish — the platform fetches the bytes at
    submission time, so submitting before Pages has published verifies the _old_
    bundle.
-6. In **Platform → UI SDK Management → Registered Apps**, press **Deploy** on the
-   app. Submission and promotion are one action: the platform fetches, analyses
-   and hashes the bundle, and promotes it on `approved` or `flagged`. There is no
-   separate promote step.
-7. If it comes back `rejected`, fix the bundle and press Deploy again. The
-   rejected version keeps its number and the auto-bump skips it.
+6. In **Platform → UI SDK Management → Registered Apps**, open the app and press
+   **Save**. There is **no Deploy button** — a save submits for verification every
+   time, unconditionally. Set the Version field to the new number, or leave it and
+   the platform assigns the next free one. Submission, verification and promotion
+   are one action: it fetches, analyses and hashes the bundle, then promotes on
+   `approved` or `flagged`.
+7. If it comes back `rejected`, fix the bundle and save again. The rejected version
+   keeps its number and the auto-bump skips it.
 
 ⚠️ **Between the Pages deploy and the Deploy press**, the CDN serves new bytes
 while the platform still pins the old hash. Anyone starting a fresh session in
