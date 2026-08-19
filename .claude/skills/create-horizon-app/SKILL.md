@@ -1,0 +1,885 @@
+---
+name: create-horizon-app
+description: Scaffold a NetSapiens Horizon remote app that passes platform bundle verification — chunk SRI, source maps, correct webpack `shared` config — with the current SDK shape: API client, scope declarations, capability-gated data streams, scoped event bus, and theme-correct UI. Use when asked to "create a Horizon app", "scaffold a Horizon extension", or to start a new partner integration.
+---
+
+# create-horizon-app
+
+Scaffolds a new remote app for NetSapiens Horizon.
+
+> **A scaffolded app must pass platform bundle verification.** Since SDK 0.2.x the platform
+> fetches the bundle itself, hashes it, and analyses it before it may load. Three things in the
+> build are **hard rejects** if missing or wrong, and all three are handled by the templates
+> below — do not "simplify" them away:
+>
+> 1. **Chunk Subresource Integrity** (`webpack-subresource-integrity` + `crossOriginLoading`)
+> 2. **Source maps with `sourcesContent`** (`devtool: 'source-map'`, and `dist/*.map` must ship)
+> 3. **`@netsapiens/horizon-sdk` must NOT be in webpack `shared`**
+>
+> Run `npm run verify` before submitting. A pass locally is a pass on the platform.
+
+**Reference material in this repository.** The app in `src/` is a working extension with every
+requirement below already applied — read it when a template here is ambiguous.
+[`MIGRATION-0.1.x-TO-0.2.x.md`](../../../MIGRATION-0.1.x-TO-0.2.x.md) is the full contract and
+explains *why* each requirement exists; `examples/vendor-backend` is a correct remote-auth
+webhook verifier.
+
+## Inputs to gather
+
+Ask the user (and validate) before generating:
+
+| Field        | Format                               | Example               |
+| ------------ | ------------------------------------ | --------------------- |
+| App ID       | `^[a-z0-9]+(-[a-z0-9]+)*$`           | `analytics-dashboard` |
+| Display name | free-form                            | `Analytics Dashboard` |
+| Module scope | `^[a-zA-Z][a-zA-Z0-9]*$` (camelCase) | `analyticsDashboard`  |
+| Dev port     | 1024–65535 (recommend 5005–5099)     | `5005`                |
+| Author       | free-form, optional                  | `Acme Corp`           |
+
+If the target directory exists, ask before overwriting.
+
+## Output structure
+
+```
+<app-id>/
+├── src/
+│   ├── App.tsx
+│   ├── pages/MainPage.tsx
+│   └── extensions/HeaderButton.tsx
+├── index.html
+├── webpack.config.js
+├── tsconfig.json
+├── package.json
+├── .gitignore
+├── KIT-GAPS.md
+└── README.md
+```
+
+## File templates
+
+### `package.json`
+
+```json
+{
+  "name": "<app-id>",
+  "version": "1.0.0",
+  "description": "<display-name>",
+  "author": "<author>",
+  "private": true,
+  "scripts": {
+    "dev": "webpack serve --mode development",
+    "build": "webpack --mode production",
+    "start": "webpack serve --mode development",
+    "verify": "horizon-verify-bundle ./dist"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@netsapiens/horizon-sdk": "^0.2.5",
+    "loglevel": "^1.9.2",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.0",
+    "@babel/preset-env": "^7.23.0",
+    "@babel/preset-react": "^7.22.0",
+    "@babel/preset-typescript": "^7.23.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "babel-loader": "^9.1.3",
+    "html-webpack-plugin": "^5.5.3",
+    "typescript": "^5.5.3",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.2.1",
+    "webpack-subresource-integrity": "^5.1.0"
+  }
+}
+```
+
+### `webpack.config.js`
+
+```js
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const ModuleFederationPlugin = require('webpack/lib/container/ModuleFederationPlugin');
+const { SubresourceIntegrityPlugin } = require('webpack-subresource-integrity');
+const webpack = require('webpack');
+const path = require('path');
+
+// The ONE identifier you maintain — the Module Federation container name in
+// camelCase (must be a valid JS identifier). It is the federation `name`, it is
+// injected into the bundle as `__MF_NAME__` for `useRemoteApp(...)` (so the two
+// can never drift), and it is the registration's `webpack_module`. The host/SDK
+// derive the kebab-case registry `id` from it (analyticsDashboard → analytics-dashboard).
+const MODULE_NAME = '<module-scope>';
+
+module.exports = (_env, argv) => {
+  const isProduction = argv.mode === 'production';
+
+  return {
+  mode: argv.mode || 'development',
+  entry: './src/App.tsx',
+  // REQUIRED. Bundle verification rejects a bundle with no source maps, and the
+  // maps must carry `sourcesContent` — so never `noSources`, and `dist/*.map`
+  // must be published alongside the JS. The analyser reads your original source
+  // through these; without them it cannot attribute findings and rejects.
+  devtool: 'source-map',
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    publicPath: isProduction ? 'auto' : 'http://localhost:<dev-port>/',
+    filename: isProduction ? '[name].[contenthash].js' : '[name].js',
+    chunkFilename: isProduction ? '[id].[contenthash].js' : '[id].js',
+    // REQUIRED for SRI to actually be enforced. A browser cannot verify an
+    // integrity value against an opaque cross-origin response, so without this
+    // the integrity attributes are emitted but never checked.
+    crossOriginLoading: 'anonymous',
+    clean: true,
+  },
+  resolve: { extensions: ['.tsx', '.ts', '.js', '.jsx'] },
+  module: {
+    rules: [
+      {
+        test: /\.(ts|tsx)$/,
+        exclude: /node_modules/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: [
+              '@babel/preset-env',
+              ['@babel/preset-react', { runtime: 'automatic' }],
+              '@babel/preset-typescript',
+            ],
+          },
+        },
+      },
+    ],
+  },
+  plugins: [
+    new ModuleFederationPlugin({
+      name: MODULE_NAME,
+      filename: 'remoteEntry.js',
+      exposes: { './App': './src/App' },
+      // Host-provided singletons only. Do NOT add `@netsapiens/horizon-sdk` here:
+      // sharing it fails the build outright with "contains unresolved integrity
+      // placeholders", and the verifier rejects on `sdk-not-shared`. Removing it
+      // entirely is the fix — do not try `import: false`.
+      // Keep webpack's default local fallback copy for these (never `import: false`).
+      shared: {
+        react: { singleton: true, requiredVersion: '^19.2.0', eager: false },
+        'react-dom': { singleton: true, requiredVersion: '^19.2.0', eager: false },
+        loglevel: { singleton: true, requiredVersion: '^1.9.2', eager: false },
+      },
+    }),
+    // REQUIRED in production. Emits the per-chunk integrity map the platform
+    // needs: it pins remoteEntry.js with a hash it computes itself, and that one
+    // pin transitively covers your whole chunk graph through these values.
+    ...(isProduction
+      ? [new SubresourceIntegrityPlugin({ hashFuncNames: ['sha384'] })]
+      : []),
+    // Inject the federation name so the app reads it at runtime instead of
+    // hardcoding it a second time (see src/App.tsx).
+    new webpack.DefinePlugin({
+      __MF_NAME__: JSON.stringify(MODULE_NAME),
+    }),
+    new HtmlWebpackPlugin({ template: './index.html' }),
+  ],
+  // `*` is fine for local dev. In production the CDN must return
+  // Access-Control-Allow-Origin covering the portal origin — CORS is probed when
+  // a version is submitted, and a bundle that fails the probe cannot be verified.
+  devServer: { port: <dev-port>, headers: { 'Access-Control-Allow-Origin': '*' } },
+  };
+};
+```
+
+### `tsconfig.json`
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src"]
+}
+```
+
+### `src/App.tsx`
+
+```tsx
+import { useEffect, useMemo } from 'react';
+import { type HorizonContext, HorizonContextProvider, useRemoteApp } from '@netsapiens/horizon-sdk';
+import HeaderButton from './extensions/HeaderButton';
+import MainPage from './pages/MainPage';
+
+// Injected by webpack's DefinePlugin from the ModuleFederationPlugin `name`
+// (see webpack.config.js) — the single identifier you maintain. The SDK derives
+// the kebab-case registry id from it, so this always matches the webpack name.
+declare const __MF_NAME__: string;
+
+export default function App(horizonContext: HorizonContext) {
+  const { sdk } = useRemoteApp(horizonContext, __MF_NAME__);
+
+  // Wrap the page once in HorizonContextProvider so it reads a live, reactive
+  // context (theme/locale/ui) via useHorizonContext() — no prop drilling. Empty
+  // deps give the wrapper a STABLE identity: the provider subscribes to the
+  // (stable) eventBus and pushes theme/locale updates down, so re-creating it on
+  // every render would needlessly unmount the page.
+  const MainPageRoute = useMemo(
+    () =>
+      function MainPageRoute() {
+        return (
+          <HorizonContextProvider context={horizonContext}>
+            <MainPage />
+          </HorizonContextProvider>
+        );
+      },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  useEffect(() => {
+    // registerRoute is async; surface failures rather than dropping them.
+    sdk
+      .registerRoute({
+        id: '<app-id>.main',
+        parentPath: '/apps',
+        path: '<app-id>',
+        label: '<display-name>',
+        icon: 'mdi:application',
+        placement: { last: true },
+        // Who this page is for. The host enforces it on the route AND hides the
+        // menu entry — declaring nothing means every signed-in user can open it.
+        // A tier name is resolved by the host; a literal array pins the scopes.
+        requiredScopes: 'ADMINS',
+        component: MainPageRoute,
+      })
+      .catch((error) => console.error('[<app-id>] route registration failed:', error));
+
+    sdk.registerDynamicExtension({
+      id: '<app-id>.header-button',
+      zone: 'page-header-actions',
+      routes: [{ pattern: '/manage/:domain/users' }],
+      priority: 10,
+      requiredScopes: 'DOMAIN_MANAGERS',
+      component: HeaderButton,
+    });
+
+    // Host data streams are capability-gated and delivered through the SDK —
+    // never the raw event bus. See "Host events & data streams" below. Requires
+    // the `call-events:listen` capability in your registration's `permissions`.
+    // subscribeToCallEvents RETURNS its unsubscribe function — call it to tear
+    // the subscription down (here, on effect cleanup / unmount).
+    const unsubscribeCallEvents = sdk.subscribeToCallEvents(
+      ['call-started', 'call-answered', 'call-ended', 'call-missed'],
+      (event) => console.log('[<app-id>] call event', event),
+    );
+
+    return () => unsubscribeCallEvents();
+  }, [sdk]);
+
+  return null;
+}
+```
+
+### `src/pages/MainPage.tsx`
+
+```tsx
+import { type ComponentType, type CSSProperties, useState } from 'react';
+import { type ThemeTokens, useHorizonContext, useTheme } from '@netsapiens/horizon-sdk';
+
+// The host UI components are typed loosely (`ComponentType<unknown>`); cast to a
+// props-accepting type so JSX usage type-checks under `strict` instead of
+// tripping TS2769.
+type UIComponent = ComponentType<Record<string, unknown>>;
+
+export default function MainPage() {
+  // Read the live, reactive context from the provider — not via props.
+  const { ui, user } = useHorizonContext();
+  // `theme` is the REACTIVE color scheme: it flips the instant the user toggles
+  // dark/light. Prefer this over `useHorizonContext().theme` for clarity. NOTE:
+  // `ui.theme` (tokens) and `ui.styles` are a MOUNT-TIME SNAPSHOT and do NOT
+  // flip on toggle — see "Theming & dark/light mode" below. The host `ui.*`
+  // components DO re-theme live, so lean on them for anything colored.
+  const { theme } = useTheme();
+  const [count, setCount] = useState(0);
+
+  const PageTemplate = ui?.templates?.PageTemplate as UIComponent | undefined;
+  const Paper = ui?.Paper as UIComponent | undefined;
+  const Stack = ui?.Stack as UIComponent | undefined;
+  const Typography = ui?.Typography as UIComponent | undefined;
+  const Button = ui?.Button as UIComponent | undefined;
+  const Chip = ui?.Chip as UIComponent | undefined;
+
+  // Design tokens for hand-rolled markup. `spacing` / `borderRadius` /
+  // `typography` are mode-INVARIANT (identical in light & dark), so reading them
+  // straight off the snapshot is always correct. Only `colors` / `shadows`
+  // differ by mode — for those, use a `ui.*` component (re-themes live) or
+  // branch on the reactive `theme`; do NOT paint them from `ui.theme.colors`,
+  // which would go stale after a toggle.
+  const tokens = ui?.theme as ThemeTokens | undefined;
+  const kbd: CSSProperties = tokens
+    ? {
+        fontFamily: tokens.typography.fontFamily.mono,
+        fontSize: tokens.typography.fontSize.lg,
+        padding: `${tokens.spacing.xs} ${tokens.spacing.md}`,
+        borderRadius: tokens.borderRadius.md,
+      }
+    : {};
+
+  if (!PageTemplate || !Paper || !Stack || !Typography || !Button) {
+    return (
+      <div style={{ padding: 24 }}>
+        <h1><display-name></h1>
+      </div>
+    );
+  }
+
+  return (
+    <PageTemplate
+      title="<display-name>"
+      breadcrumbs={[{ label: 'Apps', url: '/apps' }, { label: '<display-name>' }]}
+      // `actions` is an ARRAY OF DESCRIPTORS the host renders into buttons — not
+      // JSX. Passing a node throws "actions.map is not a function". For arbitrary
+      // header JSX (chips/badges) use the `headerStatus` prop instead.
+      actions={[
+        {
+          label: 'Refresh',
+          icon: 'mdi:refresh',
+          variant: 'secondary', // 'primary' | 'secondary' | 'danger'
+          onClick: () => setCount(0),
+        },
+      ]}
+    >
+      <Stack spacing={3}>
+        <Paper sx={{ p: 3 }}>
+          <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+            <Typography variant="h6">Welcome, {user.displayName}</Typography>
+            {/* Re-labels on every toggle — proof the theme signal is reactive. */}
+            {Chip ? <Chip size="small" label={`${theme} mode`} /> : null}
+          </Stack>
+          <Typography variant="body2">Domain: {user.domain}</Typography>
+        </Paper>
+        <Paper sx={{ p: 3 }}>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Button onClick={() => setCount(count - 1)}>−</Button>
+            {/* Mode-invariant tokens (mono font, radius, spacing) are snapshot-safe.
+                Color comes from the themed <Paper>, which re-themes on toggle. */}
+            <span style={kbd}>{count}</span>
+            <Button onClick={() => setCount(count + 1)}>+</Button>
+          </Stack>
+        </Paper>
+      </Stack>
+    </PageTemplate>
+  );
+}
+```
+
+### `src/extensions/HeaderButton.tsx`
+
+```tsx
+import { type ExtensionComponentProps, useTheme } from '@netsapiens/horizon-sdk';
+
+export default function HeaderButton({ context }: ExtensionComponentProps) {
+  // Extensions read the host UI components off `context.ui` (a prop, not a hook).
+  const { Button, Icon } = context.ui || {};
+
+  // Extensions render OUTSIDE HorizonContextProvider, so `useTheme()` can't read
+  // a provider — pass `context.eventBus` (subscribe for live updates) and
+  // `context.theme` (correct value on first paint, before the first toggle).
+  const { theme } = useTheme(context.eventBus, context.theme);
+
+  const handleClick = () =>
+    console.log('[<app-id>] header button clicked', context.params);
+
+  // Graceful fallback if the host UI kit isn't available.
+  if (!Button || !Icon) {
+    return <button onClick={handleClick}><display-name></button>;
+  }
+
+  // The themed Button re-colors itself on toggle; we only use `theme` to pick a
+  // mode-appropriate glyph. Never hardcode colors here.
+  return (
+    <Button
+      variant="text"
+      sx={{ px: 1 }}
+      onClick={handleClick}
+      startIcon={
+        <Icon
+          icon={theme === 'dark' ? 'mdi:weather-night' : 'mdi:weather-sunny'}
+          sx={{ fontSize: 20 }}
+        />
+      }
+    >
+      <display-name>
+    </Button>
+  );
+}
+```
+
+### `index.html`
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title><display-name></title>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
+```
+
+### `.gitignore`
+
+```
+node_modules/
+dist/
+*.log
+.DS_Store
+.env*
+```
+
+### `KIT-GAPS.md`
+
+Seed the file empty, then **append to it while you build** — every time you reach
+for a component that `horizonContext.ui` does not have and use something else
+instead. See the agent note at the bottom; this is not a scaffold-time artefact,
+it is a running log.
+
+```md
+# Kit gaps — `horizonContext.ui`
+
+Components this app reached for and did not find, what it used instead, and what
+that cost. Recorded while building, when the reasoning was still live.
+
+**Please share this file** with the Horizon SDK team — it is the input that
+decides what gets added to the host UI kit. Add an entry whenever you work
+around a missing component rather than fixing it silently.
+
+<!-- No gaps recorded yet. Use the format below.
+
+## <what was needed>
+
+- **Reached for:** `ui.Thing`
+- **Used instead:** what you actually did, with the file path
+- **Cost:** lines of code, behaviour lost, risk taken on
+- **Would have been solved by:** the component/prop shape that would have fit
+-->
+```
+
+### `README.md`
+
+````md
+# <display-name>
+
+Federated remote app for NetSapiens Horizon.
+
+## Develop
+
+    npm install
+    npm run dev
+
+Serves `remoteEntry.js` from `http://localhost:<dev-port>/remoteEntry.js`.
+
+## Register with Horizon
+
+Use **Platform → UI SDK Management → Registered Apps → Add App** in the host UI, or the API:
+
+    curl -X POST "https://your-horizon.example.com/ns-api/v2/ui-extensions" \
+      -H "Authorization: Bearer YOUR_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "<display-name>",
+        "description": "<display-name>",
+        "author": "<author>",
+        "version": "1.0.0",
+        "remote_entry_url": "http://localhost:<dev-port>/remoteEntry.js",
+        "webpack_module": "<module-scope>",
+        "enabled": "yes"
+      }'
+
+The app `id` is derived server-side as the kebab-case of `webpack_module` (so `<module-scope>` → `<app-id>`). `webpack_module` must be unique platform-wide — a duplicate returns **409** — and is immutable once registered.
+
+There is deliberately **no `permissions` or `capabilities` field**. The platform analyser extracts what your bundle declares (`requiredPermissions` on your extension configs) from the submitted source; the Capabilities column in Registered Apps is a read-only view of that. Capabilities are enabled or disabled **platform-wide** by an administrator, not per app.
+
+Your origin must be in the operator's **approved CDN origins** allowlist or the bundle is refused before it is fetched. It is an allowlist of bare hostnames or single-label wildcards (`cdn.example.com`, `*.example.com`) and defaults to _nothing approved_; `localhost` and `127.0.0.1` are seeded so local dev works. Failure is silent in the UI — check the console for `[HorizonAppsLoader]` errors.
+
+**Registration alone does not make the app load.** A newly registered app sits at verification status `none` and renders nowhere. Submit a version:
+
+    curl -X POST "https://your-horizon.example.com/ns-api/v2/ui-extensions/<app-id>/versions" \
+      -H "Authorization: Bearer YOUR_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{ "version": "1.0.0", "remote_entry_url": "https://cdn.example.com/remoteEntry.js" }'
+
+Never send an `integrity_hash` — the platform computes it from the bytes it fetched, and the field is no longer accepted. The response carries `status` (`approved` / `flagged` / `rejected`), `has_chunk_sri`, `promoted`, and `report.findings[]`. **`approved` and `flagged` both load**; `rejected`, `pending` and `none` do not. A `409` means that version was already submitted — not an error.
+
+## Build for production
+
+    npm run build
+    npm run verify
+
+`verify` runs `horizon-verify-bundle` against `dist/`, the same checks the platform runs. A pass here is a pass there. Fix anything it reports before publishing — in particular `chunk-integrity`, `source-maps`, `sources-content` and `sdk-not-shared`, which are hard rejects.
+
+Publish `dist/` — **including `dist/*.map`** — to your CDN at a **stable URL**. The remote entry URL does not change between releases: bump `version` in `package.json`, rebuild, publish over the same path, then submit the new version. The version field is what tells Horizon to re-verify the bytes at that URL.
+
+> Between publishing and the platform promoting the new version, the CDN serves new bytes while the platform still pins the old hash, so loads fail SRI. **Release in a maintenance window**, and keep the registered version and `package.json` version in lockstep (worth a CI guard).
+
+### Deploying: build in CI from `main`
+
+Do not hand-publish, and **do not commit `dist/`** — not to `main`, and not to a `gh-pages` branch. Built output in git produces diff noise on every change and lets the published bytes drift from the source they claim to come from. Build in CI from `main` so the only way to publish is to push source that builds.
+
+For GitHub Pages, that means `build_type: workflow` (Settings → Pages → Source: GitHub Actions), not a branch source:
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy to GitHub Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions: { contents: read, pages: write, id-token: write }
+# Never let two deploys race — a half-overwritten publish is what makes every
+# host fail its integrity check at once.
+concurrency: { group: pages, cancel-in-progress: false }
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: npm }
+      - run: npm ci
+      - run: npm run build
+      # The same checks the platform runs on submission. Failing here is much
+      # cheaper than failing after publish, when the CDN is already serving
+      # bytes the platform will refuse.
+      - run: npm run verify
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: dist }
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: '${{ steps.deployment.outputs.page_url }}' }
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+```
+````
+
+A **private repo can serve a public Pages site** on GitHub Enterprise Cloud (`PUT /repos/{owner}/{repo}/pages` with `public: true`). Use that: the platform must fetch `remoteEntry.js` unauthenticated, but the source does not have to be public. A private-visibility Pages site gets a randomised `*.pages.github.io` URL that the platform cannot reach.
+
+GitHub Pages already sends `Access-Control-Allow-Origin: *`, which satisfies the CORS probe on submission.
+
+### Code patterns the analyser rejects
+
+Keep these out of `src/` — they are content rules, and most are hard rejects:
+
+| Pattern                                                            | Verdict |
+| ------------------------------------------------------------------ | ------- |
+| `eval(...)`, `setTimeout('string')`                                | reject  |
+| the literal string `/ns-api/` (call the API through `context.api`) | reject  |
+| `document.cookie`                                                  | reject  |
+| `credentials: 'include'` on `fetch`                                | reject  |
+| `localStorage` keys prefixed `ns_`                                 | reject  |
+| frame-escape (`window.top`, `parent.location`)                     | reject  |
+| `new Function(...)`                                                | flag    |
+
+A `size-delta` flag on your first 0.2.x submission is expected and needs no action. Note the analyser's rule policy is operator-tunable, so a local pass is not a guarantee of acceptance.
+
+````
+
+## Declaring who a surface is for (contract)
+
+Menu visibility and route access used to be computed separately, so hiding a menu
+entry was cosmetic — the page still opened for anyone who typed the URL. Access is
+enforced on the route now, and `requiredScopes` is how a surface says who it is for.
+
+Put it on **`registerRoute`, `registerDynamicExtension`, and column configs**. Two
+forms, and prefer the first:
+
+```tsx
+requiredScopes: 'ADMINS'                    // host-resolved tier — survives a re-membered tier
+requiredScopes: ['Admin', 'Super User']     // pinned literally — only when no tier fits
+```
+
+The tiers are `PLATFORM`, `ADMINS`, `DOMAIN_MANAGERS`, `DOMAIN_ONLY`, `CALL_CENTER`,
+`END_USERS`. `SCOPE_GROUPS` in the SDK is a **fallback snapshot for local dev and
+tests**, not the enforcement path — read `useScopes()` / `horizonContext.scopes` for
+the live vocabulary.
+
+Three things that catch people out:
+
+- **It narrows, it never widens.** The host intersects your declaration with what
+  the user actually has. You cannot grant yourself reach by declaring it.
+- **A malformed declaration refuses the whole registration** — a typo'd tier name
+  is not ignored, it drops the surface. Write the value as an inline literal so
+  TypeScript catches it at compile time rather than at load.
+- **Columns deserve this more than they look like they do.** A column added to a
+  host table is data on someone else's page; the scopes that page requires say
+  nothing about who should see your column.
+
+For capabilities (streams and the like), `sdk.declareCapabilityScopes({ 'call-events:listen': 'CALL_CENTER' })`
+declares who *within* the app may exercise a granted capability. It is weaker than
+`requiredScopes` — the platform grant is still what enables the capability at all —
+so treat it as intent, not enforcement.
+
+## Remote authentication (contract, only if your backend needs it)
+
+Skip this unless the app authenticates the Horizon user against **your own**
+service. Where a webhook is sent is registration data, set by an administrator —
+the app does not choose it.
+
+```tsx
+const { token, status, error } = useRemoteAuth(horizonContext, '<your-vendor-id>', {
+  scopes: ['profile'],
+});
+```
+
+The hook authenticates on load; there is no button to wire up. Your backend
+receives a signed webhook and must verify it:
+
+- `X-NS-Signature` is an HMAC over `"<X-NS-Timestamp>." + <the exact raw request body>`.
+  Hash the **raw bytes** — `JSON.stringify(req.body)` re-serializes and will not match.
+- Reject a stale `X-NS-Timestamp` (5 minutes is reasonable). It is inside the signed
+  string, so it cannot be altered without breaking the signature.
+- `X-NS-Signature-Version: 2` identifies the scheme.
+
+`examples/vendor-backend` in this repository is a working implementation with the
+raw-body capture wired up correctly; Part 6 of the migration guide explains the
+rest.
+
+## Calling the NetSapiens API (contract)
+
+Read/write platform data through `horizonContext.api` — the host-brokered,
+audited proxy. The app never sees the user's token.
+
+```tsx
+const { api, user } = useHorizonContext(); // (or destructure from useRemoteApp in App.tsx)
+
+const devices = await api.get<Device[]>(`/domains/${user.domain}/users/${user.extension}/devices`);
+await api.post(`/domains/${user.domain}/users/${user.extension}/contacts`, {
+  /* … */
+});
+// also: api.put<T>(path, data), api.delete<T>(path)
+````
+
+- **Paths are relative to `/ns-api/v2`** (`api.getBaseUrl()` returns that). Pass
+  only the relative path; the host prepends the base and injects credentials.
+- **v2 REST only.** The proxy does not expose the host JWT, so the legacy
+  `/ns-api/?object=…&action=…` endpoints are **not reachable** from a remote app.
+  If a capability only exists on legacy, a v2 route has to be added server-side.
+- Calls are permission-gated, rate-limited, and audited per app — surface
+  failures (`.catch`) rather than assuming success.
+
+## Theming & dark/light mode (contract)
+
+Aurora (the host theme) drives a live light/dark toggle. An app looks native only
+if it re-themes with it. Four things the host hands you, and how each behaves:
+
+| Source                               | What it is                                                                                              | Reactive to toggle?                                                              |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `ui.*` components / `ui.templates.*` | host MUI components (`Button`, `Paper`, `Chip`, `PageTemplate`, …)                                      | **Yes** — wrapped in the host's MUI `ThemeProvider`, they re-color automatically |
+| `useTheme() → { theme }`             | the `'light' \| 'dark'` mode string                                                                     | **Yes** — flips the instant the user toggles                                     |
+| `ui.theme` (`ThemeTokens`)           | design tokens: `colors`, `spacing`, `typography`, `borderRadius`, `shadows`                             | **Snapshot** — frozen at the mode active when the route first mounted            |
+| `ui.styles`                          | pre-built semantic style objects (`surface.card`, `text.*`, `badge.*`, `divider`) baked from the tokens | **Snapshot** — same as `ui.theme`                                                |
+
+**Why the snapshot:** `HorizonContextProvider` keeps `theme`/`locale` live by
+re-spreading `{ ...context, theme, locale }`, but it never rebuilds `context.ui`.
+So `useTheme().theme` updates while `ui.theme`/`ui.styles` keep the values from
+mount. Painting your own surfaces from `ui.theme.colors.*` or `ui.styles.card`
+looks right at first, then mismatches after the user flips the mode.
+
+Rules that keep an app theme-correct:
+
+1. **Default to `ui.*` components for anything visible.** They re-theme live and
+   are the reason MUI isn't a direct dependency. This alone gets ~all UI right.
+2. **`useTheme()` is the only reactive theme signal** — use it to pick a
+   mode-dependent glyph, image, or chart palette (values your app owns), not to
+   recolor host chrome.
+3. **From `ui.theme`, only `spacing` / `typography` / `borderRadius` are
+   mode-invariant** (identical in light & dark) — those are safe to read off the
+   snapshot for custom layout/sizing. `colors` and `shadows` differ by mode, so
+   the snapshot copies go stale on toggle.
+4. **Need a mode-dependent color in hand-rolled markup?** Don't read it from the
+   snapshot — branch on the reactive `theme` and supply your own light/dark
+   values, or (better) wrap the region in a `ui.*` surface (`Paper`/`Box`) and
+   let the host color it. The token builders (`getThemeTokens`/`getUIStyles`)
+   are host-internal and **not** exported to apps, so you can't recompute fresh
+   tokens yourself.
+5. **Don't subscribe to `theme:changed` directly** — `useTheme()` already does,
+   in both pages (via provider) and standalone extensions (via `context.eventBus`).
+
+## Rendering a data table (contract)
+
+Use `ui.templates.DatagridTemplate` — it wraps the host's shared `DataTable`, so it
+inherits search, filtering, CSV export, column show/hide, per-user persisted column
+order/width, autosize, row actions, and the pagination footer. Do **not** hand-roll a
+table; a remote app has no MUI of its own.
+
+```tsx
+const DatagridTemplate = ui?.templates?.DatagridTemplate as UIComponent | undefined;
+
+<DatagridTemplate
+  data={rows}
+  columns={[
+    { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
+    { field: 'email', headerName: 'Email', flex: 1, minWidth: 200 },
+    { field: 'status', headerName: 'Status', width: 120 },
+  ]}
+  actions={[
+    { label: 'Edit', icon: 'mdi:pencil', onClick: (row) => edit(row) },
+    { label: 'Delete', icon: 'mdi:delete', color: 'error', onClick: (row) => remove(row) },
+  ]}
+  toolbar={{
+    enableSearch: true,
+    enableFilter: true,
+    enableColumns: true,
+    enableExport: true,
+    enableRefresh: true,
+    onRefresh: refetch,
+  }}
+  getRowId={(row) => row.id}
+  loading={isLoading}
+  defaultPageSize={25}
+  pageSizeOptions={[15, 25, 50, 100]}
+  height="calc(100vh - 320px)"
+/>;
+```
+
+Rules that trip apps up:
+
+1. **Always set `height`.** The host default is `calc(100vh - 377px)`, an offset tuned
+   to the _host's_ page chrome. Your page adds its own heading/description above the
+   grid, which pushes the bottom of the grid — and therefore the pagination footer —
+   below the fold, so pagination looks missing when it is merely off-screen. Pass a
+   concrete value (`'520px'`, `'60vh'`, `'calc(100vh - 320px)'`).
+2. **`height="auto"` is the usual reason pagination looks missing.** It sizes the grid to
+   its rows, so the footer follows the last row — about `rows × rowHeight` down the page,
+   ~1600px at `defaultPageSize: 25` with 64px rows, i.e. two screens down. It is a fine
+   choice for a short table that should grow and let the page scroll, but pair it with a
+   small `defaultPageSize` (5–10). A bounded height keeps the footer pinned and visible.
+3. **Pagination is client-side over the rows you pass.** There is no `paginationMode`,
+   `rowCount`, or `onPaginationModelChange` — fetch your rows, hand them over, and the
+   footer paginates them. If you page a large set in yourself, feed
+   `infiniteLoading={{ totalCount, progress, isLoadingAny }}` so the footer shows
+   load progress instead of a total that keeps changing.
+4. **`defaultPageSize` larger than your row count leaves every page control disabled** —
+   correct behaviour, but it reads as "pagination is broken". Check against real volumes.
+5. **Set `getRowId`** unless your rows have an `id` field; without it selection, export
+   of selected rows, and detail panels all misbehave.
+6. `headerName` and action `label` are run through the host translator, so a plain
+   English string is fine but a translation key resolves if one exists.
+
+## Host events & data streams (contract)
+
+Two rules govern how a remote app talks across the host boundary. The host **enforces** both — get them right.
+
+### 1. Host data streams are capability-gated — never read the raw bus
+
+Live host data (call events, subscriber / device / registration changes) is delivered **only** through the SDK as per-app callbacks. It is **not** broadcast on `eventBus`, so `horizonContext.eventBus.on('call-event' | 'subscriber:*', …)` receives nothing.
+
+```tsx
+// Call events — typed helper:
+const stop = sdk.subscribeToCallEvents(['call-started', 'call-answered', 'call-ended'], (event) => {
+  /* … */
+});
+
+// Other host streams (subscriber / device / registration):
+const stop2 = sdk.subscribeToStream('subscriber', ['user'], (event) => {
+  /* … */
+});
+
+// Call stop()/stop2() to unsubscribe; sdk.cleanup() also tears them down.
+// The useStream(eventBus, webpackModule, streamId, eventTypes, cb) hook does
+// the same with automatic cleanup.
+```
+
+Each stream is gated by a `<streamId>:listen` capability. Declare it as `requiredPermissions` on the extension config that needs it — the platform analyser extracts those from your submitted source, and the Capabilities column on Registered Apps is a read-only view of what it found. There is no `permissions` field on the registration to list them in. The capability must also be enabled **platform-wide**; an administrator can disable any capability globally, and a disabled one silently ignores the subscription. Subscriptions are attributed to your app on the Registered Apps page.
+
+| `subscribeToStream` id | Capability            | Carries                                             |
+| ---------------------- | --------------------- | --------------------------------------------------- |
+| `call-events`          | `call-events:listen`  | SIP call lifecycle (prefer `subscribeToCallEvents`) |
+| `subscriber`           | `subscriber:listen`   | subscriber / user record changes                    |
+| `device`               | `device:listen`       | device state                                        |
+| `registration`         | `registration:listen` | SIP registration state                              |
+
+### 2. The event bus is per-app scoped — use it only for your own custom events
+
+The host hands each app a **scoped** `eventBus`. Custom events you emit are automatically confined to your app's namespace: they reach your own pages and extensions (e.g. a `table-row-actions` extension signalling your page or side panel) but never another app — and you cannot listen to host channels or another app's events.
+
+```tsx
+// Intra-app coordination only — the host scopes this to your app automatically.
+horizonContext.eventBus.emit('<app-id>:refresh', payload);
+horizonContext.eventBus.on('<app-id>:refresh', handler); // clean up in your effect
+```
+
+Do **not** subscribe to `theme:changed` / `locale:changed` directly — use `useTheme()` / `useLocale()`. Opening the shared side panel from an extension is a built-in control event — use `useSidePanel()`, not a custom event.
+
+## After scaffolding
+
+Tell the user:
+
+```
+✅ Created <app-id> at ./<app-id>
+
+Next:
+  cd <app-id>
+  npm install
+  npm run dev
+
+Then register with Horizon (see README for the curl command), and visit
+/apps/<app-id> in your Horizon instance.
+
+Check who each surface is for:
+  Every registered route, extension and column should declare `requiredScopes`.
+  Without it, any signed-in user can reach it.
+
+Before you ship:
+  npm run build && npm run verify
+
+  `verify` runs the same bundle checks the platform runs. Registering the app
+  is not enough on its own — it stays at verification status `none` and will
+  not render until you submit a version and it is verified. The README has the
+  submission call.
+
+  Your CDN origin (and `localhost` for dev) must be in the operator's approved
+  CDN origins list, or the bundle is refused before it is fetched.
+
+If you had to work around a missing UI component, it is written up in
+KIT-GAPS.md — please send that file to the Horizon SDK team. It is how the
+host UI kit finds out what it is missing.
+```
+
+## Notes for the agent
+
+- Replace **all** placeholders before writing files: `<app-id>`, `<display-name>`, `<module-scope>`, `<dev-port>`, `<author>`.
+- **Keep `KIT-GAPS.md` up to date as you build — this is a running log, not a scaffold-time file.** The kit is deliberately smaller than MUI, so sooner or later you will want a component it does not have. Whenever that happens, do not just work around it silently: append an entry recording what you reached for, what you used instead (with the file path), what it cost, and the component shape that would have fit. You are the only observer who has that reasoning while it is still live — a developer reading the finished code months later cannot reconstruct why a `ToggleButtonGroup` is pretending to be a tab strip. This file is the sole mechanism by which the host UI kit learns what it is missing, so an unrecorded workaround is a gap nobody ever hears about. If you finish with no gaps, leave the file with its commented-out template; an empty log is a real signal too.
+- **The federation name is single-sourced.** `<module-scope>` (camelCase) is now hardcoded in exactly one place — `MODULE_NAME` in `webpack.config.js` — and flows into the app via `DefinePlugin` (`__MF_NAME__`), which `useRemoteApp(horizonContext, __MF_NAME__)` consumes. Do **not** also hardcode the module name in `App.tsx`. `<module-scope>` must be a valid JS identifier (camelCase, no dashes); the SDK/host derive the kebab `<app-id>` from it, which is what you use for route ids/paths (`<app-id>.main`, `/apps/<app-id>`) and the registration's `capabilities.routes`.
+- Don't pull in MUI as a direct dependency — every UI component comes from `horizonContext.ui`. They're wrapped in the host MUI `ThemeProvider`, so they re-theme on a live dark/light toggle for free — which is exactly why hand-rolled markup colored from raw tokens drifts out of sync.
+- **Theme-correctness is a contract — see "Theming & dark/light mode".** The short version: build UI from `ui.*` components (reactive); use `useTheme() → { theme }` for the reactive mode string; treat `ui.theme`/`ui.styles` as a **mount-time snapshot** (the provider re-spreads `theme`/`locale` but never rebuilds `ui`). Only `ui.theme.spacing` / `typography` / `borderRadius` are mode-invariant and safe to read off the snapshot; `colors`/`shadows` go stale after a toggle. `getThemeTokens`/`getUIStyles` are host-internal, not exported, so an app can't recompute fresh tokens — branch on `theme` or use a `ui.*` surface instead. In standalone extensions (outside the provider) call `useTheme(context.eventBus, context.theme)`.
+- **Only `react`, `react-dom`, and `loglevel` go in webpack `shared`.** Any other runtime dependency (e.g. a WebRTC/signaling/charting lib) is bundled normally — just `npm install` it and import it. Do **NOT** add a non-host-provided lib to `shared` as a `singleton`: the host's federation loader doesn't register it, so it crashes at load with "Unsatisfied version". (This is also why MUI is absent from `shared`.) The host also provides `i18next` and `react-i18next`, but you reach translations through `context.t` rather than sharing them.
+- **Never put `@netsapiens/horizon-sdk` in `shared`.** It is the one entry that looks like it belongs and does not. Sharing it fails the build with "contains unresolved integrity placeholders" and fails verification on `sdk-not-shared`. Remove it entirely — `import: false` is not a workaround.
+- **Pages read context via `useHorizonContext()`, not props.** Wrap each page component once in `<HorizonContextProvider context={horizonContext}>` inside `App.tsx` (memoized with **empty deps** for stable identity — the provider keeps theme/locale live via the eventBus). Don't prop-drill `horizonContext` into pages. Extensions are different — they receive `context` as a prop (`ExtensionComponentProps`) and read `context.ui` directly.
+- **Host UI components are typed `ComponentType<unknown>`.** In pages, cast them to `ComponentType<Record<string, unknown>>` before using them in JSX (see `MainPage.tsx`) so `tsc --strict` doesn't trip `TS2769`. The babel build strips types either way, but the cast keeps the scaffold type-clean.
+- **Route menu position uses `placement`, not `order`.** `RouteConfig` has no `order` field — use `placement: { first: true } | { last: true } | { after: 'anchor' } | { before: 'anchor' }` (anchors resolve by fuzzy match). `registerRoute` is async — `.catch()` it.
+- Don't use `sdk.registerExtension` (legacy, removed). Use `sdk.registerDynamicExtension` with a zone + route patterns.
+- **Never read host data streams off the raw bus.** `eventBus.on('call-event' | 'subscriber:*' | …)` receives nothing — host streams are delivered only via `sdk.subscribeToCallEvents(...)` / `sdk.subscribeToStream(streamId, eventTypes, cb)` (capability-gated, attributed). See "Host events & data streams".
+- **Declare `requiredScopes` on every route, extension and column — see "Declaring who a surface is for".** Omitting it means every signed-in user can reach the surface; the host no longer treats a hidden menu entry as a gate. Prefer a tier name (`'ADMINS'`) over a literal scope array, and write it inline so a typo is a compile error — a malformed declaration refuses the whole registration rather than being ignored.
+- **Streams are capability-gated.** For any stream the app subscribes to, add its `<streamId>:listen` capability to the registration `permissions` (e.g. `call-events:listen`); a platform admin enables it per app. Without the grant, the subscription is silently dropped.
+- **The event bus is per-app scoped.** Use `eventBus` only for the app's _own_ custom events (intra-app coordination — your page ↔ your extensions), namespaced with the appId prefix; the host confines them to your app and blocks cross-app/host-channel access. Don't subscribe to `theme:changed` / `locale:changed` directly — use `useTheme()` / `useLocale()`.
+- Don't import from `@netsapiens/horizon-sdk/client` or `/ui` — only the root entry exists.
+- **`IconButton` is shorthand-only.** Pass the Iconify icon name via the `icon` prop (and optionally `iconSize`). Do NOT use the MUI children pattern — children are not supported and the button will render at 0×0. Correct: `<IconButton icon="mdi:account" iconSize={18} size="small" onClick={...} aria-label="..." />`. Wrong: `<IconButton><Icon icon="mdi:account" /></IconButton>`. The SDK type contract enforces this at compile time. Every other themed component (`Button`, `Stack`, `Paper`, etc.) follows standard MUI children patterns.
+- **`Select` takes an `options` prop, not `MenuItem` children.** The host kit does not expose `MenuItem`. Use `<Select label="…" value={v} onChange={(e) => set(e.target.value)} options={[{ value, label }]} />`. Building it with `MenuItem` children yields an empty dropdown.
+- **`PageTemplate` `actions` is `PageAction[]`, not JSX.** The host renders the buttons itself, so pass an array of `{ label, icon?, variant?: 'primary' | 'secondary' | 'danger', onClick, disabled?, tooltip? }`. Passing a node throws `actions.map is not a function` and blanks the route. For arbitrary header JSX (status chips/badges) use the `headerStatus` prop instead.
+- The remote `App` component should return `null` or hidden content. UI surfaces only through registered routes/extensions/columns.

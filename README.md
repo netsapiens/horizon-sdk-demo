@@ -20,6 +20,15 @@ light and dark mode.
 > and have not rebuilt. It replaces `MIGRATION_BUNDLE_VERIFICATION.md`, which
 > covered only the 0.2.1 half.
 
+> **Starting a new app with an AI agent?** This repository ships a Claude Code
+> skill at
+> [`.claude/skills/create-horizon-app/`](./.claude/skills/create-horizon-app/SKILL.md).
+> Open this repo (or copy that folder into your own) and ask your agent to
+> *"create a Horizon app"* — it scaffolds a project with bundle verification,
+> scope declarations and the theme contract already correct, which is most of what
+> the migration guide exists to explain. The skill is written against the same SDK
+> version this demo uses.
+
 ## What it demonstrates
 
 This single app registers **4 full-page routes**, **10 zone extensions**, **1
