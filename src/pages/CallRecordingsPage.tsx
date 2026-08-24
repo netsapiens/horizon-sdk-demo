@@ -66,8 +66,7 @@ export default function CallRecordingsPage({ ...marker }: ZoneMarkerProps) {
 
   const ui = horizonContext.ui;
   const { PageTemplate, DatagridTemplate } = ui?.templates || {};
-  const { Alert, Box, Chip, FormControlLabel, Stack, Switch, Typography } =
-    ui || {};
+  const { Alert, Box, Chip, FormControlLabel, Switch, Typography } = ui || {};
 
   // `customControls` is a node, so memoize it — an inline element would be a new
   // reference every render and re-mount the switch on each keystroke in search.
@@ -256,7 +255,7 @@ export default function CallRecordingsPage({ ...marker }: ZoneMarkerProps) {
     [Box, Typography],
   );
 
-  if (!PageTemplate || !DatagridTemplate || !Stack || !Box || !Typography) {
+  if (!PageTemplate || !DatagridTemplate || !Box || !Typography) {
     return (
       <div {...marker} style={{ padding: 24 }}>
         UI components not available
@@ -307,29 +306,32 @@ export default function CallRecordingsPage({ ...marker }: ZoneMarkerProps) {
         },
       ]}
     >
-      <Stack spacing={2}>
-        {Alert && (
-          <Alert severity={lastAction ? 'success' : 'info'}>
-            {lastAction ??
-              'Every control on this page — search, filter, columns, export, refresh, selection and the pagination footer — comes from DatagridTemplate. Only the "Starred only" switch is app-specific.'}
-          </Alert>
-        )}
+      {/* No wrapper around these two on purpose. `layout="fill"` makes the page
+          body a flex column with its own gap, and the grid fills what is left of
+          it. A <Stack> here would sit in between as an ordinary content-sized flex
+          item, and the grid would size to the Stack instead of to the page — which
+          is what used to be hidden by the hand-tuned `height`. */}
+      {Alert && (
+        <Alert severity={lastAction ? 'success' : 'info'}>
+          {lastAction ??
+            'Every control on this page — search, filter, columns, export, refresh, selection and the pagination footer — comes from DatagridTemplate. Only the "Starred only" switch is app-specific.'}
+        </Alert>
+      )}
 
-        <DatagridTemplate
-          data={rows}
-          getRowId={getRowId}
-          columns={columns}
-          actions={actions}
-          toolbar={toolbar}
-          enableCheckboxSelection
-          onSelectionChange={handleSelectionChange}
-          initialState={INITIAL_STATE}
-          getDetailPanelContent={getDetailPanelContent}
-          getDetailPanelHeight={getDetailPanelHeight}
-          defaultPageSize={25}
-          pageSizeOptions={PAGE_SIZE_OPTIONS}
-        />
-      </Stack>
+      <DatagridTemplate
+        data={rows}
+        getRowId={getRowId}
+        columns={columns}
+        actions={actions}
+        toolbar={toolbar}
+        enableCheckboxSelection
+        onSelectionChange={handleSelectionChange}
+        initialState={INITIAL_STATE}
+        getDetailPanelContent={getDetailPanelContent}
+        getDetailPanelHeight={getDetailPanelHeight}
+        defaultPageSize={25}
+        pageSizeOptions={PAGE_SIZE_OPTIONS}
+      />
     </PageTemplate>
   );
 }

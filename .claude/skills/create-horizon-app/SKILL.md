@@ -794,6 +794,12 @@ The grid sizes itself, but only if the page tells the shell to fill. Put
 </PageTemplate>
 ```
 
+**Put them in directly — do not wrap them in a `<Stack>` or `<Box>`.** The body is
+already a flex column with its own gap. A wrapper sits in between as a
+content-sized flex item, and the grid fills _the wrapper_ instead of the page, so
+it stops short of the bottom. If you genuinely need one, give it
+`sx={{ flex: 1, minHeight: 0 }}` so it fills and lets the grid fill in turn.
+
 `src/pages/CallRecordingsPage.tsx` in this repository is exactly this shape, and
 `DATAGRID.md` covers the footer questions in more depth.
 

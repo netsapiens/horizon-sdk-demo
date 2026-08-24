@@ -191,6 +191,34 @@ The grid takes whatever height is left in the page column, so its pagination row
 sits on the viewport's bottom edge — and it stays there when you add a banner, a
 tab bar, a filter row, or when the host injects an extension above the grid.
 
+**Do not wrap the children in a `<Stack>` or a `<Box>`.** `layout="fill"` already
+makes the page body a flex column with its own gap, so the banner and the grid go
+in directly. A wrapper sits between them as an ordinary content-sized flex item,
+and the grid then fills _the wrapper_ rather than the page — so it stops short of
+the bottom:
+
+```tsx
+// ✗ the grid sizes to the Stack, not to the page
+<PageTemplate layout='fill'>
+  <Stack spacing={2}>
+    <Alert severity='info'>…</Alert>
+    <DatagridTemplate … />
+  </Stack>
+</PageTemplate>
+
+// ✓ direct children; the body's own gap does the spacing
+<PageTemplate layout='fill'>
+  <Alert severity='info'>…</Alert>
+  <DatagridTemplate … />
+</PageTemplate>
+```
+
+This one is easy to miss because it looks fine until you notice the gap under the
+grid — this repository's own call-recordings page shipped with the Stack, hidden
+for a while by the hand-tuned `height` it used to pass. If you must have a wrapper
+(a split view, say), give it `sx={{ flex: 1, minHeight: 0 }}` so it fills and lets
+the grid fill in turn.
+
 This used to default to `calc(100vh - 377px)`, and the advice here was to
 "increase the offset to match" whatever you rendered above the grid. That advice
 produced values like `calc(100vh - 470px)`: correct on the day it was written, and
