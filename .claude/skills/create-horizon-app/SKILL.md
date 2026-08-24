@@ -263,14 +263,41 @@ export default function App(horizonContext: HorizonContext) {
       })
       .catch((error) => console.error('[<app-id>] route registration failed:', error));
 
+    // Contributing a BUTTON to an action zone: declare it, don't render it.
+    // State the intent and the host draws it exactly as it draws its own header
+    // buttons, so it cannot drift from the page it sits on. `onClick` receives
+    // the live page state, so an action can work on the current rows or the
+    // user's selection without owning a component.
     sdk.registerDynamicExtension({
       id: '<app-id>.header-button',
       zone: 'page-header-actions',
       routes: [{ pattern: '/manage/:domain/users' }],
       priority: 10,
       requiredScopes: 'DOMAIN_MANAGERS',
-      component: HeaderButton,
+      actions: [
+        {
+          id: 'export',
+          label: 'Export data',
+          icon: 'material-symbols:download',
+          intent: 'secondary', // 'primary' | 'secondary' (default) | 'danger'
+          onClick: ({ pageContext, route }) => {
+            const { rows, selectedRows } = (pageContext ?? {}) as {
+              rows?: unknown[];
+              selectedRows?: unknown[];
+            };
+            exportRows(selectedRows?.length ? selectedRows : rows, route);
+          },
+        },
+        // Several buttons: add entries. Several apps in one zone: the host
+        // orders by `priority`, then array order.
+      ],
     });
+
+    // Use `component` only for something that is NOT a button — a badge, a
+    // banner, a widget, a filter control. `component` and `actions` are mutually
+    // exclusive; a registration with both, or neither, is rejected and logged.
+    // `src/extensions/ExportButton.tsx` in this repository is the declared form;
+    // the other files in that directory are components, correctly.
 
     // Host data streams are capability-gated and delivered through the SDK —
     // never the raw event bus. See "Host events & data streams" below. Requires
@@ -753,22 +780,40 @@ const DatagridTemplate = ui?.templates?.DatagridTemplate as UIComponent | undefi
   loading={isLoading}
   defaultPageSize={25}
   pageSizeOptions={[15, 25, 50, 100]}
-  height="calc(100vh - 320px)"
 />;
 ```
 
+The grid sizes itself, but only if the page tells the shell to fill. Put
+`layout="fill"` on the `PageTemplate` that wraps it:
+
+```tsx
+<PageTemplate title="<display-name>" layout="fill">
+  <Alert severity="info">…</Alert>          {/* takes its height first */}
+  <DatagridTemplate {...gridProps} />        {/* absorbs whatever is left */}
+</PageTemplate>
+```
+
+`src/pages/CallRecordingsPage.tsx` in this repository is exactly this shape, and
+`DATAGRID.md` covers the footer questions in more depth.
+
 Rules that trip apps up:
 
-1. **Always set `height`.** The host default is `calc(100vh - 377px)`, an offset tuned
-   to the _host's_ page chrome. Your page adds its own heading/description above the
-   grid, which pushes the bottom of the grid — and therefore the pagination footer —
-   below the fold, so pagination looks missing when it is merely off-screen. Pass a
-   concrete value (`'520px'`, `'60vh'`, `'calc(100vh - 320px)'`).
+1. **Never calculate a `height`. Set `layout="fill"` on the `PageTemplate` instead.**
+   The grid then takes whatever height is left in the page column, so its pagination row
+   sits on the viewport's bottom edge however much you stack above it — a heading, a
+   banner, a filter row, or a host extension zone. It stays correct when that content
+   changes.
+
+   This used to advise passing a concrete offset tuned to your own chrome. That produced
+   values like `calc(100vh - 470px)` — this repository's own call-recordings page was one
+   — right the day they were written, wrong as soon as anything above the grid moved. Pass
+   an explicit `height` only for a genuinely fixed-size grid: a dashboard card, one pane
+   of a split view.
 2. **`height="auto"` is the usual reason pagination looks missing.** It sizes the grid to
    its rows, so the footer follows the last row — about `rows × rowHeight` down the page,
    ~1600px at `defaultPageSize: 25` with 64px rows, i.e. two screens down. It is a fine
    choice for a short table that should grow and let the page scroll, but pair it with a
-   small `defaultPageSize` (5–10). A bounded height keeps the footer pinned and visible.
+   small `defaultPageSize` (5–10). `layout="fill"` is what you want otherwise.
 3. **Pagination is client-side over the rows you pass.** There is no `paginationMode`,
    `rowCount`, or `onPaginationModelChange` — fetch your rows, hand them over, and the
    footer paginates them. If you page a large set in yourself, feed
@@ -881,5 +926,11 @@ host UI kit finds out what it is missing.
 - Don't import from `@netsapiens/horizon-sdk/client` or `/ui` — only the root entry exists.
 - **`IconButton` is shorthand-only.** Pass the Iconify icon name via the `icon` prop (and optionally `iconSize`). Do NOT use the MUI children pattern — children are not supported and the button will render at 0×0. Correct: `<IconButton icon="mdi:account" iconSize={18} size="small" onClick={...} aria-label="..." />`. Wrong: `<IconButton><Icon icon="mdi:account" /></IconButton>`. The SDK type contract enforces this at compile time. Every other themed component (`Button`, `Stack`, `Paper`, etc.) follows standard MUI children patterns.
 - **`Select` takes an `options` prop, not `MenuItem` children.** The host kit does not expose `MenuItem`. Use `<Select label="…" value={v} onChange={(e) => set(e.target.value)} options={[{ value, label }]} />`. Building it with `MenuItem` children yields an empty dropdown.
+- **Contribute action-zone buttons with `actions`, not `component`.** Declaring
+  `{ id, label, icon?, intent?, onClick }` lets the host render the button in the house
+  style; rendering your own means restating that a secondary action is
+  `variant="soft" color="neutral"`, and the raw MUI variants stay reachable, so it is easy
+  to ship one that does not match the page. `onClick` gets `{ route, params, user,
+  pageContext }`, so page data is still available. Keep `component` for non-buttons.
 - **`PageTemplate` `actions` is `PageAction[]`, not JSX.** The host renders the buttons itself, so pass an array of `{ label, icon?, variant?: 'primary' | 'secondary' | 'danger', onClick, disabled?, tooltip? }`. Passing a node throws `actions.map is not a function` and blanks the route. For arbitrary header JSX (status chips/badges) use the `headerStatus` prop instead.
 - The remote `App` component should return `null` or hidden content. UI surfaces only through registered routes/extensions/columns.
