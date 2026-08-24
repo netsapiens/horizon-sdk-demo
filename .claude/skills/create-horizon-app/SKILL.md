@@ -21,7 +21,7 @@ Scaffolds a new remote app for NetSapiens Horizon.
 **Reference material in this repository.** The app in `src/` is a working extension with every
 requirement below already applied — read it when a template here is ambiguous.
 [`MIGRATION-0.1.x-TO-0.2.x.md`](../../../MIGRATION-0.1.x-TO-0.2.x.md) is the full contract and
-explains *why* each requirement exists; `examples/vendor-backend` is a correct remote-auth
+explains _why_ each requirement exists; `examples/vendor-backend` is a correct remote-auth
 webhook verifier.
 
 ## Inputs to gather
@@ -214,8 +214,10 @@ module.exports = (_env, argv) => {
 ### `src/App.tsx`
 
 ```tsx
+import type { HorizonContext } from '@netsapiens/horizon-sdk';
 import { useEffect, useMemo } from 'react';
-import { type HorizonContext, HorizonContextProvider, useRemoteApp } from '@netsapiens/horizon-sdk';
+import { HorizonContextProvider, useRemoteApp } from '@netsapiens/horizon-sdk';
+
 import HeaderButton from './extensions/HeaderButton';
 import MainPage from './pages/MainPage';
 
@@ -261,7 +263,9 @@ export default function App(horizonContext: HorizonContext) {
         requiredScopes: 'ADMINS',
         component: MainPageRoute,
       })
-      .catch((error) => console.error('[<app-id>] route registration failed:', error));
+      .catch((error) =>
+        console.error('[<app-id>] route registration failed:', error),
+      );
 
     // Contributing a BUTTON to an action zone: declare it, don't render it.
     // State the intent and the host draws it exactly as it draws its own header
@@ -319,13 +323,8 @@ export default function App(horizonContext: HorizonContext) {
 ### `src/pages/MainPage.tsx`
 
 ```tsx
-import { type ComponentType, type CSSProperties, useState } from 'react';
+import { type CSSProperties, useState } from 'react';
 import { type ThemeTokens, useHorizonContext, useTheme } from '@netsapiens/horizon-sdk';
-
-// The host UI components are typed loosely (`ComponentType<unknown>`); cast to a
-// props-accepting type so JSX usage type-checks under `strict` instead of
-// tripping TS2769.
-type UIComponent = ComponentType<Record<string, unknown>>;
 
 export default function MainPage() {
   // Read the live, reactive context from the provider — not via props.
@@ -338,12 +337,8 @@ export default function MainPage() {
   const { theme } = useTheme();
   const [count, setCount] = useState(0);
 
-  const PageTemplate = ui?.templates?.PageTemplate as UIComponent | undefined;
-  const Paper = ui?.Paper as UIComponent | undefined;
-  const Stack = ui?.Stack as UIComponent | undefined;
-  const Typography = ui?.Typography as UIComponent | undefined;
-  const Button = ui?.Button as UIComponent | undefined;
-  const Chip = ui?.Chip as UIComponent | undefined;
+  const { PageTemplate } = ui?.templates ?? {};
+  const { Paper, Stack, Typography, Button, Chip } = ui ?? {};
 
   // Design tokens for hand-rolled markup. `spacing` / `borderRadius` /
   // `typography` are mode-INVARIANT (identical in light & dark), so reading them
@@ -454,7 +449,7 @@ export default function HeaderButton({ context }: ExtensionComponentProps) {
 ### `index.html`
 
 ```html
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -597,7 +592,8 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    environment: { name: github-pages, url: '${{ steps.deployment.outputs.page_url }}' }
+    environment:
+      { name: github-pages, url: '${{ steps.deployment.outputs.page_url }}' }
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
@@ -755,7 +751,7 @@ order/width, autosize, row actions, and the pagination footer. Do **not** hand-r
 table; a remote app has no MUI of its own.
 
 ```tsx
-const DatagridTemplate = ui?.templates?.DatagridTemplate as UIComponent | undefined;
+const { DatagridTemplate } = ui?.templates ?? {};
 
 <DatagridTemplate
   data={rows}
@@ -766,7 +762,12 @@ const DatagridTemplate = ui?.templates?.DatagridTemplate as UIComponent | undefi
   ]}
   actions={[
     { label: 'Edit', icon: 'mdi:pencil', onClick: (row) => edit(row) },
-    { label: 'Delete', icon: 'mdi:delete', color: 'error', onClick: (row) => remove(row) },
+    {
+      label: 'Delete',
+      icon: 'mdi:delete',
+      color: 'error',
+      onClick: (row) => remove(row),
+    },
   ]}
   toolbar={{
     enableSearch: true,
@@ -787,9 +788,9 @@ The grid sizes itself, but only if the page tells the shell to fill. Put
 `layout="fill"` on the `PageTemplate` that wraps it:
 
 ```tsx
-<PageTemplate title="<display-name>" layout="fill">
-  <Alert severity="info">…</Alert>          {/* takes its height first */}
-  <DatagridTemplate {...gridProps} />        {/* absorbs whatever is left */}
+<PageTemplate title='<display-name>' layout='fill'>
+  <Alert severity='info'>…</Alert> {/* takes its height first */}
+  <DatagridTemplate {...gridProps} /> {/* absorbs whatever is left */}
 </PageTemplate>
 ```
 
@@ -809,6 +810,7 @@ Rules that trip apps up:
    — right the day they were written, wrong as soon as anything above the grid moved. Pass
    an explicit `height` only for a genuinely fixed-size grid: a dashboard card, one pane
    of a split view.
+
 2. **`height="auto"` is the usual reason pagination looks missing.** It sizes the grid to
    its rows, so the footer follows the last row — about `rows × rowHeight` down the page,
    ~1600px at `defaultPageSize: 25` with 64px rows, i.e. two screens down. It is a fine
@@ -836,9 +838,12 @@ Live host data (call events, subscriber / device / registration changes) is deli
 
 ```tsx
 // Call events — typed helper:
-const stop = sdk.subscribeToCallEvents(['call-started', 'call-answered', 'call-ended'], (event) => {
-  /* … */
-});
+const stop = sdk.subscribeToCallEvents(
+  ['call-started', 'call-answered', 'call-ended'],
+  (event) => {
+    /* … */
+  },
+);
 
 // Other host streams (subscriber / device / registration):
 const stop2 = sdk.subscribeToStream('subscriber', ['user'], (event) => {
@@ -931,6 +936,6 @@ host UI kit finds out what it is missing.
   style; rendering your own means restating that a secondary action is
   `variant="soft" color="neutral"`, and the raw MUI variants stay reachable, so it is easy
   to ship one that does not match the page. `onClick` gets `{ route, params, user,
-  pageContext }`, so page data is still available. Keep `component` for non-buttons.
+pageContext }`, so page data is still available. Keep `component` for non-buttons.
 - **`PageTemplate` `actions` is `PageAction[]`, not JSX.** The host renders the buttons itself, so pass an array of `{ label, icon?, variant?: 'primary' | 'secondary' | 'danger', onClick, disabled?, tooltip? }`. Passing a node throws `actions.map is not a function` and blanks the route. For arbitrary header JSX (status chips/badges) use the `headerStatus` prop instead.
 - The remote `App` component should return `null` or hidden content. UI surfaces only through registered routes/extensions/columns.
