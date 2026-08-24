@@ -24,8 +24,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useHorizonContext, useLocale } from '@netsapiens/horizon-sdk';
 
 import type { RecentCall } from '../mocks/recentCalls';
-import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import { fetchRecentCalls } from '../api/callsApi';
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import { lookupCrmRecord, normalizePhoneNumber } from '../mocks/crm';
 import { formatDuration, SAMPLE_RECENT_CALLS } from '../mocks/recentCalls';
 
@@ -160,9 +160,10 @@ export default function CrmIntegrationPage({ ...marker }: ZoneMarkerProps) {
     ? lookupCrmRecord(normalizePhoneNumber(selectedCall.party))
     : undefined;
 
-  const { PageTemplate } = horizonContext.ui?.templates || {};
+  const ui = horizonContext.ui;
+  const { PageTemplate } = ui?.templates || {};
   const { Paper, Stack, Typography, Chip, Alert, Divider, Box, Button } =
-    horizonContext.ui || {};
+    ui || {};
 
   if (!PageTemplate || !Paper || !Stack || !Typography || !Chip || !Box) {
     return (
@@ -184,7 +185,7 @@ export default function CrmIntegrationPage({ ...marker }: ZoneMarkerProps) {
       title={`${VENDOR_NAME} Integration`}
       subtitle="The signed-in user's NetSapiens calls, matched to their CRM record"
       breadcrumbs={[
-        { label: t('MANAGE') || 'Manage', url: '/manage' },
+        { label: t?.('MANAGE') || 'Manage', url: '/manage' },
         { label: `${VENDOR_NAME} Integration` },
       ]}
     >
@@ -359,7 +360,8 @@ export default function CrmIntegrationPage({ ...marker }: ZoneMarkerProps) {
                     color='text.secondary'
                     sx={{ wordBreak: 'break-all' }}
                   >
-                    Deep-links this contact into {VENDOR_NAME}: <code>{deepLink}</code>
+                    Deep-links this contact into {VENDOR_NAME}:{' '}
+                    <code>{deepLink}</code>
                   </Typography>
                 )}
               </Stack>

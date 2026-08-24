@@ -129,7 +129,8 @@ export default function RemoteAuthPanel({
   s: DemoStyles;
   themeTokens: DemoTheme;
 }) {
-  const { auth, ui } = useHorizonContext();
+  const { auth } = useHorizonContext();
+  const { ui } = useHorizonContext();
 
   // Seed from the session cache so a prior connection survives a tab switch.
   const [token, setToken] = useState<RemoteAuthResponse | null>(() =>

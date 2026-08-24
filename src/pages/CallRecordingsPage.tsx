@@ -64,9 +64,10 @@ export default function CallRecordingsPage({ ...marker }: ZoneMarkerProps) {
   const [selected, setSelected] = useState<CallRecording[]>([]);
   const [lastAction, setLastAction] = useState<string | null>(null);
 
-  const { PageTemplate, DatagridTemplate } = horizonContext.ui?.templates || {};
+  const ui = horizonContext.ui;
+  const { PageTemplate, DatagridTemplate } = ui?.templates || {};
   const { Alert, Box, Chip, FormControlLabel, Stack, Switch, Typography } =
-    horizonContext.ui || {};
+    ui || {};
 
   // `customControls` is a node, so memoize it — an inline element would be a new
   // reference every render and re-mount the switch on each keystroke in search.

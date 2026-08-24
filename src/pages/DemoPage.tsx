@@ -10,7 +10,8 @@
  * Styled with the host theme tokens (`horizonContext.ui.styles` / `.theme`) so
  * it tracks the host light/dark theme automatically.
  */
-import { type ComponentType, type CSSProperties, useState } from 'react';
+import type { CSSProperties } from 'react';
+import { useState } from 'react';
 import { useHorizonContext, VERSION } from '@netsapiens/horizon-sdk';
 
 import { type ZoneMarkerProps } from '../integration/withZoneTestId';
@@ -43,19 +44,21 @@ export default function DemoPage({ ...marker }: ZoneMarkerProps) {
   const horizonContext = useHorizonContext();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
-  // The host UI components are typed loosely (`ComponentType<unknown>`); cast to
-  // a props-accepting type so JSX usage type-checks instead of tripping TS2769.
-  type UIComponent = ComponentType<Record<string, unknown>>;
   const ui = horizonContext.ui;
-  const PageTemplate = ui?.templates?.PageTemplate as UIComponent | undefined;
-  const Paper = ui?.Paper as UIComponent | undefined;
-  const Stack = ui?.Stack as UIComponent | undefined;
-  const Box = ui?.Box as UIComponent | undefined;
-  const Typography = ui?.Typography as UIComponent | undefined;
+  const PageTemplate = ui?.templates?.PageTemplate;
+  const { Paper, Stack, Box, Typography } = ui || {};
   const s = ui?.styles;
   const themeTokens = ui?.theme;
 
-  if (!PageTemplate || !Paper || !Stack || !Box || !Typography || !s || !themeTokens) {
+  if (
+    !PageTemplate ||
+    !Paper ||
+    !Stack ||
+    !Box ||
+    !Typography ||
+    !s ||
+    !themeTokens
+  ) {
     return (
       <div {...marker} style={{ padding: '24px' }}>
         <h1>Horizon SDK Demo</h1>
@@ -120,13 +123,25 @@ export default function DemoPage({ ...marker }: ZoneMarkerProps) {
           ))}
         </Stack>
 
-        {activeTab === 'overview' && <OverviewPanel s={s} themeTokens={themeTokens} />}
-        {activeTab === 'zones' && <ZonesPanel s={s} themeTokens={themeTokens} />}
-        {activeTab === 'patterns' && <PatternsPanel s={s} themeTokens={themeTokens} />}
+        {activeTab === 'overview' && (
+          <OverviewPanel s={s} themeTokens={themeTokens} />
+        )}
+        {activeTab === 'zones' && (
+          <ZonesPanel s={s} themeTokens={themeTokens} />
+        )}
+        {activeTab === 'patterns' && (
+          <PatternsPanel s={s} themeTokens={themeTokens} />
+        )}
         {activeTab === 'code' && <CodePanel s={s} themeTokens={themeTokens} />}
-        {activeTab === 'remote-auth' && <RemoteAuthPanel s={s} themeTokens={themeTokens} />}
+        {activeTab === 'remote-auth' && (
+          <RemoteAuthPanel s={s} themeTokens={themeTokens} />
+        )}
         {activeTab === 'walkthrough' && (
-          <WalkthroughPanel s={s} themeTokens={themeTokens} onNavigate={horizonContext.navigate} />
+          <WalkthroughPanel
+            s={s}
+            themeTokens={themeTokens}
+            onNavigate={horizonContext.navigate}
+          />
         )}
       </Box>
     </PageTemplate>

@@ -10,8 +10,8 @@
  */
 import { type ExtensionComponentProps } from '@netsapiens/horizon-sdk';
 
-import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import type { CrmRecord } from '../mocks/crm';
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import {
   lookupCrmRecord,
   MOCK_CRM_DIRECTORY,

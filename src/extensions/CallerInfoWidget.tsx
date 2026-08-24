@@ -6,8 +6,8 @@
 import type { ExtensionComponentProps } from '@netsapiens/horizon-sdk';
 import { useEffect, useState } from 'react';
 
-import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import type { CallerInfo } from '../services/callEnrichment';
+import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import {
   activeCallsStore,
   CALL_REMOVED_EVENT,
@@ -31,13 +31,18 @@ export function CallerInfoWidget({
     const updateActiveCalls = () =>
       setActiveCalls(Array.from(activeCallsStore.values()));
 
-    const handleCallUpdate = (data: CallerInfo) => {
-      activeCallsStore.set(data.callId, data);
+    // The event bus is string-keyed and typed `(data: unknown) => void`, so
+    // check the one field we key the store by rather than trusting the payload.
+    const handleCallUpdate = (data: unknown) => {
+      const info = data as CallerInfo | undefined;
+      if (typeof info?.callId !== 'string') return;
+      activeCallsStore.set(info.callId, info);
       updateActiveCalls();
     };
 
-    const handleCallRemoved = (callId: string) => {
-      activeCallsStore.delete(callId);
+    const handleCallRemoved = (data: unknown) => {
+      if (typeof data !== 'string') return;
+      activeCallsStore.delete(data);
       updateActiveCalls();
     };
 

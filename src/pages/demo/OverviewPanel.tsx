@@ -15,7 +15,9 @@ export default function OverviewPanel({
   return (
     <>
       <div style={s.surface.card}>
-        <h2 style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.md }}>
+        <h2
+          style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.md }}
+        >
           What the Horizon SDK does
         </h2>
         <p style={{ ...s.text.body, marginBottom: themeTokens.spacing.md }}>
@@ -29,7 +31,9 @@ export default function OverviewPanel({
       </div>
 
       <div style={s.surface.card}>
-        <h2 style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.md }}>
+        <h2
+          style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.md }}
+        >
           Capabilities
         </h2>
         <div
@@ -48,7 +52,12 @@ export default function OverviewPanel({
               }}
             >
               <h4 style={subheading(s, themeTokens)}>{c.title}</h4>
-              <p style={{ ...s.text.muted, marginBottom: themeTokens.spacing.sm }}>
+              <p
+                style={{
+                  ...s.text.muted,
+                  marginBottom: themeTokens.spacing.sm,
+                }}
+              >
                 {c.desc}
               </p>
               <span style={s.badge.primary}>{c.api}</span>

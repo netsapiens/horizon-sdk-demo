@@ -16,7 +16,9 @@ export default function WalkthroughPanel({
 }: WalkthroughPanelProps) {
   return (
     <div style={s.surface.card}>
-      <h2 style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.xs }}>
+      <h2
+        style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.xs }}
+      >
         See it in action
       </h2>
       <p style={{ ...s.text.muted, marginBottom: themeTokens.spacing.md }}>
@@ -36,7 +38,9 @@ export default function WalkthroughPanel({
         {WALKTHROUGH.map((item) => (
           <div key={item.label} style={s.surface.elevated}>
             <h4 style={subheading(s, themeTokens)}>{item.label}</h4>
-            <p style={{ ...s.text.muted, marginBottom: themeTokens.spacing.sm }}>
+            <p
+              style={{ ...s.text.muted, marginBottom: themeTokens.spacing.sm }}
+            >
               {item.desc}
             </p>
             <button

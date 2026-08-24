@@ -8,7 +8,6 @@
  * hardcoded-hex version this replaced looked identical in both schemes.
  */
 import type { ExtensionContext } from '@netsapiens/horizon-sdk';
-import React from 'react';
 
 import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 
@@ -74,7 +73,8 @@ export function CallPriorityCell({
   // Degraded path: own markup, so pick a mode-appropriate value per the theming
   // contract. `context.theme` is the reactive signal — the host rebuilds the
   // column context when the scheme flips.
-  const color = FALLBACK_COLOR[context.theme === 'dark' ? 'dark' : 'light'][priority];
+  const color =
+    FALLBACK_COLOR[context.theme === 'dark' ? 'dark' : 'light'][priority];
 
   return (
     <div

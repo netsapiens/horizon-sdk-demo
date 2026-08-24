@@ -1,4 +1,5 @@
 /** Showcase section: ToggleButtonGroup (exclusive + multi-select). */
+import type { SyntheticEvent } from 'react';
 import { useState } from 'react';
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
@@ -30,7 +31,9 @@ export default function ToggleButtonGroupSection() {
           <ToggleButtonGroup
             value={toggleValue}
             exclusive
-            onChange={(e, v) => v && setToggleValue(v)}
+            onChange={(_e: SyntheticEvent, v: string | null) =>
+              v && setToggleValue(v)
+            }
             options={[
               { value: 'left', label: 'Left' },
               { value: 'center', label: 'Center' },
@@ -44,7 +47,7 @@ export default function ToggleButtonGroupSection() {
           </Typography>
           <ToggleButtonGroup
             value={toggleMultiple}
-            onChange={(e, v) => setToggleMultiple(v)}
+            onChange={(_e: SyntheticEvent, v: string[]) => setToggleMultiple(v)}
             options={[
               { value: 'bold', label: 'Bold' },
               { value: 'italic', label: 'Italic' },

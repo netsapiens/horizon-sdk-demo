@@ -25,29 +25,40 @@ function fmtDuration(totalSeconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-const STAT_CONFIGS = [
-  { key: 'totalCalls' as const, label: 'Total Calls', color: 'primary.main' },
-  { key: 'avgDuration' as const, label: 'Avg Duration', color: 'success.main' },
-  { key: 'peakHour' as const, label: 'Peak Hour', color: 'warning.main' },
+type StatKey = 'totalCalls' | 'avgDuration' | 'peakHour' | 'successRate';
+
+interface StatConfig {
+  key: StatKey;
+  label: string;
+  color: string;
+  /** Appended to the value, unless the value is the em-dash placeholder. */
+  suffix?: string;
+}
+
+const STAT_CONFIGS: readonly StatConfig[] = [
+  { key: 'totalCalls', label: 'Total Calls', color: 'primary.main' },
+  { key: 'avgDuration', label: 'Avg Duration', color: 'success.main' },
+  { key: 'peakHour', label: 'Peak Hour', color: 'warning.main' },
   {
-    key: 'successRate' as const,
+    key: 'successRate',
     label: 'Success Rate',
     suffix: '%',
     color: 'secondary.main',
   },
-] as const;
-
-type StatKey = (typeof STAT_CONFIGS)[number]['key'];
+];
 
 export function AnalyticsWidget({
   context,
   ...marker
 }: ExtensionComponentProps & ZoneMarkerProps) {
   const { Paper, Typography } = context.ui ?? {};
-  const rows =
-    (context.pageContext as CallLogsPageContext | undefined)?.rows ?? [];
+  // Read the raw reference: defaulting with `?? []` out here would allocate a
+  // new array every render and the memo below would never hold.
+  const pageRows = (context.pageContext as CallLogsPageContext | undefined)
+    ?.rows;
 
   const stats = useMemo<Record<StatKey, string | number>>(() => {
+    const rows = pageRows ?? [];
     const n = rows.length;
 
     if (n === 0) {
@@ -95,7 +106,7 @@ export function AnalyticsWidget({
     const successRate = Number(((successful / n) * 100).toFixed(1));
 
     return { totalCalls: n, avgDuration, peakHour, successRate };
-  }, [rows]);
+  }, [pageRows]);
 
   if (!Paper || !Typography) return null;
 

@@ -3,21 +3,25 @@
  * host theme tokens and `s` the host style presets, both from
  * `horizonContext.ui` — passed into each panel so they track the host theme.
  */
-import type { HorizonContext } from '@netsapiens/horizon-sdk';
+import type { ThemeTokens, UIStyles } from '@netsapiens/horizon-sdk';
 import type { CSSProperties } from 'react';
 
-type Ui = NonNullable<HorizonContext['ui']>;
 /** Host style presets (surface/text/badge), i.e. `horizonContext.ui.styles`. */
-export type DemoStyles = NonNullable<Ui['styles']>;
+export type DemoStyles = UIStyles;
 /** Host theme tokens, i.e. `horizonContext.ui.theme`. */
-export type DemoTheme = NonNullable<Ui['theme']>;
+export type DemoTheme = ThemeTokens;
 
 /** Tab button styling, with an active (selected) state. */
-export function tabStyle(themeTokens: DemoTheme, active: boolean): CSSProperties {
+export function tabStyle(
+  themeTokens: DemoTheme,
+  active: boolean,
+): CSSProperties {
   return {
     padding: `${themeTokens.spacing.sm} ${themeTokens.spacing.lg}`,
     backgroundColor: 'transparent',
-    color: active ? themeTokens.colors.primary : themeTokens.colors.text.secondary,
+    color: active
+      ? themeTokens.colors.primary
+      : themeTokens.colors.text.secondary,
     border: 'none',
     borderBottom: `3px solid ${active ? themeTokens.colors.primary : 'transparent'}`,
     cursor: 'pointer',
@@ -32,7 +36,10 @@ export function tabStyle(themeTokens: DemoTheme, active: boolean): CSSProperties
 }
 
 /** Consistent style for the small card/section headings. */
-export function subheading(s: DemoStyles, themeTokens: DemoTheme): CSSProperties {
+export function subheading(
+  s: DemoStyles,
+  themeTokens: DemoTheme,
+): CSSProperties {
   return {
     ...s.text.subheading,
     fontSize: themeTokens.typography.fontSize.base,

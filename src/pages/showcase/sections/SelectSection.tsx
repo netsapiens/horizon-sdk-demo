@@ -1,4 +1,5 @@
 /** Showcase section: Select dropdown. */
+import type { ChangeEvent } from 'react';
 import { useState } from 'react';
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
@@ -22,7 +23,9 @@ export default function SelectSection() {
       <Select
         label='Choose Option'
         value={selectValue}
-        onChange={(e) => setSelectValue(e.target.value as string)}
+        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+          setSelectValue(e.target.value)
+        }
         options={[
           { value: 'option1', label: 'Option 1' },
           { value: 'option2', label: 'Option 2' },

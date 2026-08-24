@@ -37,15 +37,18 @@ function isOnHold(r: Row): boolean {
 
 /** A call currently routed into a call queue. */
 function isQueued(r: Row): boolean {
-  return r['call-term-uri'] === 'Call-Queue' || r['term_to_uri'] === 'Call-Queue';
+  return (
+    r['call-term-uri'] === 'Call-Queue' || r['term_to_uri'] === 'Call-Queue'
+  );
 }
 
 /** The filters this chip group offers, in display order. */
-const FILTERS: { value: string; label: string; match: (r: Row) => boolean }[] = [
-  { value: 'recorded', label: '● Recording', match: isRecording },
-  { value: 'held', label: '⏸ On hold', match: isOnHold },
-  { value: 'queued', label: '☎ In queue', match: isQueued },
-];
+const FILTERS: { value: string; label: string; match: (r: Row) => boolean }[] =
+  [
+    { value: 'recorded', label: '● Recording', match: isRecording },
+    { value: 'held', label: '⏸ On hold', match: isOnHold },
+    { value: 'queued', label: '☎ In queue', match: isQueued },
+  ];
 
 export function ActiveCallsRecordingFilter({
   context,
@@ -58,7 +61,9 @@ export function ActiveCallsRecordingFilter({
   function handleChange(_e: React.SyntheticEvent, value: string | null) {
     setSelected(value);
     const filter = FILTERS.find((f) => f.value === value);
-    filterCtx?.onFilterChange(filter ? (row) => filter.match(row as Row) : null);
+    filterCtx?.onFilterChange(
+      filter ? (row) => filter.match(row as Row) : null,
+    );
   }
 
   if (!ToggleButtonGroup) return null;

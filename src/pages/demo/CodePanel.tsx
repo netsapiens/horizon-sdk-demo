@@ -3,10 +3,18 @@ import type { DemoStyles, DemoTheme } from './styles';
 import { CODE_EXAMPLES } from '../../content/demoContent';
 import { subheading } from './styles';
 
-export default function CodePanel({ s, themeTokens }: { s: DemoStyles; themeTokens: DemoTheme }) {
+export default function CodePanel({
+  s,
+  themeTokens,
+}: {
+  s: DemoStyles;
+  themeTokens: DemoTheme;
+}) {
   return (
     <div style={s.surface.card}>
-      <h2 style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.lg }}>
+      <h2
+        style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.lg }}
+      >
         How this demo registers
       </h2>
 

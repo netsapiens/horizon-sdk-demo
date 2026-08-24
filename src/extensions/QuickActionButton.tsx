@@ -19,8 +19,10 @@ export function QuickActionButton({
   context,
   ...marker
 }: ExtensionComponentProps & ZoneMarkerProps) {
-  const row = context.pageContext?.row as Record<string, unknown> | undefined;
-  const { IconButton } = context.ui || {};
+  const row = (
+    context.pageContext as { row?: Record<string, unknown> } | undefined
+  )?.row;
+  const { IconButton } = context.ui ?? {};
   // Pass context.eventBus: extension components render outside HorizonContextProvider.
   const { open } = useSidePanel(context.eventBus);
 

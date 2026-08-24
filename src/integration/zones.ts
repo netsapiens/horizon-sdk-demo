@@ -5,9 +5,14 @@
  * hand-writing each call. Adding/removing a zone extension is a manifest edit
  * plus a component entry in COMPONENTS below.
  */
-import type { ExtensionAction, ScopeRequirement } from '@netsapiens/horizon-sdk';
+import type {
+  ExtensionAction,
+  ExtensionComponentProps,
+  ScopeRequirement,
+} from '@netsapiens/horizon-sdk';
 import type { ComponentType } from 'react';
 
+import type { ZoneMarkerProps } from './withZoneTestId';
 import { ActiveCallsRecordingFilter } from '../extensions/ActiveCallsRecordingFilter';
 import { AnalyticsWidget } from '../extensions/AnalyticsWidget';
 import { CallerInfoWidget } from '../extensions/CallerInfoWidget';
@@ -72,7 +77,10 @@ const ACTIONS: Record<string, ExtensionAction[]> = {
 
 // Manifest id -> the component that renders in that zone. For anything that is
 // not a button: badges, banners, widgets, filter controls.
-const COMPONENTS: Record<string, ComponentType> = {
+const COMPONENTS: Record<
+  string,
+  ComponentType<ExtensionComponentProps & ZoneMarkerProps>
+> = {
   'demo-analytics-widget': AnalyticsWidget,
   'demo-quick-action': QuickActionButton,
   'demo-caller-info-widget': CallerInfoWidget,
@@ -89,7 +97,7 @@ export interface ExtensionRegistration {
   zone: string;
   routes: Array<{ pattern: string }>;
   /** Exactly one of these is set — see ACTIONS/COMPONENTS above. */
-  component?: ComponentType;
+  component?: ComponentType<ExtensionComponentProps>;
   actions?: ExtensionAction[];
   priority?: number;
   requiredPermissions?: string[];

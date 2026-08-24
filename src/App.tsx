@@ -299,7 +299,7 @@ export default function App(horizonContext: HorizonContext) {
             data-zone='call-logs-columns'
           />
         ),
-        valueGetter: (value, row) => {
+        valueGetter: (_value, row) => {
           const duration = Number(row['call-total-duration-seconds']) || 0;
           const direction = row['call-direction'];
           if (direction === 2) return 'High';
@@ -313,7 +313,14 @@ export default function App(horizonContext: HorizonContext) {
     return () => {
       unsubscribeCallEvents();
     };
-  }, [sdk, horizonContext.eventBus]);
+  }, [
+    sdk,
+    horizonContext.eventBus,
+    DemoPageWithContext,
+    ComponentShowcasePageWithContext,
+    CrmIntegrationPageWithContext,
+    CallRecordingsPageWithContext,
+  ]);
 
   // Headless: the app injects UI into the host; it renders nothing itself.
   return (
