@@ -24,7 +24,7 @@ light and dark mode.
 > skill at
 > [`.claude/skills/create-horizon-app/`](./.claude/skills/create-horizon-app/SKILL.md).
 > Open this repo (or copy that folder into your own) and ask your agent to
-> *"create a Horizon app"* — it scaffolds a project with bundle verification,
+> _"create a Horizon app"_ — it scaffolds a project with bundle verification,
 > scope declarations and the theme contract already correct, which is most of what
 > the migration guide exists to explain. The skill is written against the same SDK
 > version this demo uses.

@@ -52,7 +52,9 @@ export async function exchangeCodeForNsToken(body, { redirectUri } = {}) {
     // Keep the upstream body OUT of anything returned to the webhook caller;
     // it's only for this server's logs.
     const text = await res.text().catch(() => '');
-    throw new Error(`code exchange failed: ${res.status} ${text.slice(0, 200)}`);
+    throw new Error(
+      `code exchange failed: ${res.status} ${text.slice(0, 200)}`,
+    );
   }
   return res.json(); // e.g. { access_token, token_type, expires_in, uid, domain, ... }
 }

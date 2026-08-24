@@ -14,7 +14,10 @@
  * Page data still reaches the handler: `onClick` receives the same `pageContext`
  * the component path received, so the export can act on the user's selection.
  */
-import type { ExtensionAction, ExtensionActionContext } from '@netsapiens/horizon-sdk';
+import type {
+  ExtensionAction,
+  ExtensionActionContext,
+} from '@netsapiens/horizon-sdk';
 
 /** Shape of the table state the host publishes into `pageContext`. */
 interface TablePageContext {
@@ -44,7 +47,9 @@ function handleExport({ route, params, pageContext }: ExtensionActionContext) {
 
   const exportData = selectedRows?.length ? selectedRows : allRows;
   const count = Array.isArray(exportData) ? exportData.length : 0;
-  alert(`Exporting ${count} row(s) from ${pageType}… (see console for the dataset)`);
+  alert(
+    `Exporting ${count} row(s) from ${pageType}… (see console for the dataset)`,
+  );
 }
 
 /**

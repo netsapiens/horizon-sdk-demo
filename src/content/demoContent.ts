@@ -84,7 +84,8 @@ export const ZONES: ZoneInfo[] = [
   {
     zone: 'table-filter-bar',
     desc: 'Filter chips alongside the host’s status filters.',
-    usedFor: '“● Recording / ⏸ On hold / ☎ In queue” filters on Active Calls.',
+    usedFor:
+      '“● Recording / ⏸ On hold / ☎ In queue” filters on Active Calls.',
   },
   {
     zone: 'table-row-actions',

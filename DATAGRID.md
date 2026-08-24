@@ -182,8 +182,8 @@ instead — see below.
 
 ```tsx
 <PageTemplate title='Call recordings' layout='fill'>
-  <Alert severity='info'>…</Alert>   {/* takes its height first */}
-  <DatagridTemplate rows={rows} columns={columns} />  {/* absorbs the rest */}
+  <Alert severity='info'>…</Alert> {/* takes its height first */}
+  <DatagridTemplate rows={rows} columns={columns} /> {/* absorbs the rest */}
 </PageTemplate>
 ```
 
@@ -276,7 +276,9 @@ export default function DevicesPage() {
     [handleEdit],
   );
 
-  return <DatagridTemplate data={devices} columns={COLUMNS} actions={actions} />;
+  return (
+    <DatagridTemplate data={devices} columns={COLUMNS} actions={actions} />
+  );
 }
 ```
 

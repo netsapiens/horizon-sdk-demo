@@ -96,7 +96,9 @@ app.post(CALLBACK_PATH, async (req, res) => {
       });
       log('cluster JWT verified');
     } else {
-      log('no cluster JWT present — proceeding on HMAC (expected in some setups)');
+      log(
+        'no cluster JWT present — proceeding on HMAC (expected in some setups)',
+      );
     }
 
     // --- 2. Exchange the code (PKCE) for a NetSapiens token proving identity ---

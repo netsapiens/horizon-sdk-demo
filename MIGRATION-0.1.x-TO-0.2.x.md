@@ -958,7 +958,7 @@ has to be added by an operator.
 | 0.2.2   | Remote-entry URL policy corrected — stable URL, not immutable paths (docs + one CLI note)                                  | Read it; may undo work. [3.2](#32-the-remote-entry-url-policy-was-reversed-022)                                     |
 | 0.2.3   | New `horizonContext.ui` types — SearchField, Autocomplete, CarouselTemplate, HostDataset, Tabs, Card, KitOption            | Optional. [Part 4](#part-4--new-ui-surfaces-023)                                                                    |
 | 0.2.4   | Scope-declaration contract — `requiredScopes`, `declareCapabilityScopes`, `horizonContext.scopes`, the exported vocabulary | Optional, but see [Part 1](#part-1--already-affecting-your-deployed-app). [Part 5](#part-5--scope-declarations-024) |
-| —       | Remote auth: webhook signature v2, `callbackUrl` moved to registration, two new headers, `useRemoteAuth` (0.2.5)                   | **Required if you use remote auth.** [Part 6](#part-6--remote-authentication-changed-shape)                         |
+| —       | Remote auth: webhook signature v2, `callbackUrl` moved to registration, two new headers, `useRemoteAuth` (0.2.5)           | **Required if you use remote auth.** [Part 6](#part-6--remote-authentication-changed-shape)                         |
 
 Host-side changes in [Part 1](#part-1--already-affecting-your-deployed-app) are not
 tied to an SDK version — they apply to every app on the server regardless of what it
