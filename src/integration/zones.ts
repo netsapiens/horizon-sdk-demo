@@ -5,7 +5,7 @@
  * hand-writing each call. Adding/removing a zone extension is a manifest edit
  * plus a component entry in COMPONENTS below.
  */
-import type { ScopeRequirement } from '@netsapiens/horizon-sdk';
+import type { ExtensionAction, ScopeRequirement } from '@netsapiens/horizon-sdk';
 import type { ComponentType } from 'react';
 
 import { ActiveCallsRecordingFilter } from '../extensions/ActiveCallsRecordingFilter';
@@ -13,7 +13,7 @@ import { AnalyticsWidget } from '../extensions/AnalyticsWidget';
 import { CallerInfoWidget } from '../extensions/CallerInfoWidget';
 import ComplianceCheckbox from '../extensions/ComplianceCheckbox';
 import ContactFormBanner from '../extensions/ContactFormBanner';
-import { ExportButton } from '../extensions/ExportButton';
+import { exportActions } from '../extensions/ExportButton';
 import { HeaderStatusBadge } from '../extensions/HeaderStatusBadge';
 import { QuickActionButton } from '../extensions/QuickActionButton';
 import { TableToolbarInfo } from '../extensions/TableToolbarInfo';
@@ -63,9 +63,16 @@ interface ZonesManifest {
 
 export const manifest = manifestJson as unknown as ZonesManifest;
 
-// Manifest id -> the component that renders in that zone.
+// Manifest id -> declared actions the host renders itself. Preferred for action
+// zones: the app supplies intent and behaviour, the host owns the styling, so a
+// contributed button cannot drift from the page it sits on.
+const ACTIONS: Record<string, ExtensionAction[]> = {
+  'demo-export-button': exportActions,
+};
+
+// Manifest id -> the component that renders in that zone. For anything that is
+// not a button: badges, banners, widgets, filter controls.
 const COMPONENTS: Record<string, ComponentType> = {
-  'demo-export-button': ExportButton,
   'demo-analytics-widget': AnalyticsWidget,
   'demo-quick-action': QuickActionButton,
   'demo-caller-info-widget': CallerInfoWidget,
@@ -81,7 +88,9 @@ export interface ExtensionRegistration {
   id: string;
   zone: string;
   routes: Array<{ pattern: string }>;
-  component: ComponentType;
+  /** Exactly one of these is set — see ACTIONS/COMPONENTS above. */
+  component?: ComponentType;
+  actions?: ExtensionAction[];
   priority?: number;
   requiredPermissions?: string[];
 }
@@ -89,15 +98,22 @@ export interface ExtensionRegistration {
 /** Registration-ready descriptors, each component wrapped with its zone testId. */
 export const extensionRegistrations: ExtensionRegistration[] =
   manifest.extensions.map((e) => {
+    const actions = ACTIONS[e.id];
     const Component = COMPONENTS[e.id];
-    if (!Component) {
-      throw new Error(`zones.manifest.json: no component mapped for "${e.id}"`);
+    if (!actions && !Component) {
+      throw new Error(
+        `zones.manifest.json: no actions or component mapped for "${e.id}"`,
+      );
     }
     return {
       id: e.id,
       zone: e.zone,
       routes: e.routes.map((pattern) => ({ pattern })),
-      component: withZoneTestId(Component, e.testId, e.zone),
+      // Declared actions carry their own test id, so they skip the wrapper the
+      // component path needs.
+      ...(actions
+        ? { actions }
+        : { component: withZoneTestId(Component!, e.testId, e.zone) }),
       ...(e.priority !== undefined ? { priority: e.priority } : {}),
       ...(e.requiredPermissions
         ? { requiredPermissions: e.requiredPermissions }

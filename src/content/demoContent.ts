@@ -63,7 +63,8 @@ export const ZONES: ZoneInfo[] = [
   {
     zone: 'page-header-actions',
     desc: 'Action buttons in the page header.',
-    usedFor: 'Export Data button on Call Logs, Contacts, Users & Devices.',
+    usedFor:
+      'Export data button on Call Logs, Contacts, Users & Devices — declared via `actions`, rendered by the host.',
   },
   {
     zone: 'page-header-secondary',
@@ -204,8 +205,11 @@ export const CODE_EXAMPLES: CodeExample[] = [
 });`,
   },
   {
-    title: 'Inject into a zone (route-pattern targeted)',
-    code: `sdk.registerDynamicExtension({
+    title: 'Contribute a header button (declare the intent, not the styling)',
+    code: `// Say what the button IS. The host renders it exactly as it renders its
+// own header buttons, so it cannot drift from the page it sits on.
+// 'secondary' is the default; 'primary' and 'danger' are the other intents.
+sdk.registerDynamicExtension({
   id: 'demo-export-button',
   zone: 'page-header-actions',
   routes: [
@@ -214,8 +218,26 @@ export const CODE_EXAMPLES: CodeExample[] = [
     { pattern: '/manage/*/users' },
   ],
   priority: 10,
-  component: ExportButton,
-});`,
+  actions: [
+    {
+      id: 'export-data',
+      label: 'Export data',
+      icon: 'material-symbols:download',
+      intent: 'secondary',
+      // Page state arrives at click time. On a table page the host publishes
+      // rows / selectedRows, so an action can work on the user's selection.
+      onClick: ({ pageContext, route }) => {
+        const { rows, selectedRows } = pageContext ?? {};
+        exportRows(selectedRows?.length ? selectedRows : rows, route);
+      },
+    },
+    // Several buttons from one registration: add an entry. Several apps in one
+    // zone: the host orders by priority, then array order.
+  ],
+});
+
+// Prefer 'actions' for page-header-actions, table-toolbar and topbar-actions.
+// Use 'component' for anything that is not a button — badges, banners, widgets.`,
   },
   {
     title: 'Add a table column',

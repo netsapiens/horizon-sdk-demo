@@ -137,7 +137,6 @@ export default function DevicesPage() {
       loading={isLoading}
       defaultPageSize={25}
       pageSizeOptions={[15, 25, 50, 100]}
-      height='calc(100vh - 320px)'
     />
   );
 }
@@ -176,26 +175,36 @@ reachable.
 If you want the footer always visible without scrolling, use a bounded height
 instead — see below.
 
-### 2. A bounded `height` that is too tall for your page
+### 2. A hand-calculated `height` instead of `layout="fill"`
 
-A bounded height pins the footer to the bottom of the grid box and scrolls the rows
-inside it. That is what host pages do, and it is the default:
+**Do not calculate a height.** Set `layout="fill"` on the surrounding
+`PageTemplate` and leave `height` unset:
 
-```text
-height="calc(100vh - 377px)"    → the default: viewport minus standard page chrome
-height="calc(100vh - 320px)"    → viewport minus your own chrome
-height="60vh"                   → viewport-relative
-height="520px"                  → fixed
-height="100%"                   → fill a parent that has a real height
+```tsx
+<PageTemplate title='Call recordings' layout='fill'>
+  <Alert severity='info'>…</Alert>   {/* takes its height first */}
+  <DatagridTemplate rows={rows} columns={columns} />  {/* absorbs the rest */}
+</PageTemplate>
 ```
 
-The default offset (377px) accounts for the standard chrome above a table —
-breadcrumbs, title row, content padding, grid toolbar — so a grid that is the
-**first thing** in your page content ends flush with the viewport bottom.
+The grid takes whatever height is left in the page column, so its pagination row
+sits on the viewport's bottom edge — and it stays there when you add a banner, a
+tab bar, a filter row, or when the host injects an extension above the grid.
 
-Every extra pixel you render above the grid pushes the bottom of the box (and the
-footer with it) that much further down. If your page adds its own heading,
-description, cards, or a filter row, increase the offset to match.
+This used to default to `calc(100vh - 377px)`, and the advice here was to
+"increase the offset to match" whatever you rendered above the grid. That advice
+produced values like `calc(100vh - 470px)`: correct on the day it was written, and
+wrong as soon as the banner above it changed. This page's own grid was one of them
+— see `src/pages/CallRecordingsPage.tsx`, which now just sets `layout='fill'`.
+
+Pass an explicit `height` only for a grid that is genuinely a fixed size, such as
+a dashboard card or one pane of a split view:
+
+```text
+height="520px"    → fixed
+height="60vh"     → viewport-relative
+height="100%"     → fill a parent that already has a real height
+```
 
 ### 3. Fewer rows than `defaultPageSize`
 
@@ -218,7 +227,6 @@ keeps jumping:
 <DatagridTemplate
   data={allRowsLoadedSoFar}
   infiniteLoading={{ totalCount, progress, isLoadingAny }}
-  height='calc(100vh - 320px)'
   /* … */
 />
 ```

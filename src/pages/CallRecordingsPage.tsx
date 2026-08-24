@@ -35,21 +35,6 @@ import {
   SAMPLE_CALL_RECORDINGS,
 } from '../mocks/callRecordings';
 
-/**
- * Grid height.
- *
- * The template's default is `calc(100vh - 377px)` — the viewport minus the
- * standard chrome above a table (breadcrumbs, title row, content padding, grid
- * toolbar) — which is correct when the grid is the first thing in the content
- * area. This page renders one info Alert above it, so the offset grows by that
- * banner plus the Stack gap, and the footer stays on screen.
- *
- * Deliberately NOT `'auto'`: that sizes the grid to its rows, putting the footer
- * roughly `rows × rowHeight` down the page (~1600px at 25 rows), which is the
- * usual reason people conclude the grid has no pagination.
- */
-const GRID_HEIGHT = 'calc(100vh - 470px)';
-
 const STATUS_COLOR: Record<CallRecording['status'], string> = {
   Processed: 'success',
   Processing: 'warning',
@@ -279,7 +264,14 @@ export default function CallRecordingsPage({ ...marker }: ZoneMarkerProps) {
   }
 
   return (
+    // `layout="fill"` is the whole story for grid sizing: the info Alert above the
+    // grid, the toolbar, and anything the host injects all take their height
+    // first, and the grid absorbs the remainder — so its pagination row sits on
+    // the bottom edge of the viewport. This page used to hand-tune
+    // `height={'calc(100vh - 470px)'}` to achieve the same thing, which was only
+    // correct until the banner above it changed.
     <PageTemplate
+      layout='fill'
       {...marker}
       title='Call Recordings'
       subtitle='Recordings of calls on your extension'
@@ -335,7 +327,6 @@ export default function CallRecordingsPage({ ...marker }: ZoneMarkerProps) {
           getDetailPanelHeight={getDetailPanelHeight}
           defaultPageSize={25}
           pageSizeOptions={PAGE_SIZE_OPTIONS}
-          height={GRID_HEIGHT}
         />
       </Stack>
     </PageTemplate>

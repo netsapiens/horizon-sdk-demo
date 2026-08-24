@@ -144,12 +144,13 @@ function UsersPage() {
         <code>rows × rowHeight</code> down the page, about 1600px at{' '}
         <code>defaultPageSize=25</code> with 64px rows, so it is two screens
         below the fold. Use <code>&quot;auto&quot;</code> only with a small{' '}
-        <code>defaultPageSize</code>. A bounded height (the default{' '}
-        <code>calc(100vh - 377px)</code>, or <code>&quot;420px&quot;</code> as
-        here) pins the footer to the bottom of the grid and keeps it visible —
-        raise the offset if you render anything above the grid. Passing fewer
-        rows than <code>defaultPageSize</code> also leaves every control
-        correctly disabled.
+        <code>defaultPageSize</code>. Otherwise leave <code>height</code> unset
+        and put <code>layout=&quot;fill&quot;</code> on the surrounding{' '}
+        <code>PageTemplate</code>: the grid then absorbs whatever height is left
+        in the page and its footer sits on the viewport&apos;s bottom edge, with
+        no offset for you to calculate or keep in step. Passing fewer rows than{' '}
+        <code>defaultPageSize</code> also leaves every control correctly
+        disabled.
       </Typography>
 
       <Typography
