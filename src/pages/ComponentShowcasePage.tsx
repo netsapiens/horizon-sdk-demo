@@ -13,6 +13,7 @@ import {
   AlertSection,
   AvatarSection,
   ButtonsSection,
+  CarouselSection,
   CheckboxSection,
   ChipSection,
   DataGridSection,
@@ -23,6 +24,7 @@ import {
   SelectSection,
   SidePanelSection,
   SwitchSection,
+  TabsSection,
   TextFieldSection,
   ToggleButtonGroupSection,
   TooltipSection,
@@ -63,11 +65,13 @@ export default function ComponentShowcasePage({ ...marker }: ZoneMarkerProps) {
         <RadioGroupSection />
         <SwitchSection />
         <ToggleButtonGroupSection />
+        <TabsSection />
         <AlertSection />
         <ChipSection />
         <AvatarSection />
         <TooltipSection />
         <LayoutSection />
+        <CarouselSection />
         <DataGridSection />
         <SidePanelSection />
       </Stack>
