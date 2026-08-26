@@ -18,6 +18,29 @@ Scaffolds a new remote app for NetSapiens Horizon.
 >
 > Run `npm run verify` before submitting. A pass locally is a pass on the platform.
 
+> **RULE 1 — never hand-roll a UI component.** Every visible element comes from
+> `horizonContext.ui` (`ui.*` components and `ui.templates.*`). No styled DOM
+> elements: no `<div style={…}>`, `<button style={…}>`, `<h2>`, `<table>`, `<pre>`.
+>
+> This is not a style preference. Kit components render inside the host's MUI
+> `ThemeProvider`, so they re-colour the instant a user toggles dark mode. Markup
+> painted from `ui.theme.colors` or `ui.styles` **cannot** — those are per-mode
+> snapshots, so a hand-rolled card keeps its original colours forever while the
+> page around it changes. An app built this way looks correct in whichever mode
+> you developed in and broken in the other.
+>
+> Colours belong in `sx` as palette paths (`color='text.secondary'`,
+> `borderLeftColor='primary.main'`, `bgcolor='background.elevation1'`), which the
+> host resolves per render. `useTheme() → { theme }` is for _picking_ a value, not
+> for rebuilding styling the kit already does.
+>
+> Three carve-outs, and nothing else: the bare fallback when the kit is
+> unavailable (`if (!Paper) return …`), the hidden root of the headless `App`, and
+> inline text semantics inside a `Typography` (`<strong>`, `<em>`, `<code>`).
+>
+> Missing a component? Do not fill the gap with styled markup — pick the nearest
+> kit primitive and record it in `KIT-GAPS.md`.
+
 **Reference material in this repository.** The app in `src/` is a working extension with every
 requirement below already applied — read it when a template here is ambiguous.
 [`MIGRATION-0.1.x-TO-0.2.x.md`](../../../MIGRATION-0.1.x-TO-0.2.x.md) is the full contract and
@@ -215,7 +238,7 @@ module.exports = (_env, argv) => {
 
 ```tsx
 import type { HorizonContext } from '@netsapiens/horizon-sdk';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { HorizonContextProvider, useRemoteApp } from '@netsapiens/horizon-sdk';
 
 import HeaderButton from './extensions/HeaderButton';
@@ -229,21 +252,31 @@ declare const __MF_NAME__: string;
 export default function App(horizonContext: HorizonContext) {
   const { sdk } = useRemoteApp(horizonContext, __MF_NAME__);
 
+  // The host rebuilds `horizonContext` on every colour-mode change, `ui`
+  // included — it keeps one frozen surface per mode. This ref is what lets the
+  // wrapper below see that: read the LATEST context at render instead of closing
+  // over the first one.
+  //
+  // Do not drop it. The wrapper is memoized with empty deps to keep a STABLE
+  // component identity (re-creating it would unmount the page on every render),
+  // and a closure over `horizonContext` would therefore pin the page to the
+  // context captured on first paint — `theme` would keep updating while
+  // `ui.theme`/`ui.styles` stayed on the mode active when the app loaded. That
+  // combination is the single most common theming bug in a Horizon remote.
+  const contextRef = useRef(horizonContext);
+  contextRef.current = horizonContext;
+
   // Wrap the page once in HorizonContextProvider so it reads a live, reactive
-  // context (theme/locale/ui) via useHorizonContext() — no prop drilling. Empty
-  // deps give the wrapper a STABLE identity: the provider subscribes to the
-  // (stable) eventBus and pushes theme/locale updates down, so re-creating it on
-  // every render would needlessly unmount the page.
+  // context (theme/locale/ui) via useHorizonContext() — no prop drilling.
   const MainPageRoute = useMemo(
     () =>
       function MainPageRoute() {
         return (
-          <HorizonContextProvider context={horizonContext}>
+          <HorizonContextProvider context={contextRef.current}>
             <MainPage />
           </HorizonContextProvider>
         );
       },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
@@ -323,38 +356,21 @@ export default function App(horizonContext: HorizonContext) {
 ### `src/pages/MainPage.tsx`
 
 ```tsx
-import { type CSSProperties, useState } from 'react';
-import { type ThemeTokens, useHorizonContext, useTheme } from '@netsapiens/horizon-sdk';
+import { useState } from 'react';
+import { useHorizonContext, useTheme } from '@netsapiens/horizon-sdk';
 
 export default function MainPage() {
   // Read the live, reactive context from the provider — not via props.
   const { ui, user } = useHorizonContext();
   // `theme` is the REACTIVE color scheme: it flips the instant the user toggles
-  // dark/light. Prefer this over `useHorizonContext().theme` for clarity. NOTE:
-  // `ui.theme` (tokens) and `ui.styles` are a MOUNT-TIME SNAPSHOT and do NOT
-  // flip on toggle — see "Theming & dark/light mode" below. The host `ui.*`
-  // components DO re-theme live, so lean on them for anything colored.
+  // dark/light. Use it to PICK something (an icon, a branch), never to rebuild
+  // styling — the `ui.*` components already re-theme themselves. See
+  // "Theming & dark/light mode" below.
   const { theme } = useTheme();
   const [count, setCount] = useState(0);
 
   const { PageTemplate } = ui?.templates ?? {};
-  const { Paper, Stack, Typography, Button, Chip } = ui ?? {};
-
-  // Design tokens for hand-rolled markup. `spacing` / `borderRadius` /
-  // `typography` are mode-INVARIANT (identical in light & dark), so reading them
-  // straight off the snapshot is always correct. Only `colors` / `shadows`
-  // differ by mode — for those, use a `ui.*` component (re-themes live) or
-  // branch on the reactive `theme`; do NOT paint them from `ui.theme.colors`,
-  // which would go stale after a toggle.
-  const tokens = ui?.theme as ThemeTokens | undefined;
-  const kbd: CSSProperties = tokens
-    ? {
-        fontFamily: tokens.typography.fontFamily.mono,
-        fontSize: tokens.typography.fontSize.lg,
-        padding: `${tokens.spacing.xs} ${tokens.spacing.md}`,
-        borderRadius: tokens.borderRadius.md,
-      }
-    : {};
+  const { Paper, Stack, Typography, Button, Chip, Code } = ui ?? {};
 
   if (!PageTemplate || !Paper || !Stack || !Typography || !Button) {
     return (
@@ -381,7 +397,10 @@ export default function MainPage() {
       ]}
     >
       <Stack spacing={3}>
-        <Paper sx={{ p: 3 }}>
+        {/* No `sx` — `Paper` arrives outlined with 24px of padding. Reach for
+            `sx` only to depart from that; it merges as an array, so an override
+            wins per-property and leaves the other defaults alone. */}
+        <Paper>
           <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
             <Typography variant="h6">Welcome, {user.displayName}</Typography>
             {/* Re-labels on every toggle — proof the theme signal is reactive. */}
@@ -389,12 +408,18 @@ export default function MainPage() {
           </Stack>
           <Typography variant="body2">Domain: {user.domain}</Typography>
         </Paper>
-        <Paper sx={{ p: 3 }}>
+        <Paper>
           <Stack direction="row" spacing={2} alignItems="center">
             <Button onClick={() => setCount(count - 1)}>−</Button>
-            {/* Mode-invariant tokens (mono font, radius, spacing) are snapshot-safe.
-                Color comes from the themed <Paper>, which re-themes on toggle. */}
-            <span style={kbd}>{count}</span>
+            {/* A monospace readout without hand-rolling one. `Code inline` is a
+                kit component, so its surface follows the light/dark toggle. The
+                alternative — a <span> styled from ui.theme tokens — is what the
+                rule at the top of this skill exists to prevent. */}
+            {Code ? (
+              <Code inline>{String(count)}</Code>
+            ) : (
+              <Typography variant="h6">{count}</Typography>
+            )}
             <Button onClick={() => setCount(count + 1)}>+</Button>
           </Stack>
         </Paper>
@@ -705,6 +730,53 @@ await api.post(`/domains/${user.domain}/users/${user.extension}/contacts`, {
 - Calls are permission-gated, rate-limited, and audited per app — surface
   failures (`.catch`) rather than assuming success.
 
+## What's in the kit (inventory)
+
+Check here before building anything yourself — RULE 1 is only followable if you
+know what exists. Everything below hangs off `horizonContext.ui`.
+
+**Whole shells** — `ui.templates.*`: `PageTemplate`,
+`PageTemplateWithExtensions`, `FormTemplate`, `FormPanel`, `SidePanel`,
+`DatagridTemplate`, `CarouselTemplate`, `SideTrayComponents`, `Icon`,
+`ExtensionZone` (mount a zone in your own page so other apps can contribute).
+
+**Actions & input**: `Button`, `IconButton` (icon-name prop, never children),
+`TextField`, `TextArea`, `SearchField` (debounced), `Autocomplete`, `Select`
+(`options`, never `MenuItem` children), `Checkbox`, `Radio`, `RadioGroup`,
+`Switch`, `ToggleButton`, `ToggleButtonGroup`, `FormLabel`, `FormControlLabel`,
+`DatePicker`.
+
+**Navigation & surfaces**: `Tabs` (owns the strip; you render the panels),
+`Card`, `CardContent`, `Paper` (pre-styled card — see below).
+
+**Display**: `Typography`, `Chip`, `Avatar`, `Divider`, `Tooltip`, `Alert`,
+`Icon`, `Code` _(0.2.7)_.
+
+**Layout**: `Stack` (column by default), `Box` (the one deliberately bare
+primitive), `Grid` _(0.2.7 — MUI v7 API: `size={{ xs: 12, md: 6 }}`, not
+`xs={12}`)_.
+
+**Static tables** _(0.2.7)_: `Table`, `TableHead`, `TableBody`, `TableRow`,
+`TableCell`. For anything with sorting, filtering, search, export or pagination
+use `DatagridTemplate` instead — these are for short fixed tables only.
+
+**Lists** _(0.2.7)_: `List`, `ListItem`, `ListItemText`. `component='ol'`/`'li'`
+for a numbered sequence.
+
+Several components carry **host-side defaults**, so declaring them bare is
+correct and `sx`/`variant` are for departing from the default, not assembling it:
+`Paper` (outlined, 24px padding), `Button` (`variant='primary'`), `Chip`
+(`'soft'`), `Card` (`'outlined'`), `Tabs` (`'pill'`), `Stack`
+(`direction='column'`). `sx` merges as an array, so an override wins
+per-property and leaves the rest intact.
+
+**Genuinely not in the kit** — do not hunt for these: `TableContainer` (use
+`Paper sx={{ overflowX: 'auto' }}`), `TableSortLabel` (sorting is
+`DatagridTemplate`'s job), `MenuItem`, `Menu`, `Accordion`, `Badge`,
+`LinearProgress`, `Skeleton`, `Breadcrumbs` (`PageTemplate` takes a
+`breadcrumbs` prop). If you need one, use the nearest primitive and log it in
+`KIT-GAPS.md`.
+
 ## Theming & dark/light mode (contract)
 
 Aurora (the host theme) drives a live light/dark toggle. An app looks native only
@@ -717,11 +789,26 @@ if it re-themes with it. Four things the host hands you, and how each behaves:
 | `ui.theme` (`ThemeTokens`)           | design tokens: `colors`, `spacing`, `typography`, `borderRadius`, `shadows`                             | **Snapshot** — frozen at the mode active when the route first mounted            |
 | `ui.styles`                          | pre-built semantic style objects (`surface.card`, `text.*`, `badge.*`, `divider`) baked from the tokens | **Snapshot** — same as `ui.theme`                                                |
 
-**Why the snapshot:** `HorizonContextProvider` keeps `theme`/`locale` live by
-re-spreading `{ ...context, theme, locale }`, but it never rebuilds `context.ui`.
-So `useTheme().theme` updates while `ui.theme`/`ui.styles` keep the values from
-mount. Painting your own surfaces from `ui.theme.colors.*` or `ui.styles.card`
-looks right at first, then mismatches after the user flips the mode.
+**Why the snapshot.** Three pieces, none wrong on its own, and the bug lives in
+their interaction — worth knowing, because it is easy to reintroduce:
+
+1. **The host is fine.** It keeps one frozen `ui` surface _per colour mode_ and
+   rebuilds the whole context when the mode changes. Correct tokens are handed
+   over every time.
+2. **The provider refreshes only two fields.** `HorizonContextProvider`
+   re-spreads `{ ...context, theme, locale }` and never touches `context.ui`.
+3. **So freezing the context pins `ui`.** The `useMemo([], …)` page wrapper in
+   `App.tsx` — needed for stable component identity — closes over the context
+   from first paint unless you read it through a ref. Then `theme` keeps
+   updating while `ui.theme`/`ui.styles` stay on the load-time mode.
+
+The `App.tsx` template above uses the ref, which is why its pages see a live
+`ui`. Keep it. But do not treat that as licence to style from tokens: it holds
+only as long as the ref does, and inline token styling still skips the focus
+rings, hover states and a11y that kit components carry.
+
+Note also that **zone extensions and dynamic columns are immune** — the host
+re-derives their `ui` per render, so this only ever bites full-page routes.
 
 Rules that keep an app theme-correct:
 
@@ -734,12 +821,14 @@ Rules that keep an app theme-correct:
    mode-invariant** (identical in light & dark) — those are safe to read off the
    snapshot for custom layout/sizing. `colors` and `shadows` differ by mode, so
    the snapshot copies go stale on toggle.
-4. **Need a mode-dependent color in hand-rolled markup?** Don't read it from the
-   snapshot — branch on the reactive `theme` and supply your own light/dark
-   values, or (better) wrap the region in a `ui.*` surface (`Paper`/`Box`) and
-   let the host color it. The token builders (`getThemeTokens`/`getUIStyles`)
-   are host-internal and **not** exported to apps, so you can't recompute fresh
-   tokens yourself.
+4. **Need a mode-dependent color?** Per RULE 1 you should not be hand-rolling
+   the markup in the first place — put the region in a `ui.*` surface and give
+   `sx` a **palette path** (`bgcolor='background.elevation1'`,
+   `borderColor='divider'`, `color='text.secondary'`), which the host resolves
+   per render. Only if you own the value outright (a chart series, a brand
+   glyph) branch on the reactive `theme`. Never read it from the snapshot: the
+   token builders (`getThemeTokens`/`getUIStyles`) are host-internal and **not**
+   exported, so you cannot recompute fresh ones yourself.
 5. **Don't subscribe to `theme:changed` directly** — `useTheme()` already does,
    in both pages (via provider) and standalone extensions (via `context.eventBus`).
 
@@ -923,11 +1012,12 @@ host UI kit finds out what it is missing.
 - **Keep `KIT-GAPS.md` up to date as you build — this is a running log, not a scaffold-time file.** The kit is deliberately smaller than MUI, so sooner or later you will want a component it does not have. Whenever that happens, do not just work around it silently: append an entry recording what you reached for, what you used instead (with the file path), what it cost, and the component shape that would have fit. You are the only observer who has that reasoning while it is still live — a developer reading the finished code months later cannot reconstruct why a `ToggleButtonGroup` is pretending to be a tab strip. This file is the sole mechanism by which the host UI kit learns what it is missing, so an unrecorded workaround is a gap nobody ever hears about. If you finish with no gaps, leave the file with its commented-out template; an empty log is a real signal too.
 - **The federation name is single-sourced.** `<module-scope>` (camelCase) is now hardcoded in exactly one place — `MODULE_NAME` in `webpack.config.js` — and flows into the app via `DefinePlugin` (`__MF_NAME__`), which `useRemoteApp(horizonContext, __MF_NAME__)` consumes. Do **not** also hardcode the module name in `App.tsx`. `<module-scope>` must be a valid JS identifier (camelCase, no dashes); the SDK/host derive the kebab `<app-id>` from it, which is what you use for route ids/paths (`<app-id>.main`, `/apps/<app-id>`) and the registration's `capabilities.routes`.
 - Don't pull in MUI as a direct dependency — every UI component comes from `horizonContext.ui`. They're wrapped in the host MUI `ThemeProvider`, so they re-theme on a live dark/light toggle for free — which is exactly why hand-rolled markup colored from raw tokens drifts out of sync.
-- **Theme-correctness is a contract — see "Theming & dark/light mode".** The short version: build UI from `ui.*` components (reactive); use `useTheme() → { theme }` for the reactive mode string; treat `ui.theme`/`ui.styles` as a **mount-time snapshot** (the provider re-spreads `theme`/`locale` but never rebuilds `ui`). Only `ui.theme.spacing` / `typography` / `borderRadius` are mode-invariant and safe to read off the snapshot; `colors`/`shadows` go stale after a toggle. `getThemeTokens`/`getUIStyles` are host-internal, not exported, so an app can't recompute fresh tokens — branch on `theme` or use a `ui.*` surface instead. In standalone extensions (outside the provider) call `useTheme(context.eventBus, context.theme)`.
+- **RULE 1 is the one to re-read before writing any JSX — see the top of this skill, and "What's in the kit".** Every visible element comes from `ui.*` / `ui.templates.*`; colours go in `sx` as palette paths. Never paint from `ui.theme.colors` or `ui.styles` — they are per-mode snapshots, so hand-rolled markup silently stops following the dark/light toggle, and `getThemeTokens`/`getUIStyles` are host-internal so you cannot recompute fresh ones. `useTheme() → { theme }` is the only reactive mode signal, and it is for _picking_ a value you own. In standalone extensions (outside the provider) call `useTheme(context.eventBus, context.theme)`. Full mechanism in "Theming & dark/light mode".
+- **Keep the `contextRef` in `App.tsx`.** The memoized page wrapper must read `contextRef.current`, not close over `horizonContext`. Closing over it pins `ui` to the colour mode active at first paint while `theme` keeps updating — the most common theming bug in a Horizon remote, and invisible until someone toggles dark mode.
 - **Only `react`, `react-dom`, and `loglevel` go in webpack `shared`.** Any other runtime dependency (e.g. a WebRTC/signaling/charting lib) is bundled normally — just `npm install` it and import it. Do **NOT** add a non-host-provided lib to `shared` as a `singleton`: the host's federation loader doesn't register it, so it crashes at load with "Unsatisfied version". (This is also why MUI is absent from `shared`.) The host also provides `i18next` and `react-i18next`, but you reach translations through `context.t` rather than sharing them.
 - **Never put `@netsapiens/horizon-sdk` in `shared`.** It is the one entry that looks like it belongs and does not. Sharing it fails the build with "contains unresolved integrity placeholders" and fails verification on `sdk-not-shared`. Remove it entirely — `import: false` is not a workaround.
 - **Pages read context via `useHorizonContext()`, not props.** Wrap each page component once in `<HorizonContextProvider context={horizonContext}>` inside `App.tsx` (memoized with **empty deps** for stable identity — the provider keeps theme/locale live via the eventBus). Don't prop-drill `horizonContext` into pages. Extensions are different — they receive `context` as a prop (`ExtensionComponentProps`) and read `context.ui` directly.
-- **Host UI components are typed `ComponentType<unknown>`.** In pages, cast them to `ComponentType<Record<string, unknown>>` before using them in JSX (see `MainPage.tsx`) so `tsc --strict` doesn't trip `TS2769`. The babel build strips types either way, but the cast keeps the scaffold type-clean.
+- **Host UI components are properly typed — do not cast them.** They carry real prop contracts (`HostComponentProps`, or a named interface where the shape is specific). Casting to `ComponentType<unknown>` or `ComponentType<Record<string, unknown>>` was a 0.1.x-era workaround and is now actively wrong: props are contravariant, so `unknown` demands a component accepting every possible props object, and React 19 reads it as `IntrinsicAttributes` — "accepts no props" — which makes `<Paper sx={{ p: 2 }}>x</Paper>` a type error. Destructure from `ui` and use them directly.
 - **Route menu position uses `placement`, not `order`.** `RouteConfig` has no `order` field — use `placement: { first: true } | { last: true } | { after: 'anchor' } | { before: 'anchor' }` (anchors resolve by fuzzy match). `registerRoute` is async — `.catch()` it.
 - Don't use `sdk.registerExtension` (legacy, removed). Use `sdk.registerDynamicExtension` with a zone + route patterns.
 - **Never read host data streams off the raw bus.** `eventBus.on('call-event' | 'subscriber:*' | …)` receives nothing — host streams are delivered only via `sdk.subscribeToCallEvents(...)` / `sdk.subscribeToStream(streamId, eventTypes, cb)` (capability-gated, attributed). See "Host events & data streams".
