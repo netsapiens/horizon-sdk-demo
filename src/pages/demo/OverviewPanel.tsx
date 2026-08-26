@@ -1,70 +1,72 @@
 /** DemoPage tab: Overview — what the SDK does + capability cards. */
-import type { DemoStyles, DemoTheme } from './styles';
-import { CAPABILITIES } from '../../content/demoContent';
-import { accentColors, subheading } from './styles';
+import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-export default function OverviewPanel({
-  s,
-  themeTokens,
-}: {
-  s: DemoStyles;
-  themeTokens: DemoTheme;
-}) {
-  const accents = accentColors(themeTokens);
+import { CAPABILITIES } from '../../content/demoContent';
+import { accentAt } from './accents';
+
+export default function OverviewPanel() {
+  const { ui } = useHorizonContext();
+  const { Paper, Stack, Box, Typography, Chip } = ui || {};
+  if (!Paper || !Stack || !Box || !Typography || !Chip) return null;
 
   return (
-    <>
-      <div style={s.surface.card}>
-        <h2
-          style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.md }}
-        >
+    <Stack spacing={3}>
+      <Paper sx={{ p: 3 }}>
+        <Typography variant='h6' gutterBottom>
           What the Horizon SDK does
-        </h2>
-        <p style={{ ...s.text.body, marginBottom: themeTokens.spacing.md }}>
+        </Typography>
+        <Typography variant='body2' color='text.secondary'>
           The Horizon SDK lets a separately-deployed (federated) application
           extend the Horizon UI without changing core platform code. It
           registers pages, injects components into existing pages by zone and
           route pattern, adds table columns, subscribes to live call events, and
-          renders with the host’s themed component kit. Everything on the other
-          tabs is registered by <strong>this</strong> demo app.
-        </p>
-      </div>
+          renders with the host&rsquo;s themed component kit. Everything on the
+          other tabs is registered by <strong>this</strong> demo app.
+        </Typography>
+      </Paper>
 
-      <div style={s.surface.card}>
-        <h2
-          style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.md }}
-        >
+      <Paper sx={{ p: 3 }}>
+        <Typography variant='h6' gutterBottom>
           Capabilities
-        </h2>
-        <div
-          style={{
+        </Typography>
+        <Box
+          sx={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: themeTokens.spacing.md,
+            gap: 2,
+            mt: 2,
           }}
         >
           {CAPABILITIES.map((c, i) => (
-            <div
+            <Paper
               key={c.title}
-              style={{
-                ...s.surface.elevated,
-                borderLeft: `4px solid ${accents[i % accents.length]}`,
+              variant='outlined'
+              sx={{
+                p: 2,
+                borderLeft: '4px solid',
+                borderLeftColor: accentAt(i),
               }}
             >
-              <h4 style={subheading(s, themeTokens)}>{c.title}</h4>
-              <p
-                style={{
-                  ...s.text.muted,
-                  marginBottom: themeTokens.spacing.sm,
-                }}
+              <Typography variant='subtitle2' fontWeight={600} gutterBottom>
+                {c.title}
+              </Typography>
+              <Typography
+                variant='body2'
+                color='text.secondary'
+                sx={{ mb: 1.5 }}
               >
                 {c.desc}
-              </p>
-              <span style={s.badge.primary}>{c.api}</span>
-            </div>
+              </Typography>
+              <Chip
+                label={c.api}
+                size='small'
+                color='primary'
+                variant='outlined'
+              />
+            </Paper>
           ))}
-        </div>
-      </div>
-    </>
+        </Box>
+      </Paper>
+    </Stack>
   );
 }

@@ -1,37 +1,30 @@
 /** DemoPage tab: Code — the registration snippets this demo uses. */
-import type { DemoStyles, DemoTheme } from './styles';
+import { useHorizonContext } from '@netsapiens/horizon-sdk';
+
+import { CodeBlock } from '../../components/CodeBlock';
 import { CODE_EXAMPLES } from '../../content/demoContent';
-import { subheading } from './styles';
 
-export default function CodePanel({
-  s,
-  themeTokens,
-}: {
-  s: DemoStyles;
-  themeTokens: DemoTheme;
-}) {
+export default function CodePanel() {
+  const { ui } = useHorizonContext();
+  const { Paper, Stack, Typography } = ui || {};
+  if (!Paper || !Stack || !Typography) return null;
+
   return (
-    <div style={s.surface.card}>
-      <h2
-        style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.lg }}
-      >
+    <Paper sx={{ p: 3 }}>
+      <Typography variant='h6' sx={{ mb: 3 }}>
         How this demo registers
-      </h2>
+      </Typography>
 
-      {CODE_EXAMPLES.map((example, i) => (
-        <div key={example.title}>
-          <h4 style={subheading(s, themeTokens)}>{example.title}</h4>
-          <pre
-            style={
-              i < CODE_EXAMPLES.length - 1
-                ? { ...s.surface.code, marginBottom: themeTokens.spacing.lg }
-                : s.surface.code
-            }
-          >
-            {example.code}
-          </pre>
-        </div>
-      ))}
-    </div>
+      <Stack spacing={3}>
+        {CODE_EXAMPLES.map((example) => (
+          <Stack key={example.title} spacing={1}>
+            <Typography variant='subtitle2' fontWeight={600}>
+              {example.title}
+            </Typography>
+            <CodeBlock>{example.code}</CodeBlock>
+          </Stack>
+        ))}
+      </Stack>
+    </Paper>
   );
 }

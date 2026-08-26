@@ -1,61 +1,45 @@
 /** DemoPage tab: Extension Zones — every zone this demo registers into. */
-import type { DemoStyles, DemoTheme } from './styles';
-import { ZONES } from '../../content/demoContent';
-import { accentColors, subheading } from './styles';
+import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-export default function ZonesPanel({
-  s,
-  themeTokens,
-}: {
-  s: DemoStyles;
-  themeTokens: DemoTheme;
-}) {
-  const accents = accentColors(themeTokens);
+import { ZONES } from '../../content/demoContent';
+import { accentAt } from './accents';
+
+export default function ZonesPanel() {
+  const { ui } = useHorizonContext();
+  const { Paper, Stack, Typography } = ui || {};
+  if (!Paper || !Stack || !Typography) return null;
 
   return (
-    <div style={s.surface.card}>
-      <h2
-        style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.xs }}
+    <Paper sx={{ p: 3 }}>
+      <Typography variant='h6'>Extension zones used by this demo</Typography>
+      <Typography
+        variant='body2'
+        color='text.secondary'
+        sx={{ mt: 0.5, mb: 3 }}
       >
-        Extension zones used by this demo
-      </h2>
-      <p style={{ ...s.text.muted, marginBottom: themeTokens.spacing.lg }}>
         Generic zones the host mounts on its pages. A single registration
         targets a zone plus one or more route patterns — see the Code tab.
-      </p>
+      </Typography>
 
-      {ZONES.map((z, i) => (
-        <div
-          key={z.zone}
-          style={{
-            ...s.surface.elevated,
-            borderLeft: `4px solid ${accents[i % accents.length]}`,
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
+      <Stack spacing={2}>
+        {ZONES.map((z, i) => (
+          <Paper
+            key={z.zone}
+            variant='outlined'
+            sx={{ p: 2, borderLeft: '4px solid', borderLeftColor: accentAt(i) }}
           >
-            <div style={{ flex: 1 }}>
-              <h4 style={subheading(s, themeTokens)}>{z.zone}</h4>
-              <p
-                style={{
-                  ...s.text.muted,
-                  marginBottom: themeTokens.spacing.xs,
-                }}
-              >
-                {z.desc}
-              </p>
-              <p style={{ ...s.text.body, fontStyle: 'italic' }}>
-                In this demo: {z.usedFor}
-              </p>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
+            <Typography variant='subtitle2' fontWeight={600} gutterBottom>
+              {z.zone}
+            </Typography>
+            <Typography variant='body2' color='text.secondary'>
+              {z.desc}
+            </Typography>
+            <Typography variant='body2' fontStyle='italic' sx={{ mt: 0.5 }}>
+              In this demo: {z.usedFor}
+            </Typography>
+          </Paper>
+        ))}
+      </Stack>
+    </Paper>
   );
 }

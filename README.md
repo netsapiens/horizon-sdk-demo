@@ -387,6 +387,20 @@ via `useRemoteApp()`. Page components read the live context with
 | `eventBus`         | Per-app **scoped** pub/sub — your custom events stay within your app; host streams use `subscribeToStream`/`subscribeToCallEvents`, not raw `.on()` |
 | `ui`               | Themed MUI Aurora components + templates (PageTemplate, SidePanel, …)                                                                               |
 
+## UI rule — never hand-roll a component
+
+Every visible element in `src/` comes from the host component kit handed over as
+`horizonContext.ui` (`ui.*` components, `ui.templates.*`). Hand-rolled markup
+styled from `ui.theme` / `ui.styles` is **not** allowed: those two objects are a
+mount-time snapshot the host never rebuilds, so anything painted from them keeps
+the colors of whichever mode was active when the page first mounted and stops
+following the host's light/dark toggle. Colors go in `sx` as palette paths
+(`color='text.secondary'`, `borderLeftColor='primary.main'`), which the host
+resolves live.
+
+The full rule, its three carve-outs, and the grep commands that check it are in
+[CLAUDE.md](CLAUDE.md).
+
 ## Project structure
 
 ```
@@ -407,7 +421,7 @@ src/
     callEnrichment.ts         # Call-event → CRM enrichment + shared active-calls store
   pages/
     DemoPage.tsx              # Tab shell for the overview/walkthrough tour
-    demo/                     # One component per DemoPage tab + shared style helpers
+    demo/                     # One component per DemoPage tab (+ accents.ts palette paths)
     ComponentShowcasePage.tsx # Composes the showcase sections
     showcase/sections/        # One self-contained section per shared UI component
     CrmIntegrationPage.tsx    # Full page: remoteAuth connect + live API call + CRM matching
@@ -527,7 +541,9 @@ npm install
 # 3. the same gates CI runs — fail here, not in Actions
 npm run build
 npm run verify        # expect PASS; version-bump / cors / submit are `note` by design
-npx tsc --noEmit      # baseline is 389 errors; adding none is the bar
+npm run typecheck     # must be clean — 0 errors, and CI gates it
+npm run lint
+npm run format
 
 # 4. commit and merge to main. Pushing main triggers the Pages deploy.
 ```

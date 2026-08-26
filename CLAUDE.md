@@ -1,0 +1,104 @@
+# horizon-sdk-demo — project rules
+
+This is a Module Federation **remote** loaded by the Horizon host. It is also the
+reference partner apps are pointed at, so the code has to model the practice it
+teaches, not just work.
+
+## RULE 1 (MAJOR): Never hand-roll UI
+
+**Every visible element must come from the host component kit the SDK hands over
+in `horizonContext.ui` — `ui.*` components and `ui.templates.*`. No exceptions
+outside the carve-outs below.**
+
+Concretely, in `src/`:
+
+- **Never** write a styled DOM element — no `<div style={...}>`, `<button
+style={...}>`, `<h2>`, `<table>`, `<pre>`. Use `Box`, `Button`, `Typography`,
+  `Paper`, `Card`, `Chip`, `Alert`, `Tabs`, `Divider`,
+  `templates.DatagridTemplate`, `templates.PageTemplate`, and the rest.
+- **Never paint a color from `ui.theme` or `ui.styles`.** `ui.theme`
+  (`ThemeTokens`) and `ui.styles` (`UIStyles` — `surface.card`, `text.muted`,
+  `badge.primary`, …) are **snapshots whose freshness is not contractual**, and
+  a `<div style={ui.styles.surface.card}>` that stops following the dark/light
+  toggle is the exact bug that motivated this rule. The mechanism is worth
+  knowing, because it is easy to reintroduce:
+
+  - The host keeps one frozen `ui` surface **per color mode** and rebuilds the
+    whole context when the mode changes (`createHorizonUi(mode)` in its
+    `HorizonAppsLoader`). So the host hands over correct tokens.
+  - `HorizonContextProvider` refreshes only `theme` and `locale` — it re-spreads
+    `{ ...context, theme, locale }` and never touches `context.ui`.
+  - So the moment an app **freezes the context** — which the SDK's own
+    recommended `useMemo([], …)` wrapper pattern in `App.tsx` does, to keep
+    component identity stable — `ui.theme`/`ui.styles` are pinned to the mode
+    that was active on first paint, while `theme` keeps updating around them.
+
+  `src/App.tsx` now bridges this with a ref, so page components do see the live
+  `ui`. Do **not** treat that as permission to style from tokens: it holds only
+  as long as that bridge does, and inline token styling still skips the focus
+  rings, hover states and a11y the kit components carry.
+
+- Colors belong in `sx`, as **palette paths** the host resolves at render:
+  `color='text.secondary'`, `borderColor='divider'`, `borderLeftColor='primary.main'`,
+  `bgcolor='background.paper'`. These follow the toggle for free.
+- Need spacing, radius, or a font size? Prefer `sx` shorthands (`p`, `mb`,
+  `gap`, `spacing`). Reading `ui.theme.spacing` / `.typography` /
+  `.borderRadius` is _safe_ (mode-independent) but rarely worth it.
+- The one reactive theme signal is `useTheme()` from the SDK. Use it only to
+  **pick** something (an icon, a `grey.900` vs `grey.50` background — see
+  `src/components/CodeBlock.tsx`), never to rebuild styling the kit already does.
+- Missing a component? Say so and pick the nearest kit primitive — e.g. the kit
+  has no `Table`, so `src/pages/demo/PatternsPanel.tsx` renders real table
+  _elements_ through `Box component='table' | 'tr' | 'td'` with every color from
+  `sx`. Do not fill a gap with hand-styled markup.
+
+### What the kit does not have
+
+Verified against the host's `src/lib/sdk/ui/horizonUi.ts` — do not go looking:
+
+| Wanted                             | Use instead                                                                                                                          |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `Table` / `TableRow` / `TableCell` | `Box component='table' \| 'tr' \| 'td'` for a static table (`demo/PatternsPanel.tsx`), or `templates.DatagridTemplate` for real data |
+| `Grid`                             | `Box` with `sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}`                                   |
+| `List` / `ListItem`                | `Box component='ol' \| 'ul'` + `Typography component='li'`                                                                           |
+| a monospace `Code` block           | `src/components/CodeBlock.tsx` (local; branches on `useTheme()` for the surface)                                                     |
+| `CardActionArea`                   | `Card` with `onClick` — the host renders one internally, keyboard-reachable                                                          |
+
+### Carve-outs (the only ones)
+
+1. **Kit-unavailable fallbacks.** The bare `<div style={{ padding: 24 }}>UI
+components not available</div>` at the top of a page component — by
+   definition the kit isn't there. Keep these minimal and uncolored.
+2. **The headless root** in `src/App.tsx` (`<div style={{ display: 'none' }}>`),
+   which renders nothing visible.
+3. **Inline text semantics** inside a `Typography`/`Box` — `<strong>`, `<em>`,
+   `<code>`, `<li>`. They carry no color of their own and inherit from the host
+   component above them.
+
+### Checking your work
+
+```bash
+# should only ever match the three carve-outs above
+grep -rn -E '<(div|span|p|h[1-6]|button|table|pre|ul|ol) ' --include='*.tsx' src
+grep -rn -e 'ui.styles' -e 'ui.theme' -e 'surface\.' -e 'badge\.' --include='*.tsx' src
+```
+
+Then `npm run typecheck && npm run lint && npm run format && npm run build`.
+
+## Repo conventions
+
+- **No direct MUI dependency.** Every component comes through
+  `horizonContext.ui`; keeping MUI out of the remote bundle is the point of that
+  surface.
+- Page components destructure the kit and guard before rendering (`if (!Paper ||
+!Typography) return null`) — see `src/pages/showcase/sections/` for the house
+  pattern to copy.
+- Panels inside a page read the live context themselves via
+  `useHorizonContext()`. Do not prop-drill `ui` / `theme` / `styles` down —
+  drilling is how a stale snapshot spreads.
+- The `useMemo([], …)` page wrappers in `src/App.tsx` read the context through
+  `contextRef.current`, not the closure. Keep it that way: closing over
+  `horizonContext` directly is what pinned `ui` to the first-paint color mode.
+- Static page copy lives in `src/content/`; a page file is layout only.
+- Scaffolding a new Horizon app? Use the `create-horizon-app` skill in
+  `.claude/skills/`, which carries the current SDK shape and theming rules.

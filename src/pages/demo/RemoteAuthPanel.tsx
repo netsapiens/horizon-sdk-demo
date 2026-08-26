@@ -24,9 +24,7 @@ import type {
 import { useCallback, useState } from 'react';
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import type { DemoStyles, DemoTheme } from './styles';
 import { CodeBlock } from '../../components/CodeBlock';
-import { subheading } from './styles';
 
 // Demo vendor identity. `vendorId` names which backend to authenticate against
 // and is the key the token is cached under.
@@ -122,15 +120,19 @@ app.post('/horizon/callback', async (req, res) => {
 
 type Status = 'idle' | 'pending' | 'connected' | 'error';
 
-export default function RemoteAuthPanel({
-  s,
-  themeTokens,
-}: {
-  s: DemoStyles;
-  themeTokens: DemoTheme;
-}) {
-  const { auth } = useHorizonContext();
-  const { ui } = useHorizonContext();
+/** Status readout: a themed Chip rather than a colored span. */
+const STATUS_CHIP: Record<
+  Status,
+  { label: string; color: 'default' | 'primary' | 'success' | 'error' }
+> = {
+  idle: { label: '○ Not connected', color: 'default' },
+  pending: { label: '○ Awaiting host handshake…', color: 'primary' },
+  connected: { label: '● Connected', color: 'success' },
+  error: { label: '● Failed', color: 'error' },
+};
+
+export default function RemoteAuthPanel() {
+  const { ui, auth } = useHorizonContext();
 
   // Seed from the session cache so a prior connection survives a tab switch.
   const [token, setToken] = useState<RemoteAuthResponse | null>(() =>
@@ -169,187 +171,126 @@ export default function RemoteAuthPanel({
     setError(null);
   }, [auth]);
 
-  const Button = ui?.Button;
+  const { Paper, Stack, Box, Typography, Button, Chip, Alert } = ui || {};
+  if (!Paper || !Stack || !Box || !Typography || !Button || !Chip || !Alert)
+    return null;
 
-  // Plain button fallback so the panel still works if the host UI kit is absent.
-  const actionButton = (
-    label: string,
-    onClick: () => void,
-    opts: { disabled?: boolean; color?: 'primary' | 'error' } = {},
-  ) =>
-    Button ? (
-      <Button
-        variant='contained'
-        color={opts.color ?? 'primary'}
-        disabled={opts.disabled}
-        onClick={onClick}
-      >
-        {label}
-      </Button>
-    ) : (
-      <button
-        onClick={onClick}
-        disabled={opts.disabled}
-        style={{
-          padding: `${themeTokens.spacing.sm} ${themeTokens.spacing.lg}`,
-          backgroundColor:
-            opts.color === 'error'
-              ? themeTokens.colors.error
-              : themeTokens.colors.primary,
-          color: '#fff',
-          border: 'none',
-          borderRadius: themeTokens.borderRadius.sm,
-          cursor: opts.disabled ? 'default' : 'pointer',
-          opacity: opts.disabled ? 0.6 : 1,
-          fontFamily: themeTokens.typography.fontFamily.sans,
-          fontSize: themeTokens.typography.fontSize.sm,
-        }}
-      >
-        {label}
-      </button>
-    );
+  const chip = STATUS_CHIP[status];
 
   return (
-    <div style={s.surface.card}>
-      <h2
-        style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.md }}
-      >
+    <Paper sx={{ p: 3 }}>
+      <Typography variant='h6' gutterBottom>
         Remote authentication
-      </h2>
-      <p style={{ ...s.text.muted, marginBottom: themeTokens.spacing.lg }}>
+      </Typography>
+      <Typography variant='body2' color='text.secondary' sx={{ mb: 3 }}>
         When the app needs to call <em>your</em> backend on behalf of the
         signed-in user, the host relays a trusted identity handshake — your
         server proves the request came from Horizon (HMAC signature), exchanges
         the delivered code for proof of identity, and issues its own vendor
         token. The app never handles Horizon credentials.
-      </p>
+      </Typography>
 
       {/* Live demo */}
-      <div
-        style={{ ...s.surface.elevated, marginBottom: themeTokens.spacing.lg }}
-      >
-        <div style={subheading(s, themeTokens)}>Try it</div>
-        <p style={{ ...s.text.muted, marginBottom: themeTokens.spacing.md }}>
+      <Paper variant='outlined' sx={{ p: 2, mb: 3 }}>
+        <Typography variant='subtitle2' fontWeight={600} gutterBottom>
+          Try it
+        </Typography>
+        <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
           Requests a token from <code>{VENDOR_ID}</code> via{' '}
           <code>auth.requestRemoteAuth()</code>. Requires a host with remote
           auth wired up and the callback hostname allow-listed for this app;
-          otherwise the request rejects and you'll see the error here.
-        </p>
+          otherwise the request rejects and you&apos;ll see the error here.
+        </Typography>
 
-        <div
-          style={{
-            display: 'flex',
-            gap: themeTokens.spacing.sm,
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            marginBottom: themeTokens.spacing.md,
-          }}
+        <Stack
+          direction='row'
+          spacing={1.5}
+          alignItems='center'
+          flexWrap='wrap'
+          useFlexGap
+          sx={{ mb: 2 }}
         >
-          {status !== 'connected'
-            ? actionButton(
-                status === 'pending' ? 'Connecting…' : 'Connect to backend',
-                connect,
-                { disabled: status === 'pending' },
-              )
-            : actionButton('Disconnect', disconnect, { color: 'error' })}
+          {status !== 'connected' ? (
+            <Button
+              variant='contained'
+              disabled={status === 'pending'}
+              onClick={connect}
+            >
+              {status === 'pending' ? 'Connecting…' : 'Connect to backend'}
+            </Button>
+          ) : (
+            <Button variant='contained' color='error' onClick={disconnect}>
+              Disconnect
+            </Button>
+          )}
 
-          <span
-            style={{
-              ...s.text.body,
-              color:
-                status === 'connected'
-                  ? themeTokens.colors.success
-                  : status === 'error'
-                    ? themeTokens.colors.error
-                    : themeTokens.colors.text.secondary,
-              fontWeight: themeTokens.typography.fontWeight.medium,
-            }}
-          >
-            {status === 'connected'
-              ? '● Connected'
-              : status === 'pending'
-                ? '○ Awaiting host handshake…'
-                : status === 'error'
-                  ? '● Failed'
-                  : '○ Not connected'}
-          </span>
-        </div>
+          <Chip label={chip.label} color={chip.color} size='small' />
+        </Stack>
 
-        {status === 'error' && error && (
-          <div
-            style={{
-              padding: themeTokens.spacing.sm,
-              backgroundColor: themeTokens.colors.error + '15',
-              borderLeft: `4px solid ${themeTokens.colors.error}`,
-              borderRadius: themeTokens.borderRadius.sm,
-              ...s.text.body,
-              color: themeTokens.colors.text.primary,
-            }}
-          >
-            {error}
-          </div>
-        )}
+        {status === 'error' && error && <Alert severity='error'>{error}</Alert>}
 
         {status === 'connected' && token && (
           <CodeBlock>{JSON.stringify(token, null, 2)}</CodeBlock>
         )}
-      </div>
+      </Paper>
 
       {/* The flow */}
-      <div style={subheading(s, themeTokens)}>How the handshake works</div>
-      <ol
-        style={{
-          ...s.text.body,
-          paddingLeft: themeTokens.spacing.lg,
-          marginBottom: themeTokens.spacing.lg,
-        }}
-      >
-        <li>
+      <Typography variant='subtitle2' fontWeight={600} gutterBottom>
+        How the handshake works
+      </Typography>
+      <Box component='ol' sx={{ pl: 3, mt: 0, mb: 3 }}>
+        <Typography component='li' variant='body2' sx={{ mb: 1 }}>
           App calls{' '}
           <code>
             useRemoteAuth(context, vendorId)&nbsp;— or{' '}
             <code>auth.requestRemoteAuth(&#123; vendorId, scopes &#125;)</code>
           </code>{' '}
           and awaits the promise. The host relays it to the NetSapiens platform.
-        </li>
-        <li>
-          The API binds the identity to the caller's <em>trusted session</em>{' '}
-          (not the request's <code>user.uid</code>, which is
-          attacker-controllable), checks the signed-in user is entitled to this
-          app, reads your <strong>registered</strong> callback endpoint(s),
-          issues a single-use PKCE <strong>code</strong>, and POSTs it — signed
-          — to the first endpoint that answers. The destination is never taken
-          from the request.
-        </li>
-        <li>
+        </Typography>
+        <Typography component='li' variant='body2' sx={{ mb: 1 }}>
+          The API binds the identity to the caller&apos;s{' '}
+          <em>trusted session</em> (not the request&apos;s <code>user.uid</code>
+          , which is attacker-controllable), checks the signed-in user is
+          entitled to this app, reads your <strong>registered</strong> callback
+          endpoint(s), issues a single-use PKCE <strong>code</strong>, and POSTs
+          it — signed — to the first endpoint that answers. The destination is
+          never taken from the request.
+        </Typography>
+        <Typography component='li' variant='body2' sx={{ mb: 1 }}>
           Backend verifies the <code>X-NS-Signature</code> HMAC (v2 — over{' '}
           <code>&quot;&lt;X-NS-Timestamp&gt;.&quot; + the raw body</code>, so
           hash the bytes before parsing), exchanges the code at the{' '}
           <code>validation_endpoint</code> for an NS token proving the user,
           then mints its own vendor token.
-        </li>
-        <li>
+        </Typography>
+        <Typography component='li' variant='body2'>
           The vendor token comes back as the <code>RemoteAuthResponse</code>,
           cached for the session; later reads come from{' '}
           <code>getRemoteAuthToken(vendorId)</code>.
-        </li>
-      </ol>
+        </Typography>
+      </Box>
 
       {/* Client snippet */}
-      <div style={subheading(s, themeTokens)}>In the app</div>
-      <div style={{ marginBottom: themeTokens.spacing.lg }}>
+      <Stack spacing={1} sx={{ mb: 3 }}>
+        <Typography variant='subtitle2' fontWeight={600}>
+          In the app
+        </Typography>
         <CodeBlock>{CLIENT_SNIPPET}</CodeBlock>
-      </div>
+      </Stack>
 
       {/* Backend snippet */}
-      <div style={subheading(s, themeTokens)}>In your backend</div>
-      <CodeBlock>{BACKEND_SNIPPET}</CodeBlock>
+      <Stack spacing={1}>
+        <Typography variant='subtitle2' fontWeight={600}>
+          In your backend
+        </Typography>
+        <CodeBlock>{BACKEND_SNIPPET}</CodeBlock>
+      </Stack>
 
-      <p style={{ ...s.text.muted, marginTop: themeTokens.spacing.md }}>
+      <Typography variant='body2' color='text.secondary' sx={{ mt: 2 }}>
         Admin setup (per app, in Registered Apps): enable remote auth, list the
         allowed callback hostname(s), and set the callback signing secret your
         backend uses to verify <code>X-NS-Signature</code>.
-      </p>
-    </div>
+      </Typography>
+    </Paper>
   );
 }

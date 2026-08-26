@@ -7,10 +7,12 @@
  *
  * This file is just the tab shell — each tab's content lives in its own panel
  * under `demo/`, and the static content lives in `content/demoContent.ts`.
- * Styled with the host theme tokens (`horizonContext.ui.styles` / `.theme`) so
- * it tracks the host light/dark theme automatically.
+ *
+ * Every visible element comes from the host kit (`horizonContext.ui`), so the
+ * whole page re-themes with the host light/dark toggle — kit components read the
+ * host's live MUI theme, which token objects cannot. Nothing here is painted
+ * from `ui.theme` / `ui.styles`. See CLAUDE.md, "Never hand-roll UI".
  */
-import type { CSSProperties } from 'react';
 import { useState } from 'react';
 import { useHorizonContext, VERSION } from '@netsapiens/horizon-sdk';
 
@@ -19,7 +21,6 @@ import CodePanel from './demo/CodePanel';
 import OverviewPanel from './demo/OverviewPanel';
 import PatternsPanel from './demo/PatternsPanel';
 import RemoteAuthPanel from './demo/RemoteAuthPanel';
-import { tabStyle } from './demo/styles';
 import WalkthroughPanel from './demo/WalkthroughPanel';
 import ZonesPanel from './demo/ZonesPanel';
 
@@ -31,34 +32,25 @@ type TabKey =
   | 'remote-auth'
   | 'walkthrough';
 
-const TABS: [TabKey, string][] = [
-  ['overview', 'Overview'],
-  ['zones', 'Extension Zones'],
-  ['patterns', 'Route Patterns'],
-  ['code', 'Code'],
-  ['remote-auth', 'Remote Auth'],
-  ['walkthrough', 'Walkthrough'],
+/** `KitOption`-shaped, so `Tabs` and `ToggleButtonGroup` both take it as-is. */
+const TABS: { value: TabKey; label: string }[] = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'zones', label: 'Extension Zones' },
+  { value: 'patterns', label: 'Route Patterns' },
+  { value: 'code', label: 'Code' },
+  { value: 'remote-auth', label: 'Remote Auth' },
+  { value: 'walkthrough', label: 'Walkthrough' },
 ];
 
 export default function DemoPage({ ...marker }: ZoneMarkerProps) {
-  const horizonContext = useHorizonContext();
+  const { ui } = useHorizonContext();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
-  const ui = horizonContext.ui;
   const PageTemplate = ui?.templates?.PageTemplate;
-  const { Paper, Stack, Box, Typography } = ui || {};
-  const s = ui?.styles;
-  const themeTokens = ui?.theme;
+  const Icon = ui?.templates?.Icon;
+  const { Paper, Stack, Box, Typography, Tabs } = ui || {};
 
-  if (
-    !PageTemplate ||
-    !Paper ||
-    !Stack ||
-    !Box ||
-    !Typography ||
-    !s ||
-    !themeTokens
-  ) {
+  if (!PageTemplate || !Paper || !Stack || !Box || !Typography || !Tabs) {
     return (
       <div {...marker} style={{ padding: '24px' }}>
         <h1>Horizon SDK Demo</h1>
@@ -77,7 +69,7 @@ export default function DemoPage({ ...marker }: ZoneMarkerProps) {
         { label: 'Horizon SDK Demo' },
       ]}
     >
-      {/* SDK version badge — host ui components, theme palette via sx themeTokens. */}
+      {/* SDK version badge — host components throughout, accent from the live palette. */}
       <Paper
         variant='outlined'
         sx={{
@@ -88,7 +80,7 @@ export default function DemoPage({ ...marker }: ZoneMarkerProps) {
         }}
       >
         <Stack direction='row' spacing={1.5} alignItems='center'>
-          <span style={{ fontSize: 20 }}>📦</span>
+          {Icon ? <Icon name='mdi:package-variant-closed' size={20} /> : null}
           <Box>
             <Typography variant='subtitle2' fontWeight={600}>
               Using the published SDK
@@ -100,50 +92,23 @@ export default function DemoPage({ ...marker }: ZoneMarkerProps) {
         </Stack>
       </Paper>
 
-      <Box style={(s.surface as Record<string, CSSProperties>).page}>
-        {/* Tabs */}
-        <Stack
-          direction='row'
-          spacing={0.5}
-          sx={{
-            borderBottom: '2px solid',
-            borderColor: 'divider',
-            mb: 3,
-            flexWrap: 'wrap',
-          }}
-        >
-          {TABS.map(([key, label]) => (
-            <button
-              key={key}
-              style={tabStyle(themeTokens, activeTab === key)}
-              onClick={() => setActiveTab(key)}
-            >
-              {label}
-            </button>
-          ))}
-        </Stack>
-
-        {activeTab === 'overview' && (
-          <OverviewPanel s={s} themeTokens={themeTokens} />
-        )}
-        {activeTab === 'zones' && (
-          <ZonesPanel s={s} themeTokens={themeTokens} />
-        )}
-        {activeTab === 'patterns' && (
-          <PatternsPanel s={s} themeTokens={themeTokens} />
-        )}
-        {activeTab === 'code' && <CodePanel s={s} themeTokens={themeTokens} />}
-        {activeTab === 'remote-auth' && (
-          <RemoteAuthPanel s={s} themeTokens={themeTokens} />
-        )}
-        {activeTab === 'walkthrough' && (
-          <WalkthroughPanel
-            s={s}
-            themeTokens={themeTokens}
-            onNavigate={horizonContext.navigate}
-          />
-        )}
+      {/* The host's own pill strip (`variant='pill'` by default) — it brings its
+          own elevated background, so no divider rule underneath. It owns the
+          strip only; the panels below stay ours, keyed off `activeTab`. */}
+      <Box sx={{ mb: 3 }}>
+        <Tabs
+          options={TABS}
+          value={activeTab}
+          onChange={(value) => setActiveTab(value as TabKey)}
+        />
       </Box>
+
+      {activeTab === 'overview' && <OverviewPanel />}
+      {activeTab === 'zones' && <ZonesPanel />}
+      {activeTab === 'patterns' && <PatternsPanel />}
+      {activeTab === 'code' && <CodePanel />}
+      {activeTab === 'remote-auth' && <RemoteAuthPanel />}
+      {activeTab === 'walkthrough' && <WalkthroughPanel />}
     </PageTemplate>
   );
 }

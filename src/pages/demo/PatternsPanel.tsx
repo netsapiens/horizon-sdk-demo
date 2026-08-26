@@ -1,76 +1,85 @@
 /** DemoPage tab: Route Patterns — how extensions target host pages. */
-import type { DemoStyles, DemoTheme } from './styles';
+import { useHorizonContext } from '@netsapiens/horizon-sdk';
+
 import { PATTERNS } from '../../content/demoContent';
 
-export default function PatternsPanel({
-  s,
-  themeTokens,
-}: {
-  s: DemoStyles;
-  themeTokens: DemoTheme;
-}) {
+const HEADINGS = ['Pattern', 'Type', 'Example match'];
+
+export default function PatternsPanel() {
+  const { ui } = useHorizonContext();
+  const { Paper, Box, Typography } = ui || {};
+  if (!Paper || !Box || !Typography) return null;
+
   return (
-    <div style={s.surface.card}>
-      <h2
-        style={{ ...s.text.subheading, marginBottom: themeTokens.spacing.md }}
-      >
+    <Paper sx={{ p: 3 }}>
+      <Typography variant='h6' gutterBottom>
         Route pattern matching
-      </h2>
-      <p style={{ ...s.text.muted, marginBottom: themeTokens.spacing.lg }}>
+      </Typography>
+      <Typography variant='body2' color='text.secondary' sx={{ mb: 3 }}>
         Each extension lists the routes it applies to. Patterns support
         wildcards, named params, prefixes, and a global match — so one
         registration can target many pages.
-      </p>
+      </Typography>
 
-      <div style={s.surface.elevated}>
-        <table
-          style={{ width: '100%', borderCollapse: 'collapse', ...s.text.body }}
+      {/* The kit exposes no Table primitives, so the table ELEMENTS come from
+          the host `Box` via `component` — real <table> semantics, with every
+          color resolved from the live palette through `sx`. */}
+      <Paper variant='outlined' sx={{ p: 2, overflowX: 'auto' }}>
+        <Box
+          component='table'
+          sx={{ width: '100%', borderCollapse: 'collapse' }}
         >
-          <thead>
-            <tr
-              style={{
-                borderBottom: `2px solid ${themeTokens.colors.border.light}`,
-              }}
+          <Box component='thead'>
+            <Box
+              component='tr'
+              sx={{ borderBottom: '2px solid', borderColor: 'divider' }}
             >
-              <th
-                style={{ textAlign: 'left', padding: themeTokens.spacing.sm }}
-              >
-                Pattern
-              </th>
-              <th
-                style={{ textAlign: 'left', padding: themeTokens.spacing.sm }}
-              >
-                Type
-              </th>
-              <th
-                style={{ textAlign: 'left', padding: themeTokens.spacing.sm }}
-              >
-                Example match
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {PATTERNS.map((p) => (
-              <tr
-                key={p.pattern}
-                style={{
-                  borderBottom: `1px solid ${themeTokens.colors.border.light}`,
-                }}
-              >
-                <td style={{ padding: themeTokens.spacing.sm }}>
-                  <code>{p.pattern}</code>
-                </td>
-                <td style={{ padding: themeTokens.spacing.sm }}>{p.kind}</td>
-                <td
-                  style={{ padding: themeTokens.spacing.sm, ...s.text.muted }}
+              {HEADINGS.map((heading) => (
+                <Box
+                  key={heading}
+                  component='th'
+                  sx={{ textAlign: 'left', p: 1 }}
                 >
-                  {p.matches}
-                </td>
-              </tr>
+                  <Typography
+                    variant='caption'
+                    color='text.secondary'
+                    fontWeight={600}
+                  >
+                    {heading}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+          <Box component='tbody'>
+            {PATTERNS.map((p) => (
+              <Box
+                key={p.pattern}
+                component='tr'
+                sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
+              >
+                <Box component='td' sx={{ p: 1 }}>
+                  <Typography
+                    variant='body2'
+                    component='code'
+                    fontFamily='monospace'
+                  >
+                    {p.pattern}
+                  </Typography>
+                </Box>
+                <Box component='td' sx={{ p: 1 }}>
+                  <Typography variant='body2'>{p.kind}</Typography>
+                </Box>
+                <Box component='td' sx={{ p: 1 }}>
+                  <Typography variant='body2' color='text.secondary'>
+                    {p.matches}
+                  </Typography>
+                </Box>
+              </Box>
             ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          </Box>
+        </Box>
+      </Paper>
+    </Paper>
   );
 }
