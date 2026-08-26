@@ -26,7 +26,12 @@ export default function ZonesPanel() {
           <Paper
             key={z.zone}
             variant='outlined'
-            sx={{ p: 2, borderLeft: '4px solid', borderLeftColor: accentAt(i) }}
+            sx={{
+              p: 3,
+              bgcolor: 'background.elevation1',
+              borderLeft: '4px solid',
+              borderLeftColor: accentAt(i),
+            }}
           >
             <Typography variant='subtitle2' fontWeight={600} gutterBottom>
               {z.zone}

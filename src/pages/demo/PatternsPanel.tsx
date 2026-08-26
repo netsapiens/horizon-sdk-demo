@@ -24,7 +24,10 @@ export default function PatternsPanel() {
       {/* The kit exposes no Table primitives, so the table ELEMENTS come from
           the host `Box` via `component` — real <table> semantics, with every
           color resolved from the live palette through `sx`. */}
-      <Paper variant='outlined' sx={{ p: 2, overflowX: 'auto' }}>
+      <Paper
+        variant='outlined'
+        sx={{ p: 3, bgcolor: 'background.elevation1', overflowX: 'auto' }}
+      >
         <Box
           component='table'
           sx={{ width: '100%', borderCollapse: 'collapse' }}

@@ -30,7 +30,11 @@ export default function WalkthroughPanel() {
         }}
       >
         {WALKTHROUGH.map((item) => (
-          <Paper key={item.label} variant='outlined' sx={{ p: 2 }}>
+          <Paper
+            key={item.label}
+            variant='outlined'
+            sx={{ p: 3, bgcolor: 'background.elevation1' }}
+          >
             <Stack spacing={1.5} alignItems='flex-start'>
               <Box>
                 <Typography variant='subtitle2' fontWeight={600} gutterBottom>
@@ -52,7 +56,10 @@ export default function WalkthroughPanel() {
         ))}
       </Box>
 
-      <Paper variant='outlined' sx={{ p: 2, mt: 3 }}>
+      <Paper
+        variant='outlined'
+        sx={{ p: 3, bgcolor: 'background.elevation1', mt: 3 }}
+      >
         <Typography variant='subtitle2' fontWeight={600} gutterBottom>
           Everywhere
         </Typography>

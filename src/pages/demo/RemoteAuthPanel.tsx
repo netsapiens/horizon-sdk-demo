@@ -191,7 +191,10 @@ export default function RemoteAuthPanel() {
       </Typography>
 
       {/* Live demo */}
-      <Paper variant='outlined' sx={{ p: 2, mb: 3 }}>
+      <Paper
+        variant='outlined'
+        sx={{ p: 3, bgcolor: 'background.elevation1', mb: 3 }}
+      >
         <Typography variant='subtitle2' fontWeight={600} gutterBottom>
           Try it
         </Typography>

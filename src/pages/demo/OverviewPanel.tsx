@@ -42,7 +42,8 @@ export default function OverviewPanel() {
               key={c.title}
               variant='outlined'
               sx={{
-                p: 2,
+                p: 3,
+                bgcolor: 'background.elevation1',
                 borderLeft: '4px solid',
                 borderLeftColor: accentAt(i),
               }}
