@@ -9,7 +9,7 @@ export default function LayoutSection() {
   if (!Paper || !Typography || !Stack || !Box) return null;
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h5' gutterBottom>
         Stack & Divider
       </Typography>

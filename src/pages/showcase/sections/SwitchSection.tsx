@@ -11,7 +11,7 @@ export default function SwitchSection() {
   if (!Paper || !Typography || !Stack || !Switch) return null;
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h5' gutterBottom>
         Switch
       </Typography>

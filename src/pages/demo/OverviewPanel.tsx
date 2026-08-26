@@ -11,7 +11,7 @@ export default function OverviewPanel() {
 
   return (
     <Stack spacing={3}>
-      <Paper sx={{ p: 3 }}>
+      <Paper>
         <Typography variant='h6' gutterBottom>
           What the Horizon SDK does
         </Typography>
@@ -25,7 +25,7 @@ export default function OverviewPanel() {
         </Typography>
       </Paper>
 
-      <Paper sx={{ p: 3 }}>
+      <Paper>
         <Typography variant='h6' gutterBottom>
           Capabilities
         </Typography>

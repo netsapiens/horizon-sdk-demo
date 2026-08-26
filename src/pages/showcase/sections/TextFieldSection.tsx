@@ -11,7 +11,7 @@ export default function TextFieldSection() {
   if (!Paper || !Typography || !Stack || !TextField) return null;
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h5' gutterBottom>
         TextField
       </Typography>

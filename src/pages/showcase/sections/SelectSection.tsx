@@ -12,7 +12,7 @@ export default function SelectSection() {
   if (!Paper || !Typography || !Stack || !Select) return null;
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h5' gutterBottom>
         Select
       </Typography>

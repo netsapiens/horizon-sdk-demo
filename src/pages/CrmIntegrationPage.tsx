@@ -296,7 +296,7 @@ export default function CrmIntegrationPage({ ...marker }: ZoneMarkerProps) {
           </Paper>
 
           {/* Right: matched CRM record (mock data) */}
-          <Paper sx={{ p: 3, flex: '1 1 320px', minWidth: 280 }}>
+          <Paper sx={{ flex: '1 1 320px', minWidth: 280 }}>
             <Stack
               direction='row'
               alignItems='center'
@@ -378,7 +378,7 @@ export default function CrmIntegrationPage({ ...marker }: ZoneMarkerProps) {
         {Divider && <Divider />}
 
         {/* Footer — what the SDK made possible on this page. */}
-        <Paper sx={{ p: 3 }}>
+        <Paper>
           <Typography variant='h6' gutterBottom>
             About this integration
           </Typography>

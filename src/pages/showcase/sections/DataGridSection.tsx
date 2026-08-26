@@ -52,7 +52,7 @@ export default function DataGridSection() {
   if (!Paper || !Typography || !Box || !DatagridTemplate) return null;
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h5' gutterBottom>
         DatagridTemplate
       </Typography>

@@ -11,7 +11,7 @@ export default function RadioSection() {
   if (!Paper || !Typography || !Stack || !Radio) return null;
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h5' gutterBottom>
         Radio
       </Typography>

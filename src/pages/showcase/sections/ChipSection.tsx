@@ -9,7 +9,7 @@ export default function ChipSection() {
   if (!Paper || !Typography || !Stack || !Chip) return null;
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h5' gutterBottom>
         Chip
       </Typography>

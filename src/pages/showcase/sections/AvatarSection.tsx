@@ -9,7 +9,7 @@ export default function AvatarSection() {
   if (!Paper || !Typography || !Stack || !Avatar) return null;
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h5' gutterBottom>
         Avatar
       </Typography>

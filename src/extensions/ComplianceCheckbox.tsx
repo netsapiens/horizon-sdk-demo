@@ -48,7 +48,7 @@ export default function ComplianceCheckbox({
   const checkboxSx = { pt: 0, mr: 1 } as const;
 
   return (
-    <Paper {...marker} variant='outlined' sx={{ p: 3, width: '100%' }}>
+    <Paper {...marker} sx={{ width: '100%' }}>
       <Stack spacing={2}>
         <Stack spacing={0.5}>
           <Typography variant='subtitle1' fontWeight={600}>

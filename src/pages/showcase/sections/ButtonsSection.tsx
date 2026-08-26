@@ -9,7 +9,7 @@ export default function ButtonsSection() {
   if (!Paper || !Typography || !Stack || !Button || !Box) return null;
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h5' gutterBottom>
         Buttons
       </Typography>

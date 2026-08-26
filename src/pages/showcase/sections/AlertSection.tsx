@@ -9,7 +9,7 @@ export default function AlertSection() {
   if (!Paper || !Typography || !Stack || !Alert) return null;
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h5' gutterBottom>
         Alert
       </Typography>

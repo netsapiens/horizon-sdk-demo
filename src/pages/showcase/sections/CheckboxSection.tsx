@@ -11,7 +11,7 @@ export default function CheckboxSection() {
   if (!Paper || !Typography || !Stack || !Checkbox) return null;
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h5' gutterBottom>
         Checkbox
       </Typography>

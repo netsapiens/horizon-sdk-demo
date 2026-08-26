@@ -9,7 +9,7 @@ export default function TooltipSection() {
   if (!Paper || !Typography || !Stack || !Tooltip || !IconButton) return null;
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h5' gutterBottom>
         Tooltip
       </Typography>

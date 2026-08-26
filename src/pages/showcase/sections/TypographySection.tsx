@@ -9,7 +9,7 @@ export default function TypographySection() {
   if (!Paper || !Typography || !Stack) return null;
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h5' gutterBottom>
         Typography
       </Typography>

@@ -9,7 +9,7 @@ export default function IconButtonSection() {
   if (!Paper || !Typography || !Stack || !IconButton) return null;
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h5' gutterBottom>
         IconButton
       </Typography>

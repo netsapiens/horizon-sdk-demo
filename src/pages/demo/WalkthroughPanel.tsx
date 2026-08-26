@@ -9,7 +9,7 @@ export default function WalkthroughPanel() {
   if (!Paper || !Stack || !Box || !Typography || !Button) return null;
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h6'>See it in action</Typography>
       <Typography
         variant='body2'
@@ -30,11 +30,7 @@ export default function WalkthroughPanel() {
         }}
       >
         {WALKTHROUGH.map((item) => (
-          <Paper
-            key={item.label}
-            variant='outlined'
-            sx={{ p: 3, bgcolor: 'background.elevation1' }}
-          >
+          <Paper key={item.label} background={1}>
             <Stack spacing={1.5} alignItems='flex-start'>
               <Box>
                 <Typography variant='subtitle2' fontWeight={600} gutterBottom>
@@ -56,10 +52,7 @@ export default function WalkthroughPanel() {
         ))}
       </Box>
 
-      <Paper
-        variant='outlined'
-        sx={{ p: 3, bgcolor: 'background.elevation1', mt: 3 }}
-      >
+      <Paper background={1} sx={{ mt: 3 }}>
         <Typography variant='subtitle2' fontWeight={600} gutterBottom>
           Everywhere
         </Typography>

@@ -34,7 +34,7 @@ export default function TabsSection() {
   if (!Paper || !Typography || !Stack || !Box || !Tabs) return null;
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h5' gutterBottom>
         Tabs
       </Typography>
