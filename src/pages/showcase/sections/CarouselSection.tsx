@@ -34,6 +34,31 @@ const FEATURED = [
     name: 'Compliance',
     note: 'A gated form section',
   },
+  {
+    icon: 'mdi:download',
+    name: 'Export Data',
+    note: 'page-header-actions, five routes',
+  },
+  {
+    icon: 'mdi:account-box',
+    name: 'Caller Enrichment',
+    note: 'Live CRM match on an inbound call',
+  },
+  {
+    icon: 'mdi:priority-high',
+    name: 'Priority Column',
+    note: 'Merged into the Call Logs grid',
+  },
+  {
+    icon: 'mdi:help-circle',
+    name: 'Help Panel',
+    note: 'Top bar on every page',
+  },
+  {
+    icon: 'mdi:broadcast',
+    name: 'Live Status Badge',
+    note: 'Beside the page title',
+  },
 ];
 
 export default function CarouselSection() {
@@ -57,7 +82,7 @@ export default function CarouselSection() {
   );
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper>
       <Typography variant='h5' gutterBottom>
         CarouselTemplate
       </Typography>
@@ -69,13 +94,25 @@ export default function CarouselSection() {
       <Stack spacing={4}>
         <Box>
           <Typography variant='subtitle2' gutterBottom>
-            With a title and an action
+            Manual — <code>autoRotate</code> off (the default)
+          </Typography>
+          <Typography variant='body2' color='text.secondary' sx={{ mb: 1.5 }}>
+            Nothing moves until you move it. Drive it with the arrows, the dots,
+            a trackpad swipe, or the arrow keys once the strip has focus. With{' '}
+            {FEATURED.length} slides at{' '}
+            <code>itemMinWidth=&#123;240&#125;</code> there are several pages to
+            move through at any window width — the control only appears when
+            there is actually somewhere to scroll.
           </Typography>
           <CarouselTemplate
             title='Featured apps'
-            action={Chip ? <Chip label='6 apps' size='small' /> : undefined}
+            action={
+              Chip ? (
+                <Chip label={`${FEATURED.length} apps`} size='small' />
+              ) : undefined
+            }
             itemMinWidth={240}
-            aria-label='Featured apps'
+            aria-label='Featured apps, manual navigation'
           >
             {FEATURED.map(slide)}
           </CarouselTemplate>
@@ -83,14 +120,22 @@ export default function CarouselSection() {
 
         <Box>
           <Typography variant='subtitle2' gutterBottom>
-            Auto-rotating, narrower items (
-            <code>itemMinWidth=&#123;180&#125;</code>)
+            Auto-rotating — <code>autoRotate</code> with a 3s dwell
+          </Typography>
+          <Typography variant='body2' color='text.secondary' sx={{ mb: 1.5 }}>
+            Advances on its own, and stops the moment you engage: hover it, or
+            tab into it, and rotation pauses until you leave. Narrower items (
+            <code>itemMinWidth=&#123;180&#125;</code>) fit more per page, so the
+            same {FEATURED.length} slides take fewer steps to cycle. If your OS
+            is set to reduce motion, this one deliberately will not rotate at
+            all — that is the template honouring{' '}
+            <code>prefers-reduced-motion</code>, not a bug.
           </Typography>
           <CarouselTemplate
-            autoRotate
+            autoRotate={3000}
             itemMinWidth={180}
             showDots
-            aria-label='Auto-rotating featured apps'
+            aria-label='Featured apps, auto-rotating'
           >
             {FEATURED.map(slide)}
           </CarouselTemplate>
@@ -105,7 +150,7 @@ export default function CarouselSection() {
 // itemMinWidth (px) drives how many fit per page at each breakpoint.
 <CarouselTemplate
   title="Featured apps"
-  action={<Chip label="6 apps" size="small" />}
+  action={<Chip label={\`\${apps.length} apps\`} size="small" />}
   itemMinWidth={240}
   aria-label="Featured apps"        // REQUIRED — a scrolling region needs a name
 >
@@ -114,8 +159,10 @@ export default function CarouselSection() {
   ))}
 </CarouselTemplate>
 
-// autoRotate: false (default) | true for the default dwell | milliseconds
-<CarouselTemplate autoRotate={5000} showDots showArrows aria-label="Promotions">
+// autoRotate: false (default) | true for the default dwell | milliseconds.
+// Rotation pauses on hover and on keyboard focus, and prefers-reduced-motion
+// disables it outright — so give the user a way through it either way.
+<CarouselTemplate autoRotate={3000} showDots showArrows aria-label="Promotions">
   {promos.map((p) => <PromoCard key={p.id} promo={p} />)}
 </CarouselTemplate>`}
       </CodeBlock>
