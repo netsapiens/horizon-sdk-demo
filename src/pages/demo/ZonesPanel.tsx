@@ -18,7 +18,10 @@ export default function ZonesPanel() {
         sx={{ mt: 0.5, mb: 3 }}
       >
         Generic zones the host mounts on its pages. A single registration
-        targets a zone plus one or more route patterns — see the Code tab.
+        targets a zone plus one or more route patterns — see the Code tab. The
+        last two are dashboard-widget zones: they name a dashboard rather than a
+        slot on a page, take no route patterns, and offer the widget in that
+        dashboard’s Customize catalogue for the user to add.
       </Typography>
 
       <Stack spacing={2}>

@@ -57,6 +57,30 @@ interface ColumnManifestEntry {
   requiredScopes?: ScopeRequirement;
   testId: string;
 }
+interface WidgetManifestEntry {
+  /** Manifest id, `demo-` prefixed like every other entry here. */
+  id: string;
+  /**
+   * The plain name passed to `sdk.registerWidget` — no app prefix. The host
+   * stamps its own from this app's binding on the bus.
+   */
+  widgetId: string;
+  /** What the host stores it as, and what lands in a user's saved layout. */
+  storedId: string;
+  kind: 'panel' | 'leaf';
+  /** Documentation only — the enforcing array is an inline literal in App.tsx. */
+  zones: string[];
+  /** Leaves only: the container category this belongs in. */
+  leafOf?: string;
+  category?: string;
+  /** Panels only — a leaf's width belongs to its container. */
+  size?: 'half' | 'full';
+  placement?: { after: string } | { before: string } | 'end';
+  refreshPolicy?: 'shared-range' | 'own-cadence' | 'realtime';
+  /** Documentation only, as on RouteManifestEntry. */
+  requiredScopes?: ScopeRequirement;
+  testId: string;
+}
 interface ZonesManifest {
   appId: string;
   webpackModule: string;
@@ -64,6 +88,7 @@ interface ZonesManifest {
   extensions: ExtensionManifestEntry[];
   routes: RouteManifestEntry[];
   columns: ColumnManifestEntry[];
+  widgets: WidgetManifestEntry[];
 }
 
 export const manifest = manifestJson as unknown as ZonesManifest;
@@ -142,5 +167,17 @@ export function columnTestId(id: string): string {
   const testId = manifest.columns.find((c) => c.id === id)?.testId;
   if (!testId)
     throw new Error(`zones.manifest.json: no column testId for "${id}"`);
+  return testId;
+}
+
+/**
+ * testId for a dashboard widget, by manifest id (used to tag the widget's own
+ * content root — the host frame around it carries its own testid keyed on the
+ * stored, app-prefixed widget id).
+ */
+export function widgetTestId(id: string): string {
+  const testId = manifest.widgets.find((w) => w.id === id)?.testId;
+  if (!testId)
+    throw new Error(`zones.manifest.json: no widget testId for "${id}"`);
   return testId;
 }

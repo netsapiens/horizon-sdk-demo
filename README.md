@@ -4,9 +4,9 @@ A federated demo application showing how to extend **NetSapiens Horizon** with t
 [`@netsapiens/horizon-sdk`](https://www.npmjs.com/package/@netsapiens/horizon-sdk).
 It is loaded into the running Horizon host over Webpack Module Federation and
 exercises every capability the SDK exposes — full pages, zone-based UI
-extensions, a dynamic table column, live call events, and authenticated API
-access — using the host's themed component kit so everything matches Horizon in
-light and dark mode.
+extensions, a dynamic table column, dashboard widgets, live call events, and
+authenticated API access — using the host's themed component kit so everything
+matches Horizon in light and dark mode.
 
 > The in-app **Apps → Horizon SDK Demo** page is the live, self-documenting tour
 > of everything below (Overview / Extension Zones / Route Patterns / Code /
@@ -32,8 +32,9 @@ light and dark mode.
 ## What it demonstrates
 
 This single app registers **4 full-page routes**, **10 zone extensions**, **1
-dynamic table column**, **1 live call-event subscription**, an **on-demand
-side panel**, and a **remote-auth handshake** with a backend.
+dynamic table column**, **2 dashboard widgets**, **1 live call-event
+subscription**, an **on-demand side panel**, and a **remote-auth handshake** with
+a backend.
 
 > **Building a data table?** Start with the **Call Recordings** page
 > (`pages/CallRecordingsPage.tsx`) — a complete list page built the way a native
@@ -155,6 +156,87 @@ A sortable/filterable **Priority** column merged into the host's Call Logs table
 the host's light/dark toggle; its fallback branch shows the alternative for
 app-owned colours (branch on `context.theme`, never on the `ui.theme` snapshot).
 One-argument renderers stay valid — the context is purely additive.
+
+### Dashboard widgets — `sdk.registerWidget()`
+
+A widget is a card on a dashboard. The host owns the grid, the card, the heading
+and the overflow menu; the app supplies the content. Native panels and an app's
+widgets go through the same registry.
+
+| Widget                   | Kind                      | Where it lands                                                                                     | Component                          |
+| ------------------------ | ------------------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| **Recent activity**      | `panel`                   | Its own card on the grid, anchored after the native _Health_ panel; offered on two dashboards      | `widgets/RecentActivityWidget.tsx` |
+| **Recordings processed** | `leaf` (`leafOf: 'stat'`) | **Inside** the host's existing stat card, alongside the native stat blocks — not a card of its own | `widgets/RecordedCallsStat.tsx`    |
+
+The leaf is the interesting one: it proves a remote app can contribute _into_ a
+host container and reorder within it, not only add top-level panels.
+
+Both register inline in `App.tsx` §4 — not from `zones.manifest.json` like the
+zone extensions, for the same reason routes and the column do not: `zones` has to
+be a literal array at the call site.
+
+```tsx
+sdk.registerWidget({
+  id: 'recent-activity', // a PLAIN name — the host stamps the app prefix
+  kind: 'panel',
+  zones: ['platform-admin-dashboard-widgets', 'manage-dashboard-widgets'],
+  title: 'Recent activity',
+  icon: 'mdi:pulse',
+  category: 'activity', // catalogue section + the loading wireframe's shape
+  size: { default: 'half', resizable: true }, // panels only
+  placement: { after: 'health' }, // resolved on add and on every re-add
+  refreshPolicy: 'shared-range', // → `widget.range` arrives as from/to timestamps
+  requiredScopes: 'ADMINS', // narrows only, intersected with the route's floor
+  component: RecentActivityWidget,
+});
+```
+
+Five things this demo is shaped to make visible, each of which is easy to get
+wrong:
+
+- **`id` is a plain name.** `recent-activity`, never
+  `horizon-extension-demo:recent-activity`. The host stamps the prefix from your
+  app's binding on the bus, so two apps can both ship a `recent-activity`, an app
+  cannot register a native id such as `stats`, and an id read back says which app
+  it came from. The **stored** id is what lands in every saved layout, which
+  makes this the one field that cannot be renamed later without losing every
+  placement.
+- **Zones are literal strings.** `zones: ['platform-admin-dashboard-widgets']`,
+  written out. Bundle verification reviews an app by extracting string literals
+  from its source, so a zone assembled by a helper — including the SDK's internal
+  `widgetZoneFor(surface)`, which is deliberately **not exported** — extracts as
+  nothing and can never be attributed to your app. The zone for a dashboard is
+  its surface plus `-widgets`.
+- **Do not draw a card, a heading or padding.** `chrome` defaults to `'host'` and
+  the frame draws all three, plus the overflow menu. Neither component in
+  `src/widgets/` contains a `<Paper>`, a heading or a `p:`. Set `chrome: 'self'`
+  only if a widget genuinely owns its chrome; otherwise it gets two titles and a
+  double inset.
+- **Registering makes a widget eligible, not placed.** A saved layout is
+  authoritative, so both of these appear under **Customize** on the dashboard
+  rather than on somebody's grid. That is the contract working, not a failure to
+  appear. (`placement` decides where it lands _when the user adds it_, and every
+  time they re-add it.)
+- **A leaf is not a small panel.** It takes `leafOf` and no `size`, its container
+  lays it out, and its `widget.pixel` is `{ width: 0, height: 0 }`. The panel
+  uses its box to pick a row count; the leaf never reads one.
+
+Your component receives `{ context, widget, actions }`. Every visible element
+comes from `context.ui` — a remote app has no MUI of its own. `widget.range` is
+resolved timestamps and never a preset label; `widget.pixel` is the box the host
+derived from the grid arithmetic, which a chart needs because ECharts sizes to
+its container at init and does not observe resize. `actions` is
+`remove` / `resize` / `refresh`; the panel calls `resize()` from an inline
+control and `remove()` from its empty state.
+
+> **`actions.refresh()` is not demonstrated, on purpose.** Against the host as it
+> stands the grid and the leaf container both pass a no-op for it, and nothing
+> passes the frame's menu an `onRefresh`, so a button wired to it would look like
+> a demonstration and do nothing. The other two actions are real.
+
+Check what you contributed under **Platform → UI SDK management → Registered
+apps**, which lists your widget zones and whether each is enabled. A refused
+registration logs the reason on the console; it never fails silently.
 
 ### Call events — `sdk.subscribeToCallEvents()`
 
@@ -441,7 +523,7 @@ The full rule, its three carve-outs, and the grep commands that check it are in
 
 ```
 src/
-  App.tsx                     # Orchestrator: registers all routes, extensions, column, call events
+  App.tsx                     # Orchestrator: registers all routes, extensions, column, widgets, call events
   api/
     callsApi.ts               # NetSapiens v2 API helper (live recent-calls/CDR fetch via the proxy)
   columns/
@@ -451,6 +533,7 @@ src/
   content/
     demoContent.ts            # Static content for DemoPage (capabilities, zones, patterns, snippets)
   extensions/                 # One component per zone extension
+  widgets/                    # One component per dashboard widget (a panel and a leaf)
   mocks/                      # Demo fixtures (people, CRM, recent calls, sample table) — see mocks/README.md
   panels/                     # Side-panel content (CallDetails, QuickLinks)
   services/

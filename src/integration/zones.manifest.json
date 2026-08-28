@@ -1,10 +1,11 @@
 {
-  "$comment": "Canonical map of every surface this demo contributes to a Horizon host: SDK zone extensions, full-page routes, and dynamic columns. Single source of truth shared by the app (src/integration/zones.ts drives registration from it) and the netsapiens-horizon-testing Playwright suite (asserts each testId mounts). testId scheme: extensions 'sdk-demo-ext-<id minus demo- prefix>', routes 'sdk-demo-page-<slug>', columns 'sdk-demo-col-<field>'. Each injected extension is also tagged with data-zone. The testId + data-zone ride on each widget's OWN root element (no wrapper element), so the marker is a real, visible box — assert VISIBILITY (toBeVisible). A component that renders null (an inactive zone) has no marker, which is the accurate signal. 'version' mirrors package.json version and is the value to register the app under: the remote entry URL is stable, so the registered version is the only thing that tells Horizon to re-verify the bytes at that URL. It must match package.json — the deploy workflow fails the build if it drifts.",
+  "$comment": "Canonical map of every surface this demo contributes to a Horizon host: SDK zone extensions, full-page routes, dynamic columns, and dashboard widgets. Single source of truth shared by the app (src/integration/zones.ts drives registration from it) and the netsapiens-horizon-testing Playwright suite (asserts each testId mounts). testId scheme: extensions 'sdk-demo-ext-<id minus demo- prefix>', routes 'sdk-demo-page-<slug>', columns 'sdk-demo-col-<field>', dashboard widgets 'sdk-demo-widget-<widgetId>'. Each injected extension is also tagged with data-zone. The testId + data-zone ride on each contributed component's OWN root element (no wrapper element), so the marker is a real, visible box — assert VISIBILITY (toBeVisible). A component that renders null (an inactive zone) has no marker, which is the accurate signal. 'version' mirrors package.json version and is the value to register the app under: the remote entry URL is stable, so the registered version is the only thing that tells Horizon to re-verify the bytes at that URL. It must match package.json — the deploy workflow fails the build if it drifts.",
   "appId": "horizon-extension-demo",
   "webpackModule": "horizonExtensionDemo",
   "remoteEntryUrl": "https://netsapiens.github.io/horizon-sdk-demo/remoteEntry.js",
-  "$comment_requiredScopes": "Where a route or column declares `requiredScopes`, it is recorded here so the Playwright suite knows which signed-in scope can assert that surface — but the manifest is NOT what registers it. The enforcing value is an inline string literal at the registerRoute/registerDynamicColumn call site in App.tsx, because the platform analyser extracts an app's declared surface by reading string literals out of submitted source and cannot follow a constant or a loop. The duplication is deliberate; keep the two in step.",
-  "version": "1.3.3",
+  "$comment_requiredScopes": "Where a route, column or widget declares `requiredScopes`, it is recorded here so the Playwright suite knows which signed-in scope can assert that surface — but the manifest is NOT what registers it. The enforcing value is an inline string literal at the registerRoute/registerDynamicColumn/registerWidget call site in App.tsx, because the platform analyser extracts an app's declared surface by reading string literals out of submitted source and cannot follow a constant or a loop. The duplication is deliberate; keep the two in step.",
+  "$comment_widgets": "Dashboard widgets are NOT auto-mounted, and that is the contract working, not a bug: registering a widget makes it eligible, and a saved layout is authoritative, so a newly available widget appears in a dashboard's Customize catalogue rather than placing itself on somebody's grid. The Playwright suite must therefore ADD the widget from Customize before it can assert its testId. `zones` is the whole list the widget is eligible on; there is no data-zone attribute on a widget, because the same component can mount on any of them and a single zone attribute would name the wrong one. Like `requiredScopes`, `zones` here is documentation — the enforcing declaration is the inline literal array at the registerWidget call site in App.tsx, for the same string-literal-extraction reason.",
+  "version": "1.4.0",
   "extensions": [
     {
       "id": "demo-export-button",
@@ -120,6 +121,31 @@
       "routes": ["/manage/call-logs", "/manage/*/call-logs"],
       "requiredScopes": "PLATFORM",
       "testId": "sdk-demo-col-call-priority"
+    }
+  ],
+  "widgets": [
+    {
+      "id": "demo-recent-activity",
+      "widgetId": "recent-activity",
+      "storedId": "horizon-extension-demo:recent-activity",
+      "kind": "panel",
+      "zones": ["platform-admin-dashboard-widgets", "manage-dashboard-widgets"],
+      "category": "activity",
+      "size": "half",
+      "placement": { "after": "health" },
+      "refreshPolicy": "shared-range",
+      "requiredScopes": "ADMINS",
+      "testId": "sdk-demo-widget-recent-activity"
+    },
+    {
+      "id": "demo-recorded-calls",
+      "widgetId": "recorded-calls",
+      "storedId": "horizon-extension-demo:recorded-calls",
+      "kind": "leaf",
+      "leafOf": "stat",
+      "zones": ["platform-admin-dashboard-widgets"],
+      "category": "stats",
+      "testId": "sdk-demo-widget-recorded-calls"
     }
   ]
 }

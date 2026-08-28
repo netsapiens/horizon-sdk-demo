@@ -6,6 +6,7 @@
  *   - 4 full-page routes       (sdk.registerRoute)
  *   - 10 zone extensions        (sdk.registerDynamicExtension)
  *   - 1 dynamic table column    (sdk.registerDynamicColumn)
+ *   - 2 dashboard widgets       (sdk.registerWidget)
  *   - 1 call-event subscription (sdk.subscribeToCallEvents)
  *
  * Pattern-based extensions need no pre-defined extension points — each
@@ -29,7 +30,7 @@
  * against its current membership, while a list is a snapshot that silently loses
  * access as tiers change.
  */
-import type { CallEvent } from '@netsapiens/horizon-sdk';
+import type { CallEvent, WidgetComponentProps } from '@netsapiens/horizon-sdk';
 import { useEffect, useMemo, useRef } from 'react';
 import {
   HorizonContext,
@@ -44,15 +45,41 @@ import {
   columnTestId,
   extensionRegistrations,
   routeTestId,
+  widgetTestId,
 } from './integration/zones';
 import CallRecordingsPage from './pages/CallRecordingsPage';
 import ComponentShowcasePage from './pages/ComponentShowcasePage';
 import CrmIntegrationPage from './pages/CrmIntegrationPage';
 import DemoPage from './pages/DemoPage';
 import { createCallEventHandler } from './services/callEnrichment';
+import { RecentActivityWidget } from './widgets/RecentActivityWidget';
+import { RecordedCallsStat } from './widgets/RecordedCallsStat';
 
 // Injected at build time by webpack DefinePlugin (see webpack.config.js).
 declare const __MF_NAME__: string;
+
+// Widget components, tagged with their manifest testId once at module scope.
+// `registerWidget` stores the component by identity and the host renders that
+// identity, so building the wrapper inside the effect would hand the host a new
+// component every time the effect re-ran and remount every placed instance.
+//
+// No `data-zone` here, unlike a zone extension: a widget declares a LIST of
+// dashboards it is eligible on and the same component mounts on whichever one
+// the user added it to, so a single zone attribute would name the wrong one. The
+// eligible zones are recorded in zones.manifest.json instead.
+//
+// The type argument is explicit: `withZoneTestId` infers `P` from the component
+// it is handed, and spelling it out keeps the result a
+// `ComponentType<WidgetComponentProps>` — exactly what `registerWidget` wants.
+const RecentActivityWidgetTagged = withZoneTestId<WidgetComponentProps>(
+  RecentActivityWidget,
+  widgetTestId('demo-recent-activity'),
+);
+
+const RecordedCallsStatTagged = withZoneTestId<WidgetComponentProps>(
+  RecordedCallsStat,
+  widgetTestId('demo-recorded-calls'),
+);
 
 export default function App(horizonContext: HorizonContext) {
   // `__MF_NAME__` is injected at build time (webpack DefinePlugin) from the
@@ -322,8 +349,99 @@ export default function App(horizonContext: HorizonContext) {
       },
     });
 
+    // ============================================================
+    // 4. DASHBOARD WIDGETS — cards on the host's dashboards
+    // ============================================================
+    // `sdk.registerWidget` is the only path. There is no bus event to emit: the
+    // event names are an SDK implementation detail and are deliberately not
+    // exported, so an app that reaches for the bus is coding against something
+    // it cannot see change.
+    //
+    // Registering a widget makes it ELIGIBLE; it does not place it. A saved
+    // layout is authoritative, so a widget an app ships appears in the
+    // dashboard's Customize catalogue rather than on a grid somebody already
+    // arranged. Both of these show up under Customize on first load, not on the
+    // dashboard — that is the contract working.
+    //
+    // Registered inline rather than looped out of zones.manifest.json (which the
+    // 10 zone extensions above are), for the same reason routes and the column
+    // are: bundle verification reviews an app by extracting string literals from
+    // its source, so `zones` has to be a literal array written at the call site.
+    // A helper — including the SDK's own internal `widgetZoneFor(surface)`, which
+    // is not exported for exactly this reason — extracts as nothing, and the zone
+    // can then never be attributed to this app.
+
+    // A PANEL: its own card on the grid.
+    sdk.registerWidget({
+      // A plain name, NOT 'horizon-extension-demo:recent-activity'. The host
+      // stamps the app prefix itself, from this app's binding on the bus, so two
+      // apps can both ship a `recent-activity` and neither has to know. It is
+      // stored as 'horizon-extension-demo:recent-activity', and that stored id is
+      // what lands in every user's saved layout — which makes this the one field
+      // that cannot be renamed later without losing every placement.
+      id: 'recent-activity',
+      kind: 'panel',
+      // Written out in full, as literals. Two zones because the same panel suits
+      // both dashboards; the user still adds it separately on each.
+      zones: ['platform-admin-dashboard-widgets', 'manage-dashboard-widgets'],
+      title: 'Recent activity',
+      description: 'Recent call activity for the selected time range.',
+      icon: 'mdi:pulse',
+      // Decides the catalogue section AND the shape of the loading wireframe the
+      // host draws while the component is suspended.
+      category: 'activity',
+      // Panels only. A leaf has no size of its own — see the leaf below.
+      size: { default: 'half', resizable: true },
+      // No `chrome` — it defaults to 'host', so the frame draws the card, the
+      // title row from `title` above, the inner padding and the overflow menu.
+      // The component draws none of them. Setting 'self' here would give the card
+      // two titles and a double inset.
+
+      // Where it lands on add, and on every RE-add: anchors resolve each time, so
+      // a widget removed and added back returns here rather than to wherever it
+      // was last dragged. Once it is on a grid the user's arrangement wins and
+      // this is not consulted again. 'health' is a native panel on the Platform
+      // dashboard; on the Manage dashboard, where that anchor does not exist, the
+      // host falls back to the end.
+      placement: { after: 'health' },
+      // The host resolves the dashboard's shared range and hands this widget
+      // `widget.range` as from/to TIMESTAMPS — never a preset label like
+      // "Last 7 days", so there is nothing for the widget to parse.
+      refreshPolicy: 'shared-range',
+      // Narrows only, like the route and column declarations above: the host
+      // intersects it with the dashboard's own floor. Both dashboards this
+      // targets are already at ADMINS or above, so today this subtracts nothing —
+      // it is here to show where the declaration goes on a widget. The Priority
+      // column is the example of one that actually bites.
+      requiredScopes: 'ADMINS',
+      component: RecentActivityWidgetTagged,
+    });
+
+    // A LEAF: a block INSIDE the host's stat container, not a card of its own.
+    sdk.registerWidget({
+      id: 'recorded-calls',
+      kind: 'leaf',
+      // The container category it belongs in. The host's stats panel declares
+      // `acceptsLeaves: { category: 'stat' }`, so this sits alongside the native
+      // stat blocks and reorders within that container rather than on the grid.
+      leafOf: 'stat',
+      zones: ['platform-admin-dashboard-widgets'],
+      title: 'Recordings processed',
+      description: 'Recordings successfully processed in the last 24 hours.',
+      icon: 'mdi:record-rec',
+      category: 'stats',
+      // Deliberately no `size`: that is panels only, and a leaf's width belongs
+      // to its container's grid. It gets no pixel box either — `widget.pixel` is
+      // `{ width: 0, height: 0 }` for a leaf.
+      component: RecordedCallsStatTagged,
+    });
+
     return () => {
       unsubscribeCallEvents();
+      // By the same plain names they were registered under — the host resolves
+      // the prefix, here as at registration.
+      sdk.unregisterWidget('recent-activity');
+      sdk.unregisterWidget('recorded-calls');
     };
   }, [
     sdk,

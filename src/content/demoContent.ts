@@ -31,6 +31,11 @@ export const CAPABILITIES: Capability[] = [
     desc: 'Add a sortable/filterable column to a host data table, such as the Priority column on Call Logs.',
   },
   {
+    title: 'Dashboard widgets',
+    api: 'sdk.registerWidget()',
+    desc: 'Contribute a card to a host dashboard — a panel on the grid, or a leaf inside the host’s stat container. The host draws the card, the heading and the menu; the app supplies the content.',
+  },
+  {
     title: 'Call events',
     api: 'sdk.subscribeToCallEvents()',
     desc: 'Subscribe to the live SIP call stream through a capability-gated, app-scoped API to enrich inbound calls.',
@@ -58,7 +63,14 @@ export interface ZoneInfo {
   usedFor: string;
 }
 
-/** Every zone this demo registers into. All are mounted by the host. */
+/**
+ * Every zone this demo registers into. All are mounted by the host.
+ *
+ * The last two are **dashboard widget** zones, which behave differently from the
+ * rest: a widget zone names a dashboard rather than a slot on a page, takes no
+ * route patterns, and the widget appears in that dashboard's Customize catalogue
+ * for the user to add rather than mounting itself.
+ */
 export const ZONES: ZoneInfo[] = [
   {
     zone: 'page-header-actions',
@@ -117,6 +129,18 @@ export const ZONES: ZoneInfo[] = [
     zone: 'topbar-actions',
     desc: 'The global top app bar (every page).',
     usedFor: 'Help button → opens the Quick Links side panel.',
+  },
+  {
+    zone: 'platform-admin-dashboard-widgets',
+    desc: 'The Platform admin dashboard. A widget zone: it names a dashboard, not a slot on a page.',
+    usedFor:
+      'Recent activity (a panel on the grid) and Recordings processed (a leaf inside the host’s stat card). Add either from Customize.',
+  },
+  {
+    zone: 'manage-dashboard-widgets',
+    desc: 'The Manage dashboard. Listing a second zone offers the same widget on a second dashboard.',
+    usedFor:
+      'Recent activity again — the user still adds it separately here, and its placement anchor does not exist on this dashboard, so it lands at the end.',
   },
 ];
 
@@ -253,6 +277,53 @@ sdk.registerDynamicExtension({
     renderCell: (params) => <CallPriorityCell params={params} />,
   },
 });`,
+  },
+  {
+    title: 'Contribute a dashboard widget',
+    code: `// A PANEL — its own card on the dashboard grid.
+sdk.registerWidget({
+  // A plain name. The host stamps the app prefix, so this is stored as
+  // 'horizon-extension-demo:recent-activity' — and that stored id is what
+  // lands in every saved layout, so it cannot be renamed later.
+  id: 'recent-activity',
+  kind: 'panel',
+  // Literal zone strings, written out. Never widgetZoneFor(surface): bundle
+  // verification extracts string literals, and a helper call extracts as
+  // nothing — the zone could then never be attributed to your app.
+  zones: ['platform-admin-dashboard-widgets', 'manage-dashboard-widgets'],
+  title: 'Recent activity',
+  icon: 'mdi:pulse',
+  category: 'activity',        // catalogue section + loading wireframe shape
+  size: { default: 'half' },   // panels only
+  placement: { after: 'health' },
+  refreshPolicy: 'shared-range', // → widget.range arrives as from/to timestamps
+  requiredScopes: 'ADMINS',      // narrows only; intersected with the floor
+  component: RecentActivityWidget,
+  // No 'chrome': it defaults to 'host', and the frame draws the card, the
+  // title, the padding and the menu. Your component draws none of them.
+});
+
+// A LEAF — a block INSIDE the host's stat container, not a card of its own.
+sdk.registerWidget({
+  id: 'recorded-calls',
+  kind: 'leaf',
+  leafOf: 'stat',              // the container category it belongs in
+  zones: ['platform-admin-dashboard-widgets'],
+  title: 'Recordings processed',
+  category: 'stats',
+  component: RecordedCallsStat, // no size, and widget.pixel is 0×0 for a leaf
+});
+
+// Your component receives { context, widget, actions }:
+function RecentActivityWidget({ context, widget, actions }) {
+  const { Stack, Typography } = context.ui;      // no MUI in a remote app
+  const { from, to } = widget.range ?? {};       // resolved timestamps
+  const { width, height } = widget.pixel;        // host-derived box
+  return <Stack>…</Stack>;                       // content only, no card
+}
+
+// On unmount. Same plain name — the host resolves the prefix.
+sdk.unregisterWidget('recent-activity');`,
   },
   {
     title: 'Subscribe to live call events',
