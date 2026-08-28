@@ -322,6 +322,8 @@ export default function App(horizonContext: HorizonContext) {
               rows?: unknown[];
               selectedRows?: unknown[];
             };
+            // Your app's own function — the SDK does not supply one. Define
+            // or import it alongside this registration.
             exportRows(selectedRows?.length ? selectedRows : rows, route);
           },
         },
@@ -936,7 +938,7 @@ sdk.registerWidget({
   // the one field that cannot change without losing every placement.
   id: 'activity',
   kind: 'panel', // or 'leaf' — a block inside a host container
-  surfaces: ['platform-admin-dashboard'],
+  zones: [widgetZoneFor('platform-admin-dashboard')],
   title: 'Recent activity',
   description: 'Shown on the catalogue card',
   icon: 'mdi:pulse',
@@ -981,7 +983,7 @@ sdk.registerWidget({
   id: 'tickets',
   kind: 'leaf',
   leafOf: 'stat', // the container category
-  surfaces: ['platform-admin-dashboard'],
+  zones: [widgetZoneFor('platform-admin-dashboard')],
   title: 'Open tickets',
   category: 'stats',
   component: OpenTickets,
