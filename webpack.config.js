@@ -75,12 +75,33 @@ module.exports = (_env, argv) => {
           // resolve to a host copy — and bundle verification rejects a bundle that
           // declares it. Bundle it normally.
           //
-          // MUI and i18next are intentionally NOT listed here either. The host's federation
-          // loader does not register them as shared modules — declaring them as
-          // singletons here causes an "Unsatisfied version" crash at load time.
+          // MUI is intentionally NOT listed here. The host does not register
+          // @mui/material or @emotion/*, and declaring a singleton the host does not
+          // provide fails at load. Consume MUI via horizonContext.ui instead, which
+          // also carries the host theme and dark mode.
           //
-          // Instead: consume MUI via horizonContext.ui, and translations via
-          // useLocale() from the SDK — both are provided by the host through context.
+          // i18next is absent for a different reason, and the distinction matters: the
+          // host DOES register i18next and react-i18next. Localization is owned by the
+          // host and the SDK — the host holds the initialised instance with every
+          // translation loaded and hands the app a t() through the context — so a
+          // partner has no reason to reach for i18next at all. Use useLocale() /
+          // context.t(). (An earlier version of this comment claimed declaring i18next
+          // shared crashes with "Unsatisfied version". That was wrong.)
+          //
+          // 'react-dom/client' is NOT declared here because this demo never calls
+          // createRoot — a Horizon remote is mounted by the host, inside the host's
+          // React tree. An app whose graph DOES reach it (most often via
+          // @ant-design/v5-patch-for-react-19) must declare it, and must do so without
+          // a fallback:
+          //
+          //   'react-dom/client': { singleton: true, requiredVersion: '^19.0.0', import: false },
+          //
+          // Sharing 'react-dom' does not cover it: react-dom/client is a separate build
+          // carrying its own reconciler and its own baked-in React version, so an
+          // undeclared bundle keeps that copy, resolves `react` to the host's, and dies
+          // with React #527. `import: false` is required rather than optional — keeping
+          // the fallback emits a chunk that leaves the integrity plugin with an
+          // unresolvable placeholder. See MIGRATION §2.2 step 4.
         },
       }),
       new webpack.DefinePlugin({

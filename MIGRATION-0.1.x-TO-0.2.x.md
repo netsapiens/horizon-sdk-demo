@@ -353,24 +353,36 @@ shared: {
 },
 ```
 
-The host registers exactly five modules in its share scope:
+The host registers exactly six modules in its share scope:
 
 ```
-react   react-dom   loglevel   i18next   react-i18next
+react   react-dom   react-dom/client   loglevel   i18next   react-i18next
 ```
+
+`react-dom/client` is there because sharing `react-dom` does **not** cover it —
+see [step 4](#4-declare-react-domclient-if-anything-in-your-graph-calls-createroot) below.
 
 **Why:** the SDK is not among them, so a shared declaration never resolved to a host
 copy — it always fell back to your own bundled copy anyway, while emitting exactly
 the chunk that makes the integrity build fail. Removing it changes nothing at
 runtime. Remove it entirely; do **not** try to neutralise it with `import: false`.
 
-`import: false` deserves its own warning, because it looks like a tidier fix and is
-a worse one. It removes your local fallback copy, which changes the failure mode for
-_every_ module you declare shared: a module the host does not provide currently
-degrades to your own bundled copy, but without a fallback it **throws at load**
-(`Shared module X doesn't exist in shared scope default`). It also buys nothing for
-integrity — fallback chunks get integrity values like any other chunk, and in fact
-yield better coverage, not worse. Keep your fallbacks.
+`import: false` deserves its own warning here, because it looks like a tidier fix for
+_this_ problem and is a worse one. It removes your local fallback copy, which changes
+the failure mode for every module you declare shared: a module the host does not
+provide degrades to your own bundled copy, but without a fallback it **throws at load**
+(`Shared module X doesn't exist in shared scope default`). For a module the host does
+not register — the SDK, MUI, emotion — that is strictly worse. Keep your fallbacks.
+
+> **One exception, and it is the reverse rule: `react-dom/client`.** For a key the host
+> _does_ register, `import: false` is correct and required — see
+> [step 4](#4-declare-react-domclient-if-anything-in-your-graph-calls-createroot).
+>
+> ⚠️ An earlier revision of this guide said `import: false` "buys nothing for integrity —
+> fallback chunks get integrity values like any other chunk, and in fact yield better
+> coverage, not worse." **That is wrong, and measurably so.** For a shared module whose
+> fallback webpack emits as its own chunk, the fallback is precisely what leaves an
+> unresolvable integrity placeholder and fails the build. Disregard that sentence.
 
 That distinction is worth internalising generally, because the two failure modes are
 easy to confuse:
@@ -401,7 +413,68 @@ Two related rules while you are in this block:
 > is legitimate; you just do not need to, because `useLocale()` is the supported
 > path.
 
-### 4. Guard the version field in CI
+### 4. Declare `react-dom/client` if anything in your graph calls `createRoot`
+
+**Most apps do not need this, and should check before acting on it.** A Horizon remote
+does not mount itself — the host renders your component inside its own React tree — so a
+normal extension never calls `createRoot`. This demo does not, and does not declare the
+key.
+
+You need it when something in your dependency graph reaches it on your behalf. The
+common case is **`@ant-design/v5-patch-for-react-19`**, which imports `react-dom/client`
+to reimplement the React 18 APIs antd v5 was written against. If you can drop that shim,
+that is the cleaner fix.
+
+**Sharing `react-dom` does not cover it.** They are different builds:
+
+| Specifier          | Resolves to                          | Contains                                                                |
+| ------------------ | ------------------------------------ | ----------------------------------------------------------------------- |
+| `react-dom`        | `cjs/react-dom.production.js`        | `createPortal`, `flushSync`, `preload`, `version`                       |
+| `react-dom/client` | `cjs/react-dom-client.production.js` | **the entire reconciler**, plus the React version as a baked-in literal |
+
+Webpack matches share keys literally. Undeclared, your bundle keeps its own reconciler
+while `react` resolves to the host's, and the literal is compared at module evaluation:
+
+```js
+if ('19.2.8' !== React.version) throw Error('Incompatible React versions: ...');
+```
+
+The result is **React error #527**, reporting a `react-dom` version that exists nowhere
+in the host, and presenting as _"Failed to load &lt;your-app&gt;"_ rather than a render
+error.
+
+```js
+shared: {
+  react:       { singleton: true, requiredVersion: '^19.0.0' },
+  'react-dom':  { singleton: true, requiredVersion: '^19.0.0' },
+  'react-dom/client': { singleton: true, requiredVersion: '^19.0.0', import: false },
+},
+```
+
+**`import: false` here, and only here.** It contradicts the rule two sections up, so it
+is worth knowing why both are right:
+
+- Keeping the fallback **breaks the build**. The fallback copy emits a chunk that leaves
+  `webpack-subresource-integrity` with a placeholder it cannot resolve. Measured on
+  plugin 5.1.0 and 5.2.0-rc.1 — upgrading does not help.
+- Dropping it **completes the fix**: no local copy means no second reconciler, and code
+  splitting stays on.
+
+**Use the exact key, not `react-dom/`.** The prefix form behaves identically in webpack,
+but with `import: false` it would require the host to provide every `react-dom/*`
+subpath your graph touches. Only `react-dom/client` is shared.
+
+**The trade, stated plainly.** `import: false` makes the host a hard dependency for this
+key: against a host too old to register it, your app throws at load instead of falling
+back. Confirm what a platform shares with `window.__horizonSDKDebug__` before shipping.
+
+What it does **not** cost you is host React upgrades. Once both halves come from the
+host they are installed together and cannot disagree, so host patch and minor bumps stop
+being able to produce #527 here. Leaving the key undeclared is what makes host upgrades
+risky, because your baked-in literal is frozen at your build time while the host's moves
+on.
+
+### 5. Guard the version field in CI
 
 See [2.1](#21-bump-the-version-every-time-the-bytes-change).
 
