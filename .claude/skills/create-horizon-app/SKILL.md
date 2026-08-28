@@ -923,6 +923,80 @@ Rules that trip apps up:
 6. `headerName` and action `label` are run through the host translator, so a plain
    English string is fine but a translation key resolves if one exists.
 
+## Contributing a dashboard widget (contract)
+
+A widget is a card on a dashboard. The host owns the grid, the card, the heading,
+the padding and the menu — write content and it matches every native card.
+
+```tsx
+sdk.registerWidget({
+  // A plain name. The host prefixes your app id, so this is stored as
+  // `<app-id>:activity`. Two apps can both ship a `sales-pipeline` and neither
+  // has to know. It is also what lands in every user's saved layout, so it is
+  // the one field that cannot change without losing every placement.
+  id: 'activity',
+  kind: 'panel', // or 'leaf' — a block inside a host container
+  surfaces: ['platform-admin-dashboard'],
+  title: 'Recent activity',
+  description: 'Shown on the catalogue card',
+  icon: 'mdi:pulse',
+  category: 'activity', // decides the catalogue section and the loading wireframe
+  size: { default: 'half' },
+  // Narrows only. The host intersects this with the dashboard's own floor, so it
+  // can hide the widget from some people who can reach the dashboard, never
+  // reveal it to somebody who cannot.
+  requiredScopes: 'ADMINS',
+  // Where it lands on add and on every re-add. Not consulted once it is placed —
+  // after that the user's arrangement wins.
+  placement: { after: 'health' },
+  component: RecentActivity,
+});
+
+// On unmount. `cleanup()` also tears this down.
+sdk.unregisterWidget('activity');
+```
+
+Your component is handed `{ context, widget, actions }`:
+
+- `context.ui` — the host UI kit, as everywhere else.
+- `widget.pixel` — the card's box, derived by the host. ECharts sizes to its
+  container at init and does not observe resize, so a chart needs this signal.
+  A **leaf** gets `{ width: 0, height: 0 }`: its container lays it out.
+- `widget.range` — resolved `from`/`to` timestamps if you declared
+  `refreshPolicy: 'shared-range'`. Never a preset label.
+- `actions` — `remove()`, `resize()`, `refresh()`.
+
+**Do not draw a card, a heading or padding.** The frame draws all three. If your
+widget genuinely owns its own chrome, set `chrome: 'self'` — otherwise it gets
+two titles and a double inset.
+
+**Do not emit `dynamic-widget:register` on the bus.** `registerWidget` is the
+only supported path; the bus is an SDK implementation detail and the event names
+are not exported.
+
+A **leaf** goes inside a host container rather than becoming a card of its own:
+
+```tsx
+sdk.registerWidget({
+  id: 'tickets',
+  kind: 'leaf',
+  leafOf: 'stat', // the container category
+  surfaces: ['platform-admin-dashboard'],
+  title: 'Open tickets',
+  category: 'stats',
+  component: OpenTickets,
+});
+```
+
+The user adds widgets from **Customize** on the dashboard; registering one offers
+it in that catalogue rather than placing it. A saved layout is authoritative, so
+a widget you ship later never appears on a dashboard somebody has already
+arranged — it appears in their catalogue.
+
+Check what you contributed under **Platform → UI SDK management → Registered
+apps**, which lists your widget zones and whether each is enabled. A refused
+registration logs the reason; it never fails silently.
+
 ## Host events & data streams (contract)
 
 Two rules govern how a remote app talks across the host boundary. The host **enforces** both — get them right.
