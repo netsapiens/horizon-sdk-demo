@@ -938,7 +938,7 @@ sdk.registerWidget({
   // the one field that cannot change without losing every placement.
   id: 'activity',
   kind: 'panel', // or 'leaf' — a block inside a host container
-  zones: [widgetZoneFor('platform-admin-dashboard')],
+  zones: ['platform-admin-dashboard-widgets'],
   title: 'Recent activity',
   description: 'Shown on the catalogue card',
   icon: 'mdi:pulse',
@@ -983,7 +983,7 @@ sdk.registerWidget({
   id: 'tickets',
   kind: 'leaf',
   leafOf: 'stat', // the container category
-  zones: [widgetZoneFor('platform-admin-dashboard')],
+  zones: ['platform-admin-dashboard-widgets'],
   title: 'Open tickets',
   category: 'stats',
   component: OpenTickets,
