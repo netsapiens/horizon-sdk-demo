@@ -341,8 +341,30 @@ relax it. No maps, no verdict, no load.
 >        contains unresolved integrity placeholders
 > ```
 >
-> Removing the SDK from `shared` resolves it immediately. Quoted here because it
-> is what you will paste into a search box.
+> Quoted here because it is what you will paste into a search box — and because the
+> message names neither its cause nor the offending chunk.
+>
+> **Removing the SDK from `shared` fixes _this_ cause. It is not the only one**, so if
+> you have already done that and still see this error, you are looking at a different
+> problem with the same message. The two others we have reproduced:
+>
+> 1. **A shared module that keeps its local fallback.** The fallback copy webpack emits
+>    can be the chunk that cannot be resolved — this is why `react-dom/client` must be
+>    declared with `import: false` (step 4 below).
+> 2. **An empty split chunk.** Importing `react-dom` at all is enough: webpack's default
+>    cache group can emit a chunk that is present in the manifest with **no file**, and
+>    the integrity plugin writes a placeholder for every manifest entry, so one with no
+>    bytes can never resolve. Fix with:
+>
+>    ```js
+>    optimization: { splitChunks: { cacheGroups: { default: false } } },
+>    ```
+>
+>    Vendor splitting is unaffected. `chunks: 'async'` and `minSize: 0` do **not** fix it,
+>    and neither does upgrading the plugin — measured on 5.1.0 and 5.2.0-rc.1.
+>
+> `webpack --json` is what tells the three apart: look for a chunk whose `files` array is
+> empty.
 
 ```js
 shared: {
@@ -861,6 +883,37 @@ const expected = crypto
 Also reject a stale `X-NS-Timestamp` (a 5-minute window is reasonable). The
 timestamp is inside the signed string, so it cannot be altered without breaking
 the signature — checking it is what makes a captured webhook unusable later.
+
+### Anything between us and your verifier must preserve the bytes
+
+The rule above is about your own handler. It has a second half that is easy to miss
+because the failure looks identical to a wrong secret.
+
+**v2 signs the exact body as sent, so every hop has to leave it alone.** Under v0.1 this
+could not bite you — only three scalar fields were signed, so a re-serialized body still
+verified. Now, anything that parses and re-emits the JSON on the way to your verifier
+invalidates the signature:
+
+- an API gateway or service mesh that normalizes or re-encodes JSON;
+- a backend that **relays** the webhook to another service for verification;
+- logging or tracing middleware that parses the body and re-emits it;
+- anything that pretty-prints, reorders keys, changes separators, or re-escapes unicode.
+
+None of those change the _meaning_ of the payload, and all of them change its bytes.
+
+**Two ways to be safe**, and the choice is architectural rather than a setting:
+
+1. **Verify at the edge** — check the signature at the first hop that receives it, before
+   anything can touch the body.
+2. **Forward the original bytes** — if verification has to happen deeper in, pass the raw
+   body through unmodified along with the original `X-NS-Signature` and `X-NS-Timestamp`
+   headers. A relay that re-serializes has already destroyed the evidence.
+
+> ⚠️ **The reason this is worth its own section: a 401 here is indistinguishable from a
+> wrong secret.** There is no signal in the failure that says "your bytes changed in
+> transit", so the natural response is to rotate the secret, which does nothing, twice.
+> If verification fails and the secret is definitely right, hash the bytes at each hop and
+> find the one where the digest changes.
 
 A working implementation, with the raw-body capture wired up, is in
 [`examples/vendor-backend`](examples/vendor-backend). `npm run sign` posts a
