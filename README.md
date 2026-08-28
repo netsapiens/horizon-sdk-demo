@@ -184,6 +184,13 @@ credentials. The **Remote Auth** tab on the demo page
 (`pages/demo/RemoteAuthPanel.tsx`) exercises the full `horizonContext.auth`
 contract live — request a token, reuse the session-cached token, and clear it:
 
+> **Changed in 0.2.x, and it changed silently.** `RemoteAuthRequest.callbackUrl` is
+> **ignored** — where the webhook goes is registration data, set by an administrator in
+> **Registered Apps**, and may be several endpoints tried in order. Code that passed a
+> `callbackUrl` still compiles and still runs; the field simply has no effect. If you are
+> migrating from 0.1.x, this is the one to check by hand — see
+> [MIGRATION §6.2](MIGRATION-0.1.x-TO-0.2.x.md#62-callbackurl-is-no-longer-yours-to-choose-breaking-but-silent).
+
 ```tsx
 const { auth } = horizonContext;
 
