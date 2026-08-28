@@ -323,15 +323,43 @@ singletons: your component renders inside the host's React tree, and a second
 copy fails as an invalid-hook-call that names nothing useful.
 
 > Do **not** add `@netsapiens/horizon-sdk` to `shared`. The host registers
-> `react`, `react-dom`, `loglevel`, `i18next` and `react-i18next` and nothing
-> else, so declaring the SDK shared cannot resolve to a host copy — and since
-> SDK 0.2.x, bundle verification **rejects** a bundle that declares it. Let it
-> bundle normally.
+> `react`, `react-dom`, `react-dom/client`, `loglevel`, `i18next` and
+> `react-i18next` and nothing else, so declaring the SDK shared cannot resolve to
+> a host copy — and since SDK 0.2.x, bundle verification **rejects** a bundle
+> that declares it. Let it bundle normally.
 
-> Do **not** add `@mui/material` or i18next to `shared` either. They are not
-> registered by the host, and declaring them as singletons fails at load with
-> "Unsatisfied version". Use MUI via `horizonContext.ui` / `context.ui` so
-> extensions inherit the host theme, and translations via `useLocale()`.
+> Do **not** add `@mui/material` to `shared`. It is not registered by the host,
+> and declaring a singleton the host does not provide fails at load. Use MUI via
+> `horizonContext.ui` / `context.ui` so extensions inherit the host theme.
+
+> Do **not** add i18next either — not because it would fail, but because you
+> should not be reaching for it. **Localization is owned by the host and the
+> SDK**: the host holds the initialised i18next instance with every translation
+> already loaded and hands your app a `t()` through the context. Use
+> `useLocale()` / `context.t()`. The host's own registration of `i18next` and
+> `react-i18next` exists to serve the host and the SDK, not partner `shared`
+> blocks.
+
+#### `react-dom/client` — only if your graph reaches it
+
+This demo does **not** declare `react-dom/client`, and that is correct for it: a
+Horizon remote never mounts itself, so nothing here calls `createRoot`.
+
+If your app is different — most often because
+`@ant-design/v5-patch-for-react-19` imports it on your behalf — then sharing
+`react-dom` does **not** cover it. `react-dom/client` is a separate build
+carrying its own copy of the reconciler and its own baked-in React version, so
+your bundle would keep that copy while `react` resolved to the host's, and fail
+to load with React error #527. Declare the exact key, without a fallback:
+
+```js
+'react-dom/client': { singleton: true, requiredVersion: '^19.0.0', import: false },
+```
+
+`import: false` is deliberate and is the opposite of the rule for everything
+else — keeping the fallback emits a chunk that makes the integrity build fail.
+Full reasoning in the SDK reference under
+"[`react-dom/client`: the deep entry that breaks everything, quietly](https://www.npmjs.com/package/@netsapiens/horizon-sdk)".
 
 ### Bundle verification (SDK 0.2.x)
 
@@ -341,12 +369,13 @@ analyser and records a verdict. A version that passes is promoted, and the host
 pins a SHA-384 of the exact bytes it verified. `webpack.config.js` carries the
 four settings that satisfy this:
 
-| Setting                                                            | Why                                                                                                              |
-| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `SubresourceIntegrityPlugin({ hashFuncNames: ['sha384'] })`        | Emits chunk integrity values — the platform pins the entry, and without these nothing the entry loads is covered |
-| `output.crossOriginLoading: 'anonymous'`                           | Required for the browser to verify those values at all; SRI cannot check an opaque cross-origin response         |
-| `devtool: 'source-map'` (with `sourcesContent`, never `noSources`) | **A bundle with no source maps is rejected outright**, not warned about                                          |
-| `@netsapiens/horizon-sdk` absent from `shared`                     | See above                                                                                                        |
+| Setting                                                            | Why                                                                                                                                                                                |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SubresourceIntegrityPlugin({ hashFuncNames: ['sha384'] })`        | Emits chunk integrity values — the platform pins the entry, and without these nothing the entry loads is covered                                                                   |
+| `output.crossOriginLoading: 'anonymous'`                           | Required for the browser to verify those values at all; SRI cannot check an opaque cross-origin response                                                                           |
+| `devtool: 'source-map'` (with `sourcesContent`, never `noSources`) | **A bundle with no source maps is rejected outright**, not warned about                                                                                                            |
+| `@netsapiens/horizon-sdk` absent from `shared`                     | See above                                                                                                                                                                          |
+| `optimization.splitChunks.cacheGroups.default: false`              | Only needed once a bundle imports `react-dom`: webpack's default cache group can otherwise emit a chunk with no file, and the integrity plugin cannot resolve a placeholder for it |
 
 Check a build before publishing — these are the same checks the platform runs:
 
