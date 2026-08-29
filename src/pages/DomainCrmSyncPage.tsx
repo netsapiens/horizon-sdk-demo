@@ -67,6 +67,17 @@ const SAMPLE_ROWS: SyncRow[] = [
 ];
 
 /**
+ * The `/users` feed also carries pseudo-users — the domain itself, each site,
+ * each department, each call queue — which hold scope but are not people. They
+ * come back with a non-numeric `extension` (`site`, `department`, `domain`), so
+ * that is the discriminator: a real seat always has a numeric extension.
+ * Without this the page lists "site Site · ext site" as a person to sync.
+ */
+function isRealSeat(extension: string): boolean {
+  return /^\d+$/.test(extension);
+}
+
+/**
  * Fake the CRM linkage. A real integration would query the vendor by email or
  * phone; the demo hashes the extension into the mock directory so the same user
  * always resolves the same way, and roughly half of them match.
@@ -107,6 +118,7 @@ export default function DomainCrmSyncPage({ ...marker }: ZoneMarkerProps) {
             const userId = u.user;
             if (!userId) return null;
             const extension = u.extension ?? userId;
+            if (!isRealSeat(extension)) return null;
             const name = [u['name-first-name'], u['name-last-name']]
               .filter(Boolean)
               .join(' ');
