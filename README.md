@@ -31,7 +31,7 @@ matches Horizon in light and dark mode.
 
 ## What it demonstrates
 
-This single app registers **4 full-page routes**, **10 zone extensions**, **1
+This single app registers **5 full-page routes**, **10 zone extensions**, **1
 dynamic table column**, **2 dashboard widgets**, **1 live call-event
 subscription**, an **on-demand side panel**, and a **remote-auth handshake** with
 a backend.
@@ -53,20 +53,22 @@ a backend.
 | Horizon SDK Demo   | Apps                           | The overview/walkthrough page (`pages/DemoPage.tsx`).                                                                                                                                                                                                                                                                     |
 | Component Showcase | Apps                           | Reference for every shared MUI Aurora component (`pages/ComponentShowcasePage.tsx`).                                                                                                                                                                                                                                      |
 | CRM Integration    | Manage (after _Call Logs_)     | Lists the user's calls from a **live** NetSapiens v2 API call, matched to their CRM record — registered into the Manage menu to show the Manage tree can be extended, not just Apps (`pages/CrmIntegrationPage.tsx`).                                                                                                     |
+| CRM Sync           | Manage, **inside a domain**    | **Domain-scoped.** Registered once at `/manage/:domain`, so it mounts under whichever domain an admin has drilled into and reads that domain with `useManagingDomain()` — one registration, every domain (`pages/DomainCrmSyncPage.tsx`).                                                                                 |
 | Call Recordings    | My Account (after _Call Logs_) | **The reference list page.** Everything — search, filter, columns, export, refresh, checkbox selection, master-detail and the pagination footer — comes from `DatagridTemplate`; the primary action sits in `PageTemplate`'s header `actions`. Shows the /home tree can be extended too (`pages/CallRecordingsPage.tsx`). |
 
 #### Choosing a menu — `parentPath`
 
-`parentPath` is a **URL prefix**, not a menu name. Four prefixes are routable —
+`parentPath` is a **URL prefix**, not a menu name. Five prefixes are routable —
 each has a splat route in the host that renders federated pages, and each maps
 to one menu tree:
 
 | `parentPath` | Menu it appears in | Host sitemap section id |
 | ------------ | ------------------ | ----------------------- |
-| `/apps`      | Apps               | `apps`                  |
-| `/manage`    | Manage             | `manage`                |
-| `/platform`  | Platform           | `platform`              |
-| `/home`      | **My Account**     | `myaccount`             |
+| `/apps`           | Apps                        | `apps`                  |
+| `/manage`         | Manage                      | `manage`                |
+| `/manage/:domain` | Manage, **inside a domain** | `manage`                |
+| `/platform`       | Platform                    | `platform`              |
+| `/home`           | **My Account**              | `myaccount`             |
 
 `/home` is the one to watch. The menu is labelled _My Account_, its internal
 section id is `myaccount`, and its URL prefix is `/home` — three different
@@ -111,6 +113,64 @@ example above `after: 'call-logs'` resolves the My Account item whose name is
 > still resolves — `/home/call-recordings` loads if entered directly — but no
 > menu entry appears, and nothing is logged to say why. `/apps`, `/manage` and
 > `/platform` are unaffected.
+
+#### Following the domain being managed — `/manage/:domain`
+
+A Reseller or Super User does not stay in their own domain: they drill into a
+customer's domain and every page under `/manage/<that domain>/…` is about it.
+`/manage/:domain` is how your page joins them there.
+
+It is the **one exception** to the direct-children rule above, and the only
+parent path that accepts a token:
+
+```ts
+sdk.registerRoute({
+  id: 'ucaas-domain-crm-sync',
+  parentPath: '/manage/:domain', // → /manage/acme.example.com/crm-sync
+  path: 'crm-sync',
+  label: 'CRM Sync',
+  requiredScopes: 'DOMAIN_MANAGERS',
+  component: DomainCrmSyncPage,
+});
+```
+
+**You register once, for all domains.** `:domain` is a wildcard the host fills
+from the URL — you never name a domain and never enumerate them. A Reseller with
+400 customers gets one registration, not 400.
+
+Read the current domain with `useManagingDomain()`, and be strict about which
+field you use:
+
+```tsx
+function DomainCrmSyncPage() {
+  const { managing } = useManagingDomain(); // the domain being managed
+  const { api, user } = useHorizonContext(); // user.domain = YOUR OWN domain
+
+  useEffect(() => {
+    if (!managing) return;
+    api.get(`/domains/${managing}/users`).then(setUsers);
+  }, [managing, api]);
+}
+```
+
+`user.domain` is the domain the signed-in admin *belongs to*. It never changes
+while they drill around, so a page that fetches against it shows the same data
+under every domain — the bug this hook exists to prevent. `managing` is
+reactive: switching domains re-renders the page and re-runs the effect, with no
+remount and no reload. It returns `null` on a surface that is not domain-scoped,
+and `undefined` on a host too old to report one.
+
+Three rules the host enforces on the token, each rejecting the registration
+outright rather than failing quietly later:
+
+- `:domain` is the **only** token — no other name is accepted.
+- It must sit at **position 1**, directly under `/manage`.
+- **One** token per parent path.
+
+Extension zones already took `:domain` in their route `pattern`s; this brings
+full pages to parity. Compare the two CRM pages in this app: **CRM Integration**
+sits at plain `/manage` and is the same page for everyone, while **CRM Sync**
+sits at `/manage/:domain` and changes with the domain you pick.
 
 ### Zone extensions — `sdk.registerDynamicExtension()`
 
@@ -544,6 +604,7 @@ src/
     ComponentShowcasePage.tsx # Composes the showcase sections
     showcase/sections/        # One self-contained section per shared UI component
     CrmIntegrationPage.tsx    # Full page: remoteAuth connect + live API call + CRM matching
+    DomainCrmSyncPage.tsx     # Full page, DOMAIN-SCOPED: registered at /manage/:domain, reads useManagingDomain()
 ```
 
 ## Hosting on GitHub Pages

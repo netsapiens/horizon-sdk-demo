@@ -3,7 +3,7 @@
  *
  * This is the orchestrator: it initializes the SDK and, in a single effect,
  * registers everything the demo contributes to the host —
- *   - 4 full-page routes       (sdk.registerRoute)
+ *   - 5 full-page routes       (sdk.registerRoute)
  *   - 10 zone extensions        (sdk.registerDynamicExtension)
  *   - 1 dynamic table column    (sdk.registerDynamicColumn)
  *   - 2 dashboard widgets       (sdk.registerWidget)
@@ -29,6 +29,14 @@
  * nothing. Prefer a tier name over a scope list — the host resolves the name
  * against its current membership, while a list is a snapshot that silently loses
  * access as tiers change.
+ *
+ * ── Domain-scoped pages (SDK 0.2.9) ───────────────────────────────────────
+ * CRM Sync registers under `parentPath: '/manage/:domain'` — the one parent
+ * path that accepts a token. It exists so a page can follow the domain an
+ * admin has drilled into WITHOUT the app enumerating domains: one registration
+ * serves all of them, and the page reads the current one with
+ * `useManagingDomain()`. Contrast it with CRM Integration directly above,
+ * which sits at plain `/manage` and is the same page for every domain.
  */
 import type { CallEvent, WidgetComponentProps } from '@netsapiens/horizon-sdk';
 import { useEffect, useMemo, useRef } from 'react';
@@ -51,6 +59,7 @@ import CallRecordingsPage from './pages/CallRecordingsPage';
 import ComponentShowcasePage from './pages/ComponentShowcasePage';
 import CrmIntegrationPage from './pages/CrmIntegrationPage';
 import DemoPage from './pages/DemoPage';
+import DomainCrmSyncPage from './pages/DomainCrmSyncPage';
 import { createCallEventHandler } from './services/callEnrichment';
 import { RecentActivityWidget } from './widgets/RecentActivityWidget';
 import { RecordedCallsStat } from './widgets/RecordedCallsStat';
@@ -137,6 +146,19 @@ export default function App(horizonContext: HorizonContext) {
         return (
           <HorizonContextProvider context={contextRef.current}>
             <CrmIntegrationPage {...props} />
+          </HorizonContextProvider>
+        );
+      },
+
+    [],
+  );
+
+  const DomainCrmSyncPageWithContext = useMemo(
+    () =>
+      function DomainCrmSyncPageWithContext(props: ZoneMarkerProps) {
+        return (
+          <HorizonContextProvider context={contextRef.current}>
+            <DomainCrmSyncPage {...props} />
           </HorizonContextProvider>
         );
       },
@@ -234,6 +256,31 @@ export default function App(horizonContext: HorizonContext) {
       })
       .catch((error) =>
         console.error('[Demo App] Failed to register CRM Integration:', error),
+      );
+
+    sdk
+      .registerRoute({
+        id: 'ucaas-domain-crm-sync',
+        // DOMAIN-SCOPED. `:domain` is a token the host fills from the URL, so
+        // this ONE registration serves every domain the admin can drill into
+        // (→ /manage/acme.example.com/crm-sync). The app never enumerates or
+        // names a domain; the page reads the selected one with
+        // useManagingDomain(). `/manage/:domain` is the only parent path that
+        // takes a token today, and the token must sit at that one position.
+        parentPath: '/manage/:domain',
+        path: 'crm-sync',
+        label: 'CRM Sync',
+        icon: 'mdi:sync',
+        // Drilling into a domain is a Reseller-and-up action to begin with; the
+        // page itself only needs a domain manager once you are inside one.
+        requiredScopes: 'DOMAIN_MANAGERS',
+        component: withZoneTestId(
+          DomainCrmSyncPageWithContext,
+          routeTestId('ucaas-domain-crm-sync'),
+        ),
+      })
+      .catch((error) =>
+        console.error('[Demo App] Failed to register CRM Sync:', error),
       );
 
     sdk
@@ -447,6 +494,7 @@ export default function App(horizonContext: HorizonContext) {
     sdk,
     horizonContext.eventBus,
     DemoPageWithContext,
+    DomainCrmSyncPageWithContext,
     ComponentShowcasePageWithContext,
     CrmIntegrationPageWithContext,
     CallRecordingsPageWithContext,
