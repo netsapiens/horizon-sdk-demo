@@ -32,12 +32,14 @@ import type {
 import type { ComponentType } from 'react';
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
+import { VENDOR_DASHBOARD_CARDS } from '../content/vendorDashboardContent';
 import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import { CallVolumeChart } from '../widgets/CallVolumeChart';
 import { LiveCallsWidget } from '../widgets/LiveCallsWidget';
 import { RecentActivityWidget } from '../widgets/RecentActivityWidget';
 import { SyncedContactsStat } from '../widgets/SyncedContactsStat';
 import { SyncFailuresStat } from '../widgets/SyncFailuresStat';
+import { SyncOutcomesDonut } from '../widgets/SyncOutcomesDonut';
 import { SyncQueueTable } from '../widgets/SyncQueueTable';
 
 /**
@@ -78,21 +80,47 @@ function asPageWidget(
   };
 }
 
-const CallVolume = asPageWidget(CallVolumeChart, 'sdk-demo-vendor-call-volume');
-const SyncQueue = asPageWidget(SyncQueueTable, 'sdk-demo-vendor-sync-queue');
-const RecentActivity = asPageWidget(
-  RecentActivityWidget,
-  'sdk-demo-vendor-recent-activity',
-);
-const LiveCalls = asPageWidget(LiveCallsWidget, 'sdk-demo-vendor-live-calls');
-const ContactsSynced = asPageWidget(
-  SyncedContactsStat,
-  'sdk-demo-vendor-contacts-synced',
-);
-const SyncFailures = asPageWidget(
-  SyncFailuresStat,
-  'sdk-demo-vendor-sync-failures',
-);
+/**
+ * Card id → the component that draws it.
+ *
+ * Every one of these is a widget already registered in `App.tsx` §4 and reused
+ * here unchanged — a widget is a component, and where it renders is a
+ * registration decision. The donut is the exception and the interesting one: it
+ * exists only on this page, because a card built from the template is page
+ * content and needs no registration, no zone and no stable id at all.
+ */
+const COMPONENTS: Record<
+  string,
+  ComponentType<DashboardTemplateWidgetProps>
+> = {
+  'vendor-call-volume': asPageWidget(
+    CallVolumeChart,
+    'sdk-demo-vendor-call-volume',
+  ),
+  'vendor-contacts-synced': asPageWidget(
+    SyncedContactsStat,
+    'sdk-demo-vendor-contacts-synced',
+  ),
+  'vendor-sync-failures': asPageWidget(
+    SyncFailuresStat,
+    'sdk-demo-vendor-sync-failures',
+  ),
+  // Not wrapped: it is written against the template's own props rather than the
+  // dashboard widget contract, which is all a page-only card ever needs.
+  'vendor-sync-outcomes': SyncOutcomesDonut,
+  'vendor-sync-queue': asPageWidget(
+    SyncQueueTable,
+    'sdk-demo-vendor-sync-queue',
+  ),
+  'vendor-recent-activity': asPageWidget(
+    RecentActivityWidget,
+    'sdk-demo-vendor-recent-activity',
+  ),
+  'vendor-live-calls': asPageWidget(
+    LiveCallsWidget,
+    'sdk-demo-vendor-live-calls',
+  ),
+};
 
 export default function VendorDashboardPage({ ...marker }: ZoneMarkerProps) {
   const { ui } = useHorizonContext();
@@ -118,67 +146,12 @@ export default function VendorDashboardPage({ ...marker }: ZoneMarkerProps) {
         subtitle='Your Example CRM integration at a glance'
         // The host's own window selector, with the platform's pre-canned ranges.
         rangeControl
-        widgets={[
-          {
-            id: 'vendor-call-volume',
-            title: 'Call volume',
-            description: 'Answered vs missed calls across the selected range.',
-            size: 'full',
-            height: 4,
-            refreshPolicy: 'shared-range',
-            metric: {
-              formula: 'count(call_events) by bucket, split by disposition',
-              source: 'Demo fixture — mocks/widgetActivity.ts',
-              cadence: 'On range change',
-            },
-            component: CallVolume,
-          },
-          {
-            id: 'vendor-contacts-synced',
-            title: 'Contacts synced',
-            description: 'Reconciled with the CRM in the last 24 hours.',
-            size: 'half',
-            height: 3,
-            component: ContactsSynced,
-          },
-          {
-            id: 'vendor-sync-failures',
-            title: 'Sync failures',
-            description: 'Rows that exhausted their retries.',
-            size: 'half',
-            height: 3,
-            component: SyncFailures,
-          },
-          {
-            id: 'vendor-sync-queue',
-            title: 'CRM sync queue',
-            description: 'Contacts waiting to reconcile with the vendor CRM.',
-            size: 'half',
-            height: 4,
-            // Its own timer, so the range control above correctly leaves it
-            // alone and it draws no window chip.
-            refreshPolicy: 'own-cadence',
-            component: SyncQueue,
-          },
-          {
-            id: 'vendor-recent-activity',
-            title: 'Recent activity',
-            description: 'Recent call activity for the selected range.',
-            size: 'half',
-            height: 4,
-            refreshPolicy: 'shared-range',
-            component: RecentActivity,
-          },
-          {
-            id: 'vendor-live-calls',
-            title: 'Live call console',
-            description: 'Calls in progress, pushed as they ring.',
-            size: 'full',
-            height: 5,
-            refreshPolicy: 'realtime',
-            component: LiveCalls,
-          },
-        ]}
+        // Copy and layout from content/, components from the map above. The
+        // page itself is neither — it is the join.
+        widgets={VENDOR_DASHBOARD_CARDS.map((card) => ({
+          ...card,
+          component: COMPONENTS[card.id],
+        }))}
       />
     </Box>
   );
