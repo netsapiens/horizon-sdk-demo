@@ -12,6 +12,47 @@
 import type { ComponentType } from 'react';
 
 declare module '@netsapiens/horizon-sdk' {
+  interface DashboardTemplateWidgetProps {
+    widget: {
+      id: string;
+      size: 'half' | 'full';
+      pixel: { width: number; height: number };
+      range?: { from: string; to: string };
+    };
+  }
+
+  interface DashboardTemplateWidget {
+    id: string;
+    title: string;
+    description?: string;
+    size?: 'half' | 'full';
+    height?: number;
+    refreshPolicy?: 'shared-range' | 'realtime' | 'own-cadence';
+    metric?: {
+      formula?: string;
+      source?: string;
+      cadence?: string;
+      delay?: string;
+    };
+    component: ComponentType<DashboardTemplateWidgetProps>;
+  }
+
+  interface DashboardTemplateProps {
+    title: string | React.ReactNode;
+    subtitle?: React.ReactNode;
+    actions?: React.ReactNode;
+    rangeControl?: boolean;
+    rangeOptions?: string[];
+    defaultRange?: string;
+    onRangeChange?: (rangeId: string) => void;
+    widgets: DashboardTemplateWidget[];
+    testId?: (element: string) => string;
+  }
+
+  interface HorizonUITemplates {
+    DashboardTemplate?: ComponentType<DashboardTemplateProps>;
+  }
+
   type ChartTone =
     | 'primary'
     | 'success'

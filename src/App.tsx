@@ -3,7 +3,7 @@
  *
  * This is the orchestrator: it initializes the SDK and, in a single effect,
  * registers everything the demo contributes to the host —
- *   - 5 full-page routes       (sdk.registerRoute)
+ *   - 6 full-page routes       (sdk.registerRoute)
  *   - 10 zone extensions        (sdk.registerDynamicExtension)
  *   - 1 dynamic table column    (sdk.registerDynamicColumn)
  *   - 9 dashboard widgets       (sdk.registerWidget)
@@ -60,6 +60,7 @@ import ComponentShowcasePage from './pages/ComponentShowcasePage';
 import CrmIntegrationPage from './pages/CrmIntegrationPage';
 import DemoPage from './pages/DemoPage';
 import DomainCrmSyncPage from './pages/DomainCrmSyncPage';
+import VendorDashboardPage from './pages/VendorDashboardPage';
 import { createCallEventHandler } from './services/callEnrichment';
 import { CallVolumeChart } from './widgets/CallVolumeChart';
 import { IntegrationHealthPanel } from './widgets/IntegrationHealthPanel';
@@ -211,6 +212,19 @@ export default function App(horizonContext: HorizonContext) {
     [],
   );
 
+  const VendorDashboardPageWithContext = useMemo(
+    () =>
+      function VendorDashboardPageWithContext(props: ZoneMarkerProps) {
+        return (
+          <HorizonContextProvider context={contextRef.current}>
+            <VendorDashboardPage {...props} />
+          </HorizonContextProvider>
+        );
+      },
+
+    [],
+  );
+
   const CallRecordingsPageWithContext = useMemo(
     () =>
       function CallRecordingsPageWithContext(props: ZoneMarkerProps) {
@@ -326,6 +340,28 @@ export default function App(horizonContext: HorizonContext) {
       })
       .catch((error) =>
         console.error('[Demo App] Failed to register CRM Sync:', error),
+      );
+
+    // A PAGE THAT IS A DASHBOARD. Everything in §4 below registers into one of
+    // the HOST's dashboards, where the reader decides what lands and where. This
+    // is the other model: `templates.DashboardTemplate` gives an app the same
+    // dashboard shell and the same card frames on a page it owns outright, with
+    // the widgets it declares in the order it chose and no Customize or Reorder
+    // — neither means anything when the app decided the layout.
+    sdk
+      .registerRoute({
+        id: 'ucaas-vendor-dashboard',
+        parentPath: '/apps',
+        path: 'example-crm',
+        label: 'Example CRM',
+        icon: 'mdi:view-dashboard-outline',
+        component: withZoneTestId(
+          VendorDashboardPageWithContext,
+          routeTestId('ucaas-vendor-dashboard'),
+        ),
+      })
+      .catch((error) =>
+        console.error('[Demo App] Failed to register Example CRM:', error),
       );
 
     sdk
@@ -713,6 +749,7 @@ export default function App(horizonContext: HorizonContext) {
     DomainCrmSyncPageWithContext,
     ComponentShowcasePageWithContext,
     CrmIntegrationPageWithContext,
+    VendorDashboardPageWithContext,
     CallRecordingsPageWithContext,
   ]);
 
