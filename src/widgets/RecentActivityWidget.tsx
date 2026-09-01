@@ -137,6 +137,14 @@ export function RecentActivityWidget({
         <Tabs
           value={tab}
           onChange={(value) => setTab(String(value))}
+          // `standard`, not the kit's default `pill`. The pill strip is the
+          // host's PAGE treatment; its dashboard panels (Overall System Health,
+          // Session License Usage) draw an underlined strip instead — and they
+          // do it by hand-rolling MUI Tabs rather than using this component, so
+          // the kit has no dashboard-panel variant to ask for. `standard` is the
+          // closest the shared component gets, and a card that sits beside those
+          // two should read like them.
+          variant='standard'
           options={TABS.map((t) => ({
             value: t.value,
             // The count rides the label: the kit's tab options take a label, and
