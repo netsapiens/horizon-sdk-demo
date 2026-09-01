@@ -12,7 +12,13 @@
 import type { ComponentType } from 'react';
 
 declare module '@netsapiens/horizon-sdk' {
-  type ChartTone = 'primary' | 'success' | 'error' | 'warning' | 'info' | 'neutral';
+  type ChartTone =
+    | 'primary'
+    | 'success'
+    | 'error'
+    | 'warning'
+    | 'info'
+    | 'neutral';
 
   interface ChartSeries {
     key: string;

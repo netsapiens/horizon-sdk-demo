@@ -447,7 +447,8 @@ export default function App(horizonContext: HorizonContext) {
     // Nine of them, chosen to cover the contract rather than to fill a grid.
     // Read down the list and every axis of `WidgetRegistration` appears once:
     //
-    //   kind          panel · leaf · panel-that-accepts-leaves (a container)
+    //   kind          panel · leaf (in the host's container AND in the app's own)
+    //                 · panel-that-accepts-leaves (a container)
     //   category      activity · charts · tables · stats · other — which also
     //                 picks which of the five loading wireframes the host draws
     //   chrome        'host' everywhere except `call-volume`, which owns its own
@@ -575,17 +576,20 @@ export default function App(horizonContext: HorizonContext) {
       component: SyncQueueTableTagged,
     });
 
-    // A REALTIME panel — data arrives by push, on this app's scoped event bus.
+    // A REALTIME LEAF — data arrives by push, on this app's scoped event bus.
+    // A leaf and not a panel, deliberately: what it shows is one number, and a
+    // half-width card holding one number is empty space beside a stats grid that
+    // fits nine. The host's own Active Calls is the same concept and is a stat
+    // block, so this sits in that container next to it.
     sdk.registerWidget({
       id: 'live-calls',
-      kind: 'panel',
+      kind: 'leaf',
+      leafOf: 'stat',
       zones: ['platform-admin-dashboard-widgets'],
       title: 'Live calls',
       description: 'Calls in progress, pushed as they ring.',
       icon: 'mdi:phone-in-talk',
       category: 'stats',
-      size: { default: 'half', resizable: true, height: 3 },
-      placement: { after: 'stats' },
       refreshPolicy: 'realtime',
       // Gates on what the APP was granted, not on who the user is — the other
       // half of the pair `requiredScopes` starts. The host checks it before this

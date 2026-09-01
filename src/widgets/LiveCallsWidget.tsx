@@ -1,29 +1,32 @@
 /**
- * Live calls — a `kind: 'panel'` widget in the **stats** category, and the
- * demo's `refreshPolicy: 'realtime'` example.
+ * Live calls — a `kind: 'leaf'` widget with `leafOf: 'stat'`, and the demo's
+ * `refreshPolicy: 'realtime'` example.
  *
- * Registered in `App.tsx` §4. Nothing here polls and nothing reads
- * `widget.range`: the data arrives by **push**, over the app-scoped event bus on
- * `context.eventBus`. `App.tsx` subscribes to the SIP stream once through
- * `sdk.subscribeToCallEvents`, `services/callEnrichment.ts` enriches each event
- * from the mock CRM and re-emits it as `demo:call-updated`, and this widget and
- * the `CallerInfoWidget` extension both listen to that one broadcast. A widget
- * does not open a second subscription to the host — one app, one stream.
+ * Registered in `App.tsx` §4. It was a half-width **panel**, which was the wrong
+ * type for what it shows: a single live number. A panel is a card, and a card
+ * holding one figure is 800px of empty space next to a stats grid that fits nine
+ * of them. The host's own *Active Calls* is the same concept and is a stat
+ * block, so this is one too — it now sits in the host's stats container
+ * alongside it, and `ui.StatBlock` draws it, so the two are the same component.
  *
- * It is also the demo's example of the two gates a widget can declare beyond
- * `requiredScopes`, and they answer different questions:
+ * Nothing here polls and nothing reads `widget.range`: the data arrives by
+ * **push**, over the app-scoped event bus on `context.eventBus`. `App.tsx`
+ * subscribes to the SIP stream once through `sdk.subscribeToCallEvents`,
+ * `services/callEnrichment.ts` enriches each event from the mock CRM and
+ * re-emits it, and this leaf and the `CallerInfoWidget` extension both listen to
+ * that one broadcast. A widget does not open a second subscription to the host —
+ * one app, one stream.
+ *
+ * It also carries the two gates beyond `requiredScopes`, which answer different
+ * questions:
  *
  * - **`requiredPermissions: ['call-events:listen']`** — what the APP was
- *   granted. The host checks it against this app's capability grants before the
- *   widget reaches the catalogue at all, so a platform that has switched call
- *   events off never offers a card that could only ever be empty. This is not
- *   decoration: it is the same capability `subscribeToCallEvents` is gated on,
- *   declared where the dashboard can see it.
- * - **`condition`** — the app's own predicate, evaluated last, on every read.
- *   Here it asks whether `context.eventBus` is present, because that is the one
- *   thing this widget cannot render without. A `condition` that throws hides the
- *   widget rather than taking the dashboard's render with it, so it costs
- *   nothing to be strict.
+ *   granted. Checked before this reaches the catalogue, so a platform with call
+ *   events switched off never offers a block that could only ever read zero.
+ * - **`condition`** — the app's own predicate, evaluated last. It asks whether
+ *   `context.eventBus` is present, because that is the one thing this cannot
+ *   render without. A condition that throws hides the widget rather than taking
+ *   the dashboard's render with it, so being strict costs nothing.
  */
 import type { WidgetComponentProps } from '@netsapiens/horizon-sdk';
 import { useEffect, useState } from 'react';
@@ -36,19 +39,11 @@ import {
   CALL_UPDATED_EVENT,
 } from '../services/callEnrichment';
 
-/** Dot colour per call status. Palette paths, so they follow the theme toggle. */
-const STATUS_COLOR: Record<CallerInfo['status'], string> = {
-  ringing: 'warning.main',
-  answered: 'success.main',
-  missed: 'error.main',
-  ended: 'text.disabled',
-};
-
 export function LiveCallsWidget({
   context,
   ...marker
 }: WidgetComponentProps & ZoneMarkerProps) {
-  const { Stack, Typography, Box, Chip, Divider } = context.ui ?? {};
+  const { StatBlock } = context.ui ?? {};
 
   const [calls, setCalls] = useState<CallerInfo[]>([]);
 
@@ -85,61 +80,24 @@ export function LiveCallsWidget({
   }, [context.eventBus]);
 
   // Carve-out: with no kit there is nothing to render but the count.
-  if (!Stack || !Typography) return <div {...marker}>{calls.length}</div>;
+  if (!StatBlock) return <div {...marker}>{calls.length}</div>;
 
   const ringing = calls.filter((call) => call.status === 'ringing').length;
 
   return (
-    // No card and no heading: `chrome` defaults to `'host'`, so the frame drew
-    // "Live calls" from the registration's `title` before this rendered.
-    <Stack {...marker} direction='column' spacing={1} sx={{ height: '100%' }}>
-      <Typography variant='h4' fontWeight={600}>
-        {calls.length}
-      </Typography>
-      <Typography variant='body2' color='text.secondary'>
-        {calls.length === 0
-          ? 'No calls in progress — this card updates the moment one rings.'
-          : `${ringing} ringing · pushed over the app's event bus`}
-      </Typography>
-
-      {calls.length > 0 && Divider ? <Divider /> : null}
-
-      <Stack
-        direction='column'
-        spacing={0.75}
-        sx={{ flexGrow: 1, minHeight: 0 }}
-      >
-        {calls.slice(0, 4).map((call) => (
-          <Stack
-            key={call.callId}
-            direction='row'
-            spacing={1}
-            alignItems='center'
-          >
-            {Box ? (
-              <Box
-                sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  flexShrink: 0,
-                  bgcolor: STATUS_COLOR[call.status],
-                }}
-              />
-            ) : null}
-            <Typography
-              variant='body2'
-              noWrap
-              sx={{ flexGrow: 1, minWidth: 0 }}
-            >
-              {call.callerName ?? call.from}
-            </Typography>
-            {Chip ? (
-              <Chip size='small' variant='outlined' label={call.status} />
-            ) : null}
-          </Stack>
-        ))}
-      </Stack>
-    </Stack>
+    // No heading — the leaf frame drew "Live calls" from the registration's
+    // `title`, exactly as it does for the native block beside this one.
+    <StatBlock
+      {...marker}
+      value={calls.length}
+      caption={
+        calls.length === 0
+          ? 'nothing in progress'
+          : `${ringing} ringing · pushed live`
+      }
+      // Semantic, not decorative: the host resolves the colour, so this reads
+      // right in both colour modes.
+      tone={ringing > 0 ? 'warning' : 'primary'}
+    />
   );
 }
