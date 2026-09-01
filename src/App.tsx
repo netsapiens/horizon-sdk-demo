@@ -6,7 +6,7 @@
  *   - 5 full-page routes       (sdk.registerRoute)
  *   - 10 zone extensions        (sdk.registerDynamicExtension)
  *   - 1 dynamic table column    (sdk.registerDynamicColumn)
- *   - 2 dashboard widgets       (sdk.registerWidget)
+ *   - 9 dashboard widgets       (sdk.registerWidget)
  *   - 1 call-event subscription (sdk.subscribeToCallEvents)
  *
  * Pattern-based extensions need no pre-defined extension points — each
@@ -61,8 +61,15 @@ import CrmIntegrationPage from './pages/CrmIntegrationPage';
 import DemoPage from './pages/DemoPage';
 import DomainCrmSyncPage from './pages/DomainCrmSyncPage';
 import { createCallEventHandler } from './services/callEnrichment';
+import { CallVolumeChart } from './widgets/CallVolumeChart';
+import { IntegrationHealthPanel } from './widgets/IntegrationHealthPanel';
+import { LiveCallsWidget } from './widgets/LiveCallsWidget';
+import { PartnerLinksWidget } from './widgets/PartnerLinksWidget';
 import { RecentActivityWidget } from './widgets/RecentActivityWidget';
 import { RecordedCallsStat } from './widgets/RecordedCallsStat';
+import { SyncedContactsStat } from './widgets/SyncedContactsStat';
+import { SyncFailuresStat } from './widgets/SyncFailuresStat';
+import { SyncQueueTable } from './widgets/SyncQueueTable';
 
 // Injected at build time by webpack DefinePlugin (see webpack.config.js).
 declare const __MF_NAME__: string;
@@ -88,6 +95,44 @@ const RecentActivityWidgetTagged = withZoneTestId<WidgetComponentProps>(
 const RecordedCallsStatTagged = withZoneTestId<WidgetComponentProps>(
   RecordedCallsStat,
   widgetTestId('demo-recorded-calls'),
+);
+
+const CallVolumeChartTagged = withZoneTestId<WidgetComponentProps>(
+  CallVolumeChart,
+  widgetTestId('demo-call-volume'),
+);
+
+const SyncQueueTableTagged = withZoneTestId<WidgetComponentProps>(
+  SyncQueueTable,
+  widgetTestId('demo-sync-queue'),
+);
+
+const LiveCallsWidgetTagged = withZoneTestId<WidgetComponentProps>(
+  LiveCallsWidget,
+  widgetTestId('demo-live-calls'),
+);
+
+// Tagged like the rest for consistency, though the host renders its LeafContainer
+// instead of this component — see IntegrationHealthPanel.tsx. The suite locates
+// this card by the frame's own testid, keyed on the stored widget id.
+const IntegrationHealthPanelTagged = withZoneTestId<WidgetComponentProps>(
+  IntegrationHealthPanel,
+  widgetTestId('demo-integration-health'),
+);
+
+const SyncedContactsStatTagged = withZoneTestId<WidgetComponentProps>(
+  SyncedContactsStat,
+  widgetTestId('demo-contacts-synced'),
+);
+
+const SyncFailuresStatTagged = withZoneTestId<WidgetComponentProps>(
+  SyncFailuresStat,
+  widgetTestId('demo-sync-failures'),
+);
+
+const PartnerLinksWidgetTagged = withZoneTestId<WidgetComponentProps>(
+  PartnerLinksWidget,
+  widgetTestId('demo-partner-links'),
 );
 
 export default function App(horizonContext: HorizonContext) {
@@ -399,6 +444,21 @@ export default function App(horizonContext: HorizonContext) {
     // ============================================================
     // 4. DASHBOARD WIDGETS — cards on the host's dashboards
     // ============================================================
+    // Nine of them, chosen to cover the contract rather than to fill a grid.
+    // Read down the list and every axis of `WidgetRegistration` appears once:
+    //
+    //   kind          panel · leaf · panel-that-accepts-leaves (a container)
+    //   category      activity · charts · tables · stats · other — which also
+    //                 picks which of the five loading wireframes the host draws
+    //   chrome        'host' everywhere except `call-volume`, which owns its own
+    //   refreshPolicy shared-range · own-cadence · realtime · none at all
+    //   size          half · full · resizable · a declared row height
+    //   gates         requiredScopes (who the user is) · requiredPermissions
+    //                 (what the app was granted) · condition (the app's own)
+    //
+    // Only the Platform admin dashboard renders a widget grid today, so every
+    // new widget targets `platform-admin-dashboard-widgets` alone; Recent
+    // activity keeps its second zone to show what listing two looks like.
     // `sdk.registerWidget` is the only path. There is no bus event to emit: the
     // event names are an SDK implementation detail and are deliberately not
     // exported, so an app that reaches for the bus is coding against something
@@ -464,6 +524,148 @@ export default function App(horizonContext: HorizonContext) {
       component: RecentActivityWidgetTagged,
     });
 
+    // A PANEL that draws its OWN chrome, and the demo's charts entry.
+    sdk.registerWidget({
+      id: 'call-volume',
+      kind: 'panel',
+      zones: ['platform-admin-dashboard-widgets'],
+      title: 'Call volume',
+      description: 'Answered vs missed calls across the dashboard’s range.',
+      icon: 'mdi:chart-bar',
+      // The category picks the catalogue section AND the loading wireframe the
+      // host draws — 'charts' gets a plot with axes and a legend rather than the
+      // generic panel shape. The five categories are covered across this app's
+      // widgets on purpose, so a partner can see all five skeletons.
+      category: 'charts',
+      // The ONE `chrome: 'self'` in this app. The frame then draws no title row
+      // and no inner padding, and floats its controls over the content; the
+      // component owns both. Worth it here because the plot bleeds to the card's
+      // edges, and a mistake anywhere else: reproducing the host's padding and
+      // type scale by hand is how a card drifts from the ones beside it.
+      chrome: 'self',
+      // `height` is in grid row units. It also sizes the reserved slot, so the
+      // grid does not reflow when this widget's code arrives.
+      size: { default: 'full', resizable: true, height: 5 },
+      placement: { after: 'average-calls' },
+      refreshPolicy: 'shared-range',
+      // Provenance for the metric tooltip. The host does not draw one yet, so
+      // this is declared rather than demonstrated — it is in the contract, it
+      // costs nothing, and a number nobody can trace is a number nobody trusts.
+      metric: {
+        formula: 'count(call_events) grouped by bucket, split by disposition',
+        source: 'Demo fixture — mocks/widgetActivity.ts',
+        cadence: 'On range change',
+      },
+      component: CallVolumeChartTagged,
+    });
+
+    // A PANEL on its OWN cadence — the second of the three refresh policies.
+    sdk.registerWidget({
+      id: 'sync-queue',
+      kind: 'panel',
+      zones: ['platform-admin-dashboard-widgets'],
+      title: 'CRM sync queue',
+      description: 'Contacts waiting to reconcile with the vendor CRM.',
+      icon: 'mdi:table-sync',
+      category: 'tables',
+      size: { default: 'half', resizable: true, height: 4 },
+      placement: { after: 'suspect-domains' },
+      // The widget owns a timer, so the host hands it NO range: `widget.range`
+      // is undefined for anything that did not ask to follow the shared one.
+      refreshPolicy: 'own-cadence',
+      component: SyncQueueTableTagged,
+    });
+
+    // A REALTIME panel — data arrives by push, on this app's scoped event bus.
+    sdk.registerWidget({
+      id: 'live-calls',
+      kind: 'panel',
+      zones: ['platform-admin-dashboard-widgets'],
+      title: 'Live calls',
+      description: 'Calls in progress, pushed as they ring.',
+      icon: 'mdi:phone-in-talk',
+      category: 'stats',
+      size: { default: 'half', resizable: true, height: 3 },
+      placement: { after: 'stats' },
+      refreshPolicy: 'realtime',
+      // Gates on what the APP was granted, not on who the user is — the other
+      // half of the pair `requiredScopes` starts. The host checks it before this
+      // reaches the catalogue, so a platform with call events switched off never
+      // offers a card that could only ever be empty. Same capability
+      // `subscribeToCallEvents` is gated on, declared where a dashboard sees it.
+      requiredPermissions: ['call-events:listen'],
+      // The app's own predicate, evaluated last and on every read. This widget
+      // cannot render without the bus, so it declines to be offered without one.
+      // A condition that throws hides the widget rather than taking the
+      // dashboard down with it, so being strict here is free.
+      condition: (context) => Boolean(context.eventBus),
+      component: LiveCallsWidgetTagged,
+    });
+
+    // A CONTAINER PANEL the app ships itself, plus the two leaves that go in it.
+    // The third widget shape, and the one most apps never find: `acceptsLeaves`
+    // makes the host render its LeafContainer in place of `component`, so the
+    // leaves below lay out and reorder INSIDE this card and cannot escape it.
+    sdk.registerWidget({
+      id: 'integration-health',
+      kind: 'panel',
+      zones: ['platform-admin-dashboard-widgets'],
+      title: 'Integration health',
+      description: 'The demo app’s own stat blocks, in a container it owns.',
+      icon: 'mdi:heart-pulse',
+      category: 'other',
+      // Namespaced, NOT 'stat'. The host resolves a leaf's container by finding
+      // the first panel that accepts its category, so reusing 'stat' here would
+      // race the host's own stat card for every stat leaf on the dashboard.
+      acceptsLeaves: { category: 'demo-insight' },
+      size: { default: 'half', resizable: true, height: 3 },
+      placement: 'end',
+      component: IntegrationHealthPanelTagged,
+    });
+
+    sdk.registerWidget({
+      id: 'contacts-synced',
+      kind: 'leaf',
+      // Into the app's OWN container above — contrast `recorded-calls` below,
+      // which declares 'stat' and lands in the host's stat card instead.
+      leafOf: 'demo-insight',
+      zones: ['platform-admin-dashboard-widgets'],
+      title: 'Contacts synced',
+      description: 'Contacts reconciled with the CRM in the last 24 hours.',
+      icon: 'mdi:account-check',
+      category: 'stats',
+      component: SyncedContactsStatTagged,
+    });
+
+    sdk.registerWidget({
+      id: 'sync-failures',
+      kind: 'leaf',
+      leafOf: 'demo-insight',
+      zones: ['platform-admin-dashboard-widgets'],
+      title: 'Sync failures',
+      description: 'Rows that exhausted their retries in the same window.',
+      icon: 'mdi:alert-circle-outline',
+      category: 'stats',
+      component: SyncFailuresStatTagged,
+    });
+
+    // A PANEL with NO refresh policy — not every widget has data that goes
+    // stale, and declaring one it does not need is a claim the host acts on.
+    sdk.registerWidget({
+      id: 'partner-links',
+      kind: 'panel',
+      zones: ['platform-admin-dashboard-widgets'],
+      title: 'Demo app links',
+      description:
+        'Where the rest of this demo lives, and a side panel to open.',
+      icon: 'mdi:link-variant',
+      // The fallback bucket, and the last of the five loading wireframes.
+      category: 'other',
+      size: { default: 'half', resizable: true, height: 3 },
+      placement: 'end',
+      component: PartnerLinksWidgetTagged,
+    });
+
     // A LEAF: a block INSIDE the host's stat container, not a card of its own.
     sdk.registerWidget({
       id: 'recorded-calls',
@@ -486,8 +688,17 @@ export default function App(horizonContext: HorizonContext) {
     return () => {
       unsubscribeCallEvents();
       // By the same plain names they were registered under — the host resolves
-      // the prefix, here as at registration.
+      // the prefix, here as at registration. A container is withdrawn like any
+      // other widget; the host keeps its slot and shows the leaves as pending
+      // rather than rewriting a layout the user arranged.
       sdk.unregisterWidget('recent-activity');
+      sdk.unregisterWidget('call-volume');
+      sdk.unregisterWidget('sync-queue');
+      sdk.unregisterWidget('live-calls');
+      sdk.unregisterWidget('integration-health');
+      sdk.unregisterWidget('contacts-synced');
+      sdk.unregisterWidget('sync-failures');
+      sdk.unregisterWidget('partner-links');
       sdk.unregisterWidget('recorded-calls');
     };
   }, [

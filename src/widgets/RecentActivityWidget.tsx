@@ -24,10 +24,12 @@
  *   menu offers, called from the content to show a widget can drive them itself
  *   (an inline control, or an empty state that offers to take itself away).
  *
- * `actions.refresh()` is in the contract and is deliberately **not** called
- * here: against the host as it stands the grid passes a no-op for it and the
- * frame's menu never offers Refresh, so a button wired to it would look like a
- * demonstration and do nothing.
+ * `actions.refresh()` is the third entry and is not called here, because a
+ * widget on the shared range has nothing to refresh that the range control does
+ * not already drive. The host now implements it as a **remount** — it bumps a
+ * token in the component's key, so whatever the widget does on mount runs again,
+ * which is the only refresh a host can honestly offer when it holds no handle on
+ * an app's queries. `SyncQueueTable.tsx` is where that is worth a button.
  */
 import type { WidgetComponentProps } from '@netsapiens/horizon-sdk';
 import { useMemo } from 'react';

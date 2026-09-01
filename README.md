@@ -32,7 +32,7 @@ matches Horizon in light and dark mode.
 ## What it demonstrates
 
 This single app registers **5 full-page routes**, **10 zone extensions**, **1
-dynamic table column**, **2 dashboard widgets**, **1 live call-event
+dynamic table column**, **9 dashboard widgets**, **1 live call-event
 subscription**, an **on-demand side panel**, and a **remote-auth handshake** with
 a backend.
 
@@ -223,15 +223,33 @@ A widget is a card on a dashboard. The host owns the grid, the card, the heading
 and the overflow menu; the app supplies the content. Native panels and an app's
 widgets go through the same registry.
 
-| Widget                   | Kind                      | Where it lands                                                                                     | Component                          |
-| ------------------------ | ------------------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| **Recent activity**      | `panel`                   | Its own card on the grid, anchored after the native _Health_ panel; offered on two dashboards      | `widgets/RecentActivityWidget.tsx` |
-| **Recordings processed** | `leaf` (`leafOf: 'stat'`) | **Inside** the host's existing stat card, alongside the native stat blocks — not a card of its own | `widgets/RecordedCallsStat.tsx`    |
+The nine here are chosen to cover the contract, not to fill a grid — read down
+the table and every axis of `WidgetRegistration` appears at least once.
 
-The leaf is the interesting one: it proves a remote app can contribute _into_ a
-host container and reorder within it, not only add top-level panels.
+| Widget                   | Kind                              | Category   | What it is here to show                                                                                                                            | Component                            |
+| ------------------------ | --------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Recent activity**      | `panel`                           | `activity` | The baseline: `refreshPolicy: 'shared-range'`, `widget.pixel`, `actions`. Offered on two dashboards                                                | `widgets/RecentActivityWidget.tsx`   |
+| **Call volume**          | `panel`                           | `charts`   | The one `chrome: 'self'` — it owns its heading and padding so the plot can bleed to the card's edges. Full width, `height: 5`, `metric` provenance | `widgets/CallVolumeChart.tsx`        |
+| **CRM sync queue**       | `panel`                           | `tables`   | `refreshPolicy: 'own-cadence'` — its own timer, no `widget.range` — and the one place `actions.refresh()` earns a button. Built from `ui.Table`    | `widgets/SyncQueueTable.tsx`         |
+| **Live calls**           | `panel`                           | `stats`    | `refreshPolicy: 'realtime'` over the app-scoped event bus, plus `requiredPermissions` and a `condition`                                            | `widgets/LiveCallsWidget.tsx`        |
+| **Integration health**   | `panel` + `acceptsLeaves`         | `other`    | A **container the app ships itself**: the host draws its body and the two leaves below reorder inside it                                           | `widgets/IntegrationHealthPanel.tsx` |
+| **Contacts synced**      | `leaf` (`leafOf: 'demo-insight'`) | `stats`    | A leaf in the app's **own** container                                                                                                              | `widgets/SyncedContactsStat.tsx`     |
+| **Sync failures**        | `leaf` (`leafOf: 'demo-insight'`) | `stats`    | The second leaf — one proves they land, two prove they reorder                                                                                     | `widgets/SyncFailuresStat.tsx`       |
+| **Demo app links**       | `panel`                           | `other`    | **No** `refreshPolicy` at all, and a widget driving a host capability (it opens the side panel)                                                    | `widgets/PartnerLinksWidget.tsx`     |
+| **Recordings processed** | `leaf` (`leafOf: 'stat'`)         | `stats`    | A leaf in the **host's** existing stat card, alongside the native stat blocks                                                                      | `widgets/RecordedCallsStat.tsx`      |
 
-Both register inline in `App.tsx` §4 — not from `zones.manifest.json` like the
+The two leaf rows are the interesting pair. _Recordings processed_ proves a
+remote app can contribute _into_ a host container and reorder within it;
+_Contacts synced_ and _Sync failures_ prove an app can ship a container of its
+own and fill it. Namespace that container's category (`demo-insight`, not
+`stat`): the host resolves a leaf's home by finding the first panel that accepts
+its category, so reusing the host's would race its stat card.
+
+`category` is also the cheapest correctness on offer — it picks the catalogue
+section _and_ the shape of the loading wireframe, so all five of the host's
+skeletons (stat, chart, table, list, panel) are visible across these nine.
+
+They register inline in `App.tsx` §4 — not from `zones.manifest.json` like the
 zone extensions, for the same reason routes and the column do not: `zones` has to
 be a literal array at the call site.
 
@@ -268,10 +286,12 @@ wrong:
   nothing and can never be attributed to your app. The zone for a dashboard is
   its surface plus `-widgets`.
 - **Do not draw a card, a heading or padding.** `chrome` defaults to `'host'` and
-  the frame draws all three, plus the overflow menu. Neither component in
-  `src/widgets/` contains a `<Paper>`, a heading or a `p:`. Set `chrome: 'self'`
-  only if a widget genuinely owns its chrome; otherwise it gets two titles and a
-  double inset.
+  the frame draws all three, plus the overflow menu. Eight of the nine components
+  in `src/widgets/` contain no `<Paper>`, no heading and no `p:`. The ninth,
+  `CallVolumeChart.tsx`, sets `chrome: 'self'` because its plot has to reach the
+  card's edges — and it then has to match the host's `h6`/700 heading and its
+  padding by hand, which is the cost. Set it for that reason or not at all;
+  otherwise a widget gets two titles and a double inset.
 - **Registering makes a widget eligible, not placed.** A saved layout is
   authoritative, so both of these appear under **Customize** on the dashboard
   rather than on somebody's grid. That is the contract working, not a failure to
@@ -286,13 +306,28 @@ comes from `context.ui` — a remote app has no MUI of its own. `widget.range` i
 resolved timestamps and never a preset label; `widget.pixel` is the box the host
 derived from the grid arithmetic, which a chart needs because ECharts sizes to
 its container at init and does not observe resize. `actions` is
-`remove` / `resize` / `refresh`; the panel calls `resize()` from an inline
-control and `remove()` from its empty state.
+`remove` / `resize` / `refresh`; the Recent activity panel calls `resize()` from
+an inline control and `remove()` from its empty state.
 
-> **`actions.refresh()` is not demonstrated, on purpose.** Against the host as it
-> stands the grid and the leaf container both pass a no-op for it, and nothing
-> passes the frame's menu an `onRefresh`, so a button wired to it would look like
-> a demonstration and do nothing. The other two actions are real.
+`refreshPolicy` is a declaration of where your data comes from, and the host acts
+on it — all three appear here, plus the fourth case of declaring nothing:
+
+| Policy           | What the host does                                      | Here                         |
+| ---------------- | ------------------------------------------------------- | ---------------------------- |
+| `'shared-range'` | Hands you `widget.range` as resolved from/to timestamps | Recent activity, Call volume |
+| `'own-cadence'`  | Hands you no range; you own the timer                   | CRM sync queue               |
+| `'realtime'`     | Hands you no range; data arrives by push on your bus    | Live calls                   |
+| _omitted_        | Nothing — for a widget whose content does not go stale  | Demo app links               |
+
+Declaring one you do not need is a claim the host acts on: it hands you a range
+and invites a dependency on a control that has nothing to do with your card.
+
+> **`actions.refresh()` is a remount.** The host holds no handle on your queries,
+> so refresh is implemented by bumping a token in your component's key: React
+> discards the subtree and whatever you do on mount runs again. That is the only
+> refresh a host can honestly offer, and it is why the widget that calls it is
+> the one on `'own-cadence'` — `SyncQueueTable.tsx` prints its poll count, and
+> Refresh visibly restarts it from zero.
 
 Check what you contributed under **Platform → UI SDK management → Registered
 apps**, which lists your widget zones and whether each is enabled. A refused
@@ -593,7 +628,7 @@ src/
   content/
     demoContent.ts            # Static content for DemoPage (capabilities, zones, patterns, snippets)
   extensions/                 # One component per zone extension
-  widgets/                    # One component per dashboard widget (a panel and a leaf)
+  widgets/                    # One component per dashboard widget (panels, leaves, a container)
   mocks/                      # Demo fixtures (people, CRM, recent calls, sample table) — see mocks/README.md
   panels/                     # Side-panel content (CallDetails, QuickLinks)
   services/

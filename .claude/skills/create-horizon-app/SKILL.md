@@ -966,7 +966,32 @@ Your component is handed `{ context, widget, actions }`:
   A **leaf** gets `{ width: 0, height: 0 }`: its container lays it out.
 - `widget.range` — resolved `from`/`to` timestamps if you declared
   `refreshPolicy: 'shared-range'`. Never a preset label.
-- `actions` — `remove()`, `resize()`, `refresh()`.
+- `actions` — `remove()`, `resize()`, `refresh()`. Refresh is a **remount**: the
+  host holds no handle on your queries, so it bumps a token in your component's
+  key and whatever you do on mount runs again.
+
+`refreshPolicy` declares where your data comes from, and the host acts on it:
+
+| Policy           | What you get                                                |
+| ---------------- | ----------------------------------------------------------- |
+| `'shared-range'` | `widget.range`, as resolved from/to timestamps              |
+| `'own-cadence'`  | No range — you own the timer                                |
+| `'realtime'`     | No range — data arrives by push on your scoped event bus    |
+| _omitted_        | Nothing. Correct for a widget whose content cannot go stale |
+
+Declaring one you do not need is a claim the host acts on: it hands you a range
+and invites a dependency on a control unrelated to your card.
+
+Two gates beyond `requiredScopes`, answering different questions:
+
+```tsx
+// What your APP was granted. Checked before the widget reaches the catalogue,
+// so a platform with the capability switched off never offers an empty card.
+requiredPermissions: ['call-events:listen'],
+// Your own predicate, evaluated last, on every read. One that throws hides the
+// widget rather than taking the dashboard's render down, so be strict.
+condition: (context) => Boolean(context.eventBus),
+```
 
 **Do not draw a card, a heading or padding.** The frame draws all three. If your
 widget genuinely owns its own chrome, set `chrome: 'self'` — otherwise it gets
@@ -987,6 +1012,35 @@ sdk.registerWidget({
   title: 'Open tickets',
   category: 'stats',
   component: OpenTickets,
+});
+```
+
+You can also ship a **container** — a panel that holds your own leaves. The host
+renders its `LeafContainer` in place of your `component`, lays the leaves out,
+reorders them inside that card, and draws the empty state when the last one is
+removed:
+
+```tsx
+sdk.registerWidget({
+  id: 'integration-health',
+  kind: 'panel',
+  // Namespace the category. The host resolves a leaf's home by finding the first
+  // panel that accepts it, so declaring 'stat' would race the host's stat card.
+  acceptsLeaves: { category: 'myapp-insight' },
+  zones: ['platform-admin-dashboard-widgets'],
+  title: 'Integration health',
+  category: 'other',
+  component: () => null, // never called — the container branch runs instead
+});
+
+sdk.registerWidget({
+  id: 'contacts-synced',
+  kind: 'leaf',
+  leafOf: 'myapp-insight', // → your container, not the host's
+  zones: ['platform-admin-dashboard-widgets'],
+  title: 'Contacts synced',
+  category: 'stats',
+  component: SyncedContacts,
 });
 ```
 

@@ -33,7 +33,7 @@ export const CAPABILITIES: Capability[] = [
   {
     title: 'Dashboard widgets',
     api: 'sdk.registerWidget()',
-    desc: 'Contribute a card to a host dashboard — a panel on the grid, or a leaf inside the host’s stat container. The host draws the card, the heading and the menu; the app supplies the content.',
+    desc: 'Contribute cards to a host dashboard — panels on the grid, leaves inside a stat container, or a container of your own that holds them. The host draws the card, the heading and the menu; the app supplies the content.',
   },
   {
     title: 'Call events',
@@ -134,7 +134,7 @@ export const ZONES: ZoneInfo[] = [
     zone: 'platform-admin-dashboard-widgets',
     desc: 'The Platform admin dashboard. A widget zone: it names a dashboard, not a slot on a page.',
     usedFor:
-      'Recent activity (a panel on the grid) and Recordings processed (a leaf inside the host’s stat card). Add either from Customize.',
+      'Nine widgets covering every shape the contract has: panels (Recent activity, Call volume, CRM sync queue, Live calls, Demo app links), a container the app ships itself (Integration health) with its own two leaves, and a leaf inside the host’s stat card (Recordings processed). Add any of them from Customize.',
   },
   {
     zone: 'manage-dashboard-widgets',
@@ -314,11 +314,47 @@ sdk.registerWidget({
   component: RecordedCallsStat, // no size, and widget.pixel is 0×0 for a leaf
 });
 
+// A CONTAINER — a panel that holds YOUR leaves. The host renders its own
+// LeafContainer in place of \`component\`, lays the leaves out and reorders
+// them inside this card. Namespace the category: the host resolves a leaf's
+// home by finding the first panel accepting it, so 'stat' would race the
+// host's own stat card.
+sdk.registerWidget({
+  id: 'integration-health',
+  kind: 'panel',
+  acceptsLeaves: { category: 'demo-insight' },
+  zones: ['platform-admin-dashboard-widgets'],
+  title: 'Integration health',
+  category: 'other',
+  component: IntegrationHealthPanel, // never called — see acceptsLeaves
+});
+
+sdk.registerWidget({
+  id: 'contacts-synced',
+  kind: 'leaf',
+  leafOf: 'demo-insight',      // → lands in the container above, not the host's
+  zones: ['platform-admin-dashboard-widgets'],
+  title: 'Contacts synced',
+  category: 'stats',
+  component: SyncedContactsStat,
+});
+
+// refreshPolicy declares where your data comes from, and the host acts on it:
+//   'shared-range' → you get widget.range as resolved from/to timestamps
+//   'own-cadence'  → no range; you own the timer  (CRM sync queue)
+//   'realtime'     → no range; data arrives by push on your scoped event bus
+//   omitted        → nothing goes stale, so ask for nothing  (Demo app links)
+
+// Two more gates, answering different questions:
+//   requiredPermissions: ['call-events:listen']  // what the APP was granted
+//   condition: (context) => Boolean(context.eventBus)  // your own, run last
+
 // Your component receives { context, widget, actions }:
 function RecentActivityWidget({ context, widget, actions }) {
   const { Stack, Typography } = context.ui;      // no MUI in a remote app
   const { from, to } = widget.range ?? {};       // resolved timestamps
   const { width, height } = widget.pixel;        // host-derived box
+  // actions: remove() / resize() / refresh() — refresh remounts you
   return <Stack>…</Stack>;                       // content only, no card
 }
 

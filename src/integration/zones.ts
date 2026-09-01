@@ -72,11 +72,25 @@ interface WidgetManifestEntry {
   zones: string[];
   /** Leaves only: the container category this belongs in. */
   leafOf?: string;
+  /**
+   * Container panels only: the leaf category this panel accepts. Its body is
+   * then drawn by the host's LeafContainer rather than by the registered
+   * component. Namespaced per app — see the manifest entry's `$comment`.
+   */
+  acceptsLeaves?: string;
   category?: string;
+  /** Defaults to 'host'. Only one widget here declares 'self'. */
+  chrome?: 'host' | 'self';
   /** Panels only — a leaf's width belongs to its container. */
   size?: 'half' | 'full';
+  /** Panels only: reserved height in grid row units, which also sizes the skeleton. */
+  height?: number;
+  /** Panels only. */
+  resizable?: boolean;
   placement?: { after: string } | { before: string } | 'end';
   refreshPolicy?: 'shared-range' | 'own-cadence' | 'realtime';
+  /** Gates on what the APP was granted. Documentation only, as below. */
+  requiredPermissions?: string[];
   /** Documentation only, as on RouteManifestEntry. */
   requiredScopes?: ScopeRequirement;
   testId: string;
