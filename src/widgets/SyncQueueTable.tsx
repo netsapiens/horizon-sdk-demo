@@ -95,8 +95,12 @@ export function SyncQueueTable({
         data={rows}
         columns={columns}
         getRowId={(row) => row.id}
-        defaultPageSize={5}
-        pageSizeOptions={[5, 10]}
+        // Ten rows is the whole fixture, so the grid fills the card it is given
+        // rather than leaving a band of empty space above the pagination footer.
+        // A card's height is not the widget's to choose — see the note in the
+        // host's DashboardGrid — so filling what you are handed is the move.
+        defaultPageSize={10}
+        pageSizeOptions={[10, 25]}
         toolbar={{
           enableSearch: true,
           searchPlaceholder: 'Search contacts',

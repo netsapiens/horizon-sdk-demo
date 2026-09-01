@@ -1,44 +1,41 @@
 /**
- * Recent Activity — a `kind: 'panel'` dashboard widget.
+ * Recent activity — a `kind: 'panel'` widget in the **activity** category, and
+ * the demo's tabbed card.
  *
- * Registered in `App.tsx` §4. This file is the **content of a card, not the
- * card**: `chrome` defaults to `'host'`, so the frame around this draws the
- * card surface, the title row from the registration's `title`, the inner
- * padding and the overflow menu. Drawing any of those here is what gets a
- * widget two titles and a double inset — the one mistake the guide calls out by
- * name. There is no `<Paper>`, no heading and no `p:` in this file, and that is
- * the point.
+ * Registered in `App.tsx` §4. It is the same shape as the host's own *Overall
+ * System Health*: a pill strip with a count on each tab, and a feed underneath
+ * filtered to the selection. `ui.Tabs` draws the strip — the kit owns that
+ * treatment so a contributed card gets the platform's tab styling for free —
+ * and the panel below is the app's, which is the split the kit documents: apps
+ * differ on whether panels stay mounted, so a `TabPanel` contract would take
+ * that choice away.
  *
- * It shows the three inputs a panel is handed:
+ * The three inputs a panel is handed, all still on show:
  *
  * - **`widget.range`** — the dashboard's resolved from/to window, because the
  *   registration declares `refreshPolicy: 'shared-range'`. Always timestamps,
- *   never a preset label like "Last 7 days", so there is nothing to parse. The
- *   feed is filtered by it: change the dashboard's range and the list changes.
- * - **`widget.pixel`** — the card's box, derived by the host from the grid
- *   arithmetic rather than measured here. Used below to decide how many rows
- *   fit and whether there is room for the party column. A chart needs this
- *   signal for a different reason: ECharts sizes to its container at init and
- *   does not observe container resize.
- * - **`actions`** — `resize()` and `remove()`, the same entries the frame's
- *   menu offers, called from the content to show a widget can drive them itself
- *   (an inline control, or an empty state that offers to take itself away).
+ *   never a preset label. The feed is filtered by it, so changing the range
+ *   changes every tab's count.
+ * - **`widget.pixel`** — the card's real box, measured by the host. Used to
+ *   decide how many rows fit. It reported the row-span arithmetic until the
+ *   host started measuring, which is why this card used to say "showing 2 of
+ *   17" in a card with room for eight.
+ * - **`actions`** — `resize()` and `remove()`, driven from the content rather
+ *   than only from the frame's menu.
  *
- * `actions.refresh()` is the third entry and is not called here, because a
- * widget on the shared range has nothing to refresh that the range control does
- * not already drive. The host now implements it as a **remount** — it bumps a
- * token in the component's key, so whatever the widget does on mount runs again,
- * which is the only refresh a host can honestly offer when it holds no handle on
- * an app's queries. `SyncQueueTable.tsx` is where that is worth a button.
+ * `actions.refresh()` is the third action and is not called here: a widget on
+ * the shared range has nothing to refresh that the range control does not
+ * already drive. The host implements it as a remount; `SyncQueueTable.tsx` is
+ * where that earns a button.
  */
 import type { WidgetComponentProps } from '@netsapiens/horizon-sdk';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { ActivityKind } from '../mocks/widgetActivity';
 import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import { buildActivityFeed } from '../mocks/widgetActivity';
 
-/** Row dot colour + label per kind. Palette paths, so both follow the theme toggle. */
+/** Row dot colour + label per kind. Palette paths, so both follow the toggle. */
 const KIND_META: Record<ActivityKind, { label: string; color: string }> = {
   answered: { label: 'Answered', color: 'success.main' },
   missed: { label: 'Missed', color: 'error.main' },
@@ -46,19 +43,25 @@ const KIND_META: Record<ActivityKind, { label: string; color: string }> = {
   transferred: { label: 'Transferred', color: 'info.main' },
 };
 
+/** Tab order. `all` first, then the kinds, matching the host's health card. */
+const TABS: Array<{ value: string; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'answered', label: 'Answered' },
+  { value: 'missed', label: 'Missed' },
+  { value: 'voicemail', label: 'Voicemail' },
+];
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * How many rows the card has room for, from the host-supplied box.
- *
- * `pixel` is `{ width: 0, height: 0 }` on the first paint, before the grid's
- * ResizeObserver has measured — hence the floor rather than a bare division.
+ * How many rows the card has room for, from the host-supplied box — which is
+ * now measured rather than derived from the declared row span.
  */
 function rowsThatFit(pixelHeight: number): number {
   if (pixelHeight <= 0) return 5;
-  const CHROME = 150; // summary chips + footer, inside the frame's own padding
+  const CHROME = 120; // tab strip + footer, inside the frame's own padding
   const ROW = 34;
-  return Math.max(2, Math.min(9, Math.floor((pixelHeight - CHROME) / ROW)));
+  return Math.max(2, Math.min(12, Math.floor((pixelHeight - CHROME) / ROW)));
 }
 
 function formatClock(iso: string): string {
@@ -74,7 +77,8 @@ export function RecentActivityWidget({
   actions,
   ...marker
 }: WidgetComponentProps & ZoneMarkerProps) {
-  const { Stack, Typography, Chip, Box, Button, Divider } = context.ui ?? {};
+  const { Stack, Typography, Box, Button, Divider, Tabs } = context.ui ?? {};
+  const [tab, setTab] = useState<string>('all');
 
   // Keyed on the two timestamps rather than on `widget.range` itself: the host
   // rebuilds that object every render, so an object dep would recompute the feed
@@ -83,8 +87,6 @@ export function RecentActivityWidget({
   const to = widget.range?.to;
 
   const { events, windowLabel } = useMemo(() => {
-    // A dashboard on the shared range always resolves a window; this fallback
-    // covers the first paint, and a host that has not sent one.
     const toDate = to ? new Date(to) : new Date();
     const fromDate = from
       ? new Date(from)
@@ -101,12 +103,19 @@ export function RecentActivityWidget({
     };
   }, [from, to]);
 
-  const counts = useMemo(
-    () => ({
-      answered: events.filter((e) => e.kind === 'answered').length,
-      missed: events.filter((e) => e.kind === 'missed').length,
-    }),
-    [events],
+  // Counts per tab, so the strip carries the same at-a-glance numbers the
+  // native health card puts on its tabs.
+  const counts = useMemo(() => {
+    const byKind = { all: events.length } as Record<string, number>;
+    for (const t of TABS.slice(1)) {
+      byKind[t.value] = events.filter((e) => e.kind === t.value).length;
+    }
+    return byKind;
+  }, [events]);
+
+  const shown = useMemo(
+    () => (tab === 'all' ? events : events.filter((e) => e.kind === tab)),
+    [events, tab],
   );
 
   // Carve-out: the kit is what supplies every visible element, so when it is
@@ -115,38 +124,29 @@ export function RecentActivityWidget({
     return <div {...marker}>{events.length} events in the selected range</div>;
   }
 
-  const visible = events.slice(0, rowsThatFit(widget.pixel.height));
+  const visible = shown.slice(0, rowsThatFit(widget.pixel.height));
   // Wide enough for a third column. Narrow cards drop the party rather than
   // truncating three things at once.
   const wide = widget.pixel.width >= 420;
 
   return (
     // The marker rides this root — a real, visible box the Playwright suite can
-    // assert. No card and no heading: the frame drew both before this rendered.
+    // assert. No card and no heading: the frame drew both, and the subtitle.
     <Stack {...marker} direction='column' spacing={1.5} sx={{ height: '100%' }}>
-      {Chip ? (
-        <Stack direction='row' spacing={1} flexWrap='wrap' useFlexGap>
-          <Chip
-            size='small'
-            variant='outlined'
-            label={`${events.length} events`}
-          />
-          <Chip
-            size='small'
-            color='success'
-            variant='outlined'
-            label={`${counts.answered} answered`}
-          />
-          <Chip
-            size='small'
-            color='error'
-            variant='outlined'
-            label={`${counts.missed} missed`}
-          />
-        </Stack>
+      {Tabs ? (
+        <Tabs
+          value={tab}
+          onChange={(value) => setTab(String(value))}
+          options={TABS.map((t) => ({
+            value: t.value,
+            // The count rides the label: the kit's tab options take a label, and
+            // a parallel badge contract would be a second way to say one thing.
+            label: `${t.label} ${counts[t.value] ?? 0}`,
+          }))}
+        />
       ) : null}
 
-      {events.length === 0 ? (
+      {shown.length === 0 ? (
         <Stack
           direction='column'
           spacing={1}
@@ -154,8 +154,8 @@ export function RecentActivityWidget({
           sx={{ flexGrow: 1 }}
         >
           <Typography variant='body2' color='text.secondary'>
-            No activity in this window. Widen the dashboard&rsquo;s range, or
-            take the card off the grid.
+            Nothing {tab === 'all' ? '' : `${tab} `}in this window. Widen the
+            dashboard&rsquo;s range, or take the card off the grid.
           </Typography>
           {/* The guide's stated use for `actions`: an empty state that offers to
               remove the widget, rather than sitting there empty. */}
@@ -224,13 +224,13 @@ export function RecentActivityWidget({
         flexWrap='wrap'
         useFlexGap
       >
-        {/* Printing the resolved window and the derived box is demo licence: a
+        {/* Printing the resolved window and the measured box is demo licence: a
             real widget would not, but a partner reading this wants to see that
             both arrive and both change. */}
         <Typography variant='caption' color='text.secondary'>
           {windowLabel} &middot; {widget.pixel.width}&times;
           {widget.pixel.height}px &middot; showing {visible.length} of{' '}
-          {events.length}
+          {shown.length}
         </Typography>
         {Button ? (
           <Button
