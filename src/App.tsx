@@ -576,20 +576,22 @@ export default function App(horizonContext: HorizonContext) {
       component: SyncQueueTableTagged,
     });
 
-    // A REALTIME LEAF — data arrives by push, on this app's scoped event bus.
-    // A leaf and not a panel, deliberately: what it shows is one number, and a
-    // half-width card holding one number is empty space beside a stats grid that
-    // fits nine. The host's own Active Calls is the same concept and is a stat
-    // block, so this sits in that container next to it.
+    // A REALTIME PANEL, and the demo's blank-canvas example. Every other widget
+    // here maps onto something the host already draws; this one is a layout the
+    // platform has no equivalent for, composed from kit primitives — a filter,
+    // a toggle, a card per call, per-row actions. A partner's product is usually
+    // not a restyled version of ours, so the kit has to express something we
+    // never anticipated without the app reaching for its own styling.
     sdk.registerWidget({
       id: 'live-calls',
-      kind: 'leaf',
-      leafOf: 'stat',
+      kind: 'panel',
       zones: ['platform-admin-dashboard-widgets'],
-      title: 'Live calls',
+      title: 'Live call console',
       description: 'Calls in progress, pushed as they ring.',
       icon: 'mdi:phone-in-talk',
-      category: 'stats',
+      category: 'activity',
+      size: { default: 'half', resizable: true, height: 4 },
+      placement: { after: 'health' },
       refreshPolicy: 'realtime',
       // Gates on what the APP was granted, not on who the user is — the other
       // half of the pair `requiredScopes` starts. The host checks it before this

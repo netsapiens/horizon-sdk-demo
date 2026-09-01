@@ -1,56 +1,122 @@
 /**
- * Live calls — a `kind: 'leaf'` widget with `leafOf: 'stat'`, and the demo's
- * `refreshPolicy: 'realtime'` example.
+ * Live call console — a `kind: 'panel'` widget, and the demo's answer to "what
+ * can I actually build in one of these?"
  *
- * Registered in `App.tsx` §4. It was a half-width **panel**, which was the wrong
- * type for what it shows: a single live number. A panel is a card, and a card
- * holding one figure is 800px of empty space next to a stats grid that fits nine
- * of them. The host's own *Active Calls* is the same concept and is a stat
- * block, so this is one too — it now sits in the host's stats container
- * alongside it, and `ui.StatBlock` draws it, so the two are the same component.
+ * Registered in `App.tsx` §4. Every other widget here maps onto something the
+ * host already draws: a chart, a datagrid, a stat block, a tabbed card. This one
+ * is deliberately the other case — a layout the platform has no equivalent for,
+ * assembled entirely from `context.ui` primitives. That is the point of it. A
+ * partner's product is usually not a restyled version of ours, and the kit has
+ * to be able to express something we never anticipated without the app reaching
+ * for its own styling.
  *
- * Nothing here polls and nothing reads `widget.range`: the data arrives by
- * **push**, over the app-scoped event bus on `context.eventBus`. `App.tsx`
- * subscribes to the SIP stream once through `sdk.subscribeToCallEvents`,
+ * Nine kit components, no hand-styled markup, no colour literal anywhere:
+ *
+ *   ToggleButtonGroup   the status filter
+ *   Switch              CRM enrichment on/off
+ *   Paper               one card per call, `background` stepped for the ringing state
+ *   Avatar              caller initials
+ *   Chip                status, direction, sample badge
+ *   IconButton          per-row actions
+ *   Button              the empty state's two routes out
+ *   Icon                the empty state's mark
+ *   Divider / Stack / Typography / Box   the rest
+ *
+ * Data is pushed, not polled — `refreshPolicy: 'realtime'`. `App.tsx` subscribes
+ * to the SIP stream once through `sdk.subscribeToCallEvents`,
  * `services/callEnrichment.ts` enriches each event from the mock CRM and
- * re-emits it, and this leaf and the `CallerInfoWidget` extension both listen to
- * that one broadcast. A widget does not open a second subscription to the host —
- * one app, one stream.
+ * re-emits it, and this console listens to that one broadcast. A widget does not
+ * open a second subscription to the host.
  *
- * It also carries the two gates beyond `requiredScopes`, which answer different
- * questions:
- *
- * - **`requiredPermissions: ['call-events:listen']`** — what the APP was
- *   granted. Checked before this reaches the catalogue, so a platform with call
- *   events switched off never offers a block that could only ever read zero.
- * - **`condition`** — the app's own predicate, evaluated last. It asks whether
- *   `context.eventBus` is present, because that is the one thing this cannot
- *   render without. A condition that throws hides the widget rather than taking
- *   the dashboard's render with it, so being strict costs nothing.
+ * When no call is in progress it shows the sample board from
+ * `mocks/liveCalls.ts` rather than an empty card, and says so in the footer —
+ * the same honesty `mocks/recentCalls.ts` uses. A console that is blank whenever
+ * the phones are quiet demonstrates nothing.
  */
-import type { WidgetComponentProps } from '@netsapiens/horizon-sdk';
-import { useEffect, useState } from 'react';
+import type {
+  SidePanelContentProps,
+  WidgetComponentProps,
+} from '@netsapiens/horizon-sdk';
+import { useEffect, useMemo, useState } from 'react';
+import { useSidePanel } from '@netsapiens/horizon-sdk';
 
 import type { CallerInfo } from '../services/callEnrichment';
 import { type ZoneMarkerProps } from '../integration/withZoneTestId';
+import { buildSampleCalls } from '../mocks/liveCalls';
+import { CallDetailsPanel } from '../panels/CallDetailsPanel';
 import {
   activeCallsStore,
   CALL_REMOVED_EVENT,
   CALL_UPDATED_EVENT,
 } from '../services/callEnrichment';
 
+type StatusFilter = 'all' | 'ringing' | 'answered';
+
+const FILTERS = [
+  { value: 'all', label: 'All' },
+  { value: 'ringing', label: 'Ringing' },
+  { value: 'answered', label: 'Active' },
+];
+
+/** Status → the semantic colour key the kit resolves. Never a literal. */
+const STATUS_TONE: Record<CallerInfo['status'], string> = {
+  ringing: 'warning',
+  answered: 'success',
+  missed: 'error',
+  ended: 'default',
+};
+
+function initials(call: CallerInfo): string {
+  const name = call.callerName?.trim();
+  if (!name) return call.from.replace(/\D/g, '').slice(-2) || '?';
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+/** Talk time so far, from the event timestamp. */
+function elapsed(call: CallerInfo, nowMs: number): string {
+  const seconds = Math.max(0, Math.floor((nowMs - call.timestamp) / 1000));
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 export function LiveCallsWidget({
   context,
+  widget,
   ...marker
 }: WidgetComponentProps & ZoneMarkerProps) {
-  const { StatBlock } = context.ui ?? {};
+  const {
+    Stack,
+    Typography,
+    Box,
+    Paper,
+    Avatar,
+    Chip,
+    Button,
+    IconButton,
+    Divider,
+    Switch,
+    ToggleButtonGroup,
+    Icon,
+  } = context.ui ?? {};
 
-  const [calls, setCalls] = useState<CallerInfo[]>([]);
+  // A widget renders outside HorizonContextProvider, exactly as a zone
+  // extension does, so the hook is handed the bus rather than reading context.
+  const { open } = useSidePanel(context.eventBus);
+  const navigate = context.navigate;
+
+  const [live, setLive] = useState<CallerInfo[]>([]);
+  const [filter, setFilter] = useState<StatusFilter>('all');
+  const [enriched, setEnriched] = useState(true);
 
   useEffect(() => {
     if (!context.eventBus) return;
 
-    const sync = () => setCalls(Array.from(activeCallsStore.values()));
+    const sync = () => setLive(Array.from(activeCallsStore.values()));
 
     // The bus is string-keyed and typed `(data: unknown) => void`, so check the
     // field the store is keyed by rather than trusting the payload.
@@ -60,7 +126,6 @@ export function LiveCallsWidget({
       activeCallsStore.set(info.callId, info);
       sync();
     };
-
     const onRemoved = (data: unknown) => {
       if (typeof data !== 'string') return;
       activeCallsStore.delete(data);
@@ -69,8 +134,8 @@ export function LiveCallsWidget({
 
     context.eventBus.on(CALL_UPDATED_EVENT, onUpdated);
     context.eventBus.on(CALL_REMOVED_EVENT, onRemoved);
-    // Seed from the store: a widget added mid-call should not wait for the next
-    // event to have anything to say.
+    // Seed from the store: a console added mid-call should not wait for the
+    // next event to have anything to say.
     sync();
 
     return () => {
@@ -79,25 +144,254 @@ export function LiveCallsWidget({
     };
   }, [context.eventBus]);
 
-  // Carve-out: with no kit there is nothing to render but the count.
-  if (!StatBlock) return <div {...marker}>{calls.length}</div>;
+  // One clock for every row, ticking only while there is something to tick.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNowMs(Date.now()), 1_000);
+    return () => clearInterval(timer);
+  }, []);
 
-  const ringing = calls.filter((call) => call.status === 'ringing').length;
+  const showingSample = live.length === 0;
+  const calls = useMemo(
+    () => (showingSample ? buildSampleCalls(new Date(nowMs)) : live),
+    // `nowMs` deliberately absent: the sample board is built once per switch to
+    // sample mode, not rebuilt every second under the ticking clock.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [showingSample, live],
+  );
+
+  const shown = useMemo(
+    () => (filter === 'all' ? calls : calls.filter((c) => c.status === filter)),
+    [calls, filter],
+  );
+
+  // Carve-out: the kit is what supplies every visible element, so with none of
+  // it there is nothing to fall back to but the count.
+  if (!Stack || !Typography || !Paper) {
+    return <div {...marker}>{calls.length} calls</div>;
+  }
+
+  const ringing = calls.filter((c) => c.status === 'ringing').length;
+  const wide = widget.pixel.width >= 520;
+
+  /**
+   * Open the shared side panel on one call.
+   *
+   * `CallDetailsPanel` takes the row as a prop, so it is closed over here — the
+   * same shape `QuickActionButton` uses to open it from a table row. The panel
+   * body is the app's; the drawer, its header and its dismissal are the host's.
+   */
+  const openDetails = (call: CallerInfo) => {
+    const Panel = (props: SidePanelContentProps) => (
+      <CallDetailsPanel
+        {...props}
+        row={{
+          'call-from': call.from,
+          'call-to': call.to,
+          'call-direction': call.direction,
+          'call-status': call.status,
+          'caller-name': call.callerName ?? '',
+          company: call.company ?? '',
+          'last-contact': call.lastContact ?? '',
+          notes: call.notes ?? '',
+        }}
+      />
+    );
+    open({
+      title: call.callerName ?? call.from,
+      subtitle: 'Live call · opened from a dashboard widget',
+      width: 'sm',
+      icon: 'mdi:phone-in-talk',
+      component: Panel,
+    });
+  };
 
   return (
-    // No heading — the leaf frame drew "Live calls" from the registration's
-    // `title`, exactly as it does for the native block beside this one.
-    <StatBlock
-      {...marker}
-      value={calls.length}
-      caption={
-        calls.length === 0
-          ? 'nothing in progress'
-          : `${ringing} ringing · pushed live`
-      }
-      // Semantic, not decorative: the host resolves the colour, so this reads
-      // right in both colour modes.
-      tone={ringing > 0 ? 'warning' : 'primary'}
-    />
+    <Stack {...marker} direction='column' spacing={1.5} sx={{ height: '100%' }}>
+      {/* Controls. A dashboard card is allowed to be interactive — the frame
+          owns the card, the menu and the drag handle, and everything inside it
+          is the app's to compose. */}
+      <Stack
+        direction='row'
+        spacing={1}
+        alignItems='center'
+        justifyContent='space-between'
+        flexWrap='wrap'
+        useFlexGap
+      >
+        {ToggleButtonGroup ? (
+          <ToggleButtonGroup
+            exclusive
+            size='small'
+            value={filter}
+            options={FILTERS}
+            onChange={(_event: unknown, next: string | null) =>
+              setFilter((current) => (next as StatusFilter) ?? current)
+            }
+          />
+        ) : null}
+
+        {Switch ? (
+          <Switch
+            size='small'
+            label='CRM'
+            checked={enriched}
+            onChange={(_event: unknown, checked: boolean) =>
+              setEnriched(checked)
+            }
+          />
+        ) : null}
+      </Stack>
+
+      {/* The board. */}
+      <Stack
+        direction='column'
+        spacing={1}
+        sx={{ flexGrow: 1, minHeight: 0, overflow: 'hidden' }}
+      >
+        {shown.length === 0 ? (
+          <Stack
+            direction='column'
+            spacing={1.5}
+            alignItems='center'
+            justifyContent='center'
+            sx={{ flexGrow: 1, textAlign: 'center', px: 2 }}
+          >
+            {Icon ? (
+              <Icon
+                icon='mdi:phone-off-outline'
+                sx={{ fontSize: 32, color: 'text.disabled' }}
+              />
+            ) : null}
+            <Typography variant='body2' color='text.secondary'>
+              Nothing {filter === 'all' ? 'in progress' : `is ${filter}`} right
+              now.
+            </Typography>
+            <Stack direction='row' spacing={1} flexWrap='wrap' useFlexGap>
+              {Button && navigate ? (
+                <Button
+                  size='small'
+                  variant='soft'
+                  onClick={() => navigate('/manage/crm-integration')}
+                >
+                  Open CRM Integration
+                </Button>
+              ) : null}
+              {Button ? (
+                <Button
+                  size='small'
+                  variant='text'
+                  onClick={() => setFilter('all')}
+                >
+                  Clear filter
+                </Button>
+              ) : null}
+            </Stack>
+          </Stack>
+        ) : (
+          shown.map((call) => (
+            // `background` is a palette step the host resolves per colour mode,
+            // not a colour this file chose — a ringing call lifts off the card
+            // without anything here knowing what "lifted" looks like in dark.
+            <Paper
+              key={call.callId}
+              variant='outlined'
+              background={call.status === 'ringing' ? 5 : undefined}
+              sx={{ p: 1.25 }}
+            >
+              <Stack direction='row' spacing={1.25} alignItems='center'>
+                {Avatar ? (
+                  <Avatar sx={{ width: 34, height: 34, fontSize: 13 }}>
+                    {initials(call)}
+                  </Avatar>
+                ) : null}
+
+                <Stack
+                  direction='column'
+                  spacing={0.25}
+                  sx={{ flexGrow: 1, minWidth: 0 }}
+                >
+                  <Typography variant='body2' fontWeight={600} noWrap>
+                    {call.callerName ?? call.from}
+                  </Typography>
+                  <Typography variant='caption' color='text.secondary' noWrap>
+                    {enriched && call.company
+                      ? `${call.company} · ${call.callCount ?? 0} calls`
+                      : call.from}
+                  </Typography>
+                </Stack>
+
+                {wide && Chip ? (
+                  <Chip
+                    size='small'
+                    variant='outlined'
+                    label={call.direction === 'inbound' ? 'In' : 'Out'}
+                  />
+                ) : null}
+
+                {Chip ? (
+                  <Chip
+                    size='small'
+                    color={STATUS_TONE[call.status]}
+                    label={
+                      call.status === 'answered'
+                        ? elapsed(call, nowMs)
+                        : call.status
+                    }
+                  />
+                ) : null}
+
+                {IconButton ? (
+                  <IconButton
+                    icon='mdi:open-in-new'
+                    size='small'
+                    aria-label={`Details for ${call.callerName ?? call.from}`}
+                    onClick={() => openDetails(call)}
+                  />
+                ) : null}
+              </Stack>
+            </Paper>
+          ))
+        )}
+      </Stack>
+
+      {Divider ? <Divider /> : null}
+
+      <Stack
+        direction='row'
+        spacing={1}
+        alignItems='center'
+        flexWrap='wrap'
+        useFlexGap
+      >
+        {Chip ? (
+          <>
+            <Chip
+              size='small'
+              variant='outlined'
+              color={ringing > 0 ? 'warning' : 'default'}
+              label={`${ringing} ringing`}
+            />
+            <Chip
+              size='small'
+              variant='outlined'
+              label={`${calls.length} on the board`}
+            />
+            {/* Never passes a sample off as live. */}
+            {showingSample ? (
+              <Chip size='small' variant='soft' label='Sample data' />
+            ) : (
+              <Chip
+                size='small'
+                variant='soft'
+                color='success'
+                label='Live feed'
+              />
+            )}
+          </>
+        ) : null}
+        {Box ? <Box sx={{ flexGrow: 1 }} /> : null}
+      </Stack>
+    </Stack>
   );
 }
