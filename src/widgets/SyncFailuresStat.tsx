@@ -24,6 +24,16 @@ const FAILURE_RATE = (
 /** Retry attempts across the window — the shape the failures arrived in. */
 const FAILURE_TREND = [0, 1, 0, 2, 1, 0, 1, 2];
 
+/**
+ * Trend against the previous bucket, so this block carries the same delta pill
+ * every native stat block does. Guarded because the previous bucket can be zero
+ * and a failure count legitimately starts there — dividing by it would put
+ * `Infinity%` on the card.
+ */
+const PREVIOUS = FAILURE_TREND[FAILURE_TREND.length - 2];
+const LATEST = FAILURE_TREND[FAILURE_TREND.length - 1];
+const DELTA_PCT = PREVIOUS ? ((LATEST - PREVIOUS) / PREVIOUS) * 100 : undefined;
+
 export function SyncFailuresStat({
   context,
   ...marker
@@ -37,6 +47,7 @@ export function SyncFailuresStat({
       {...marker}
       value={SYNC_FAILURES_24H}
       caption={`${FAILURE_RATE}% of attempts`}
+      delta={DELTA_PCT === undefined ? undefined : { pct: DELTA_PCT }}
       spark={FAILURE_TREND}
       // Semantic, not decorative: the host resolves the colour, so this stays
       // right in both colour modes.
