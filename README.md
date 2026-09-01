@@ -62,8 +62,8 @@ a backend.
 each has a splat route in the host that renders federated pages, and each maps
 to one menu tree:
 
-| `parentPath` | Menu it appears in | Host sitemap section id |
-| ------------ | ------------------ | ----------------------- |
+| `parentPath`      | Menu it appears in          | Host sitemap section id |
+| ----------------- | --------------------------- | ----------------------- |
 | `/apps`           | Apps                        | `apps`                  |
 | `/manage`         | Manage                      | `manage`                |
 | `/manage/:domain` | Manage, **inside a domain** | `manage`                |
@@ -153,7 +153,7 @@ function DomainCrmSyncPage() {
 }
 ```
 
-`user.domain` is the domain the signed-in admin *belongs to*. It never changes
+`user.domain` is the domain the signed-in admin _belongs to_. It never changes
 while they drill around, so a page that fetches against it shows the same data
 under every domain — the bug this hook exists to prevent. `managing` is
 reactive: switching domains re-renders the page and re-runs the effect, with no
@@ -226,17 +226,17 @@ widgets go through the same registry.
 The nine here are chosen to cover the contract, not to fill a grid — read down
 the table and every axis of `WidgetRegistration` appears at least once.
 
-| Widget                   | Kind                              | Category   | What it is here to show                                                                                                                            | Component                            |
-| ------------------------ | --------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| **Recent activity**      | `panel`                           | `activity` | The baseline: `refreshPolicy: 'shared-range'`, `widget.pixel`, `actions`. Offered on two dashboards                                                | `widgets/RecentActivityWidget.tsx`   |
-| **Call volume**          | `panel`                           | `charts`   | The one `chrome: 'self'` — it owns its heading and padding so the plot can bleed to the card's edges. Full width, `height: 5`, `metric` provenance | `widgets/CallVolumeChart.tsx`        |
-| **CRM sync queue**       | `panel`                           | `tables`   | `refreshPolicy: 'own-cadence'` — its own timer, no `widget.range` — and the one place `actions.refresh()` earns a button. Built from `ui.Table`    | `widgets/SyncQueueTable.tsx`         |
-| **Live calls**           | `panel`                           | `stats`    | `refreshPolicy: 'realtime'` over the app-scoped event bus, plus `requiredPermissions` and a `condition`                                            | `widgets/LiveCallsWidget.tsx`        |
-| **Integration health**   | `panel` + `acceptsLeaves`         | `other`    | A **container the app ships itself**: the host draws its body and the two leaves below reorder inside it                                           | `widgets/IntegrationHealthPanel.tsx` |
-| **Contacts synced**      | `leaf` (`leafOf: 'demo-insight'`) | `stats`    | A leaf in the app's **own** container                                                                                                              | `widgets/SyncedContactsStat.tsx`     |
-| **Sync failures**        | `leaf` (`leafOf: 'demo-insight'`) | `stats`    | The second leaf — one proves they land, two prove they reorder                                                                                     | `widgets/SyncFailuresStat.tsx`       |
-| **Demo app links**       | `panel`                           | `other`    | **No** `refreshPolicy` at all, and a widget driving a host capability (it opens the side panel)                                                    | `widgets/PartnerLinksWidget.tsx`     |
-| **Recordings processed** | `leaf` (`leafOf: 'stat'`)         | `stats`    | A leaf in the **host's** existing stat card, alongside the native stat blocks                                                                      | `widgets/RecordedCallsStat.tsx`      |
+| Widget                   | Kind                              | Category   | What it is here to show                                                                                                                         | Component                            |
+| ------------------------ | --------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Recent activity**      | `panel`                           | `activity` | The baseline: `refreshPolicy: 'shared-range'`, `widget.pixel`, `actions`. Offered on two dashboards                                             | `widgets/RecentActivityWidget.tsx`   |
+| **Call volume**          | `panel`                           | `charts`   | Full width, `height: 5`, and `metric` provenance — which the host frame draws as a tooltip beside the title                                     | `widgets/CallVolumeChart.tsx`        |
+| **CRM sync queue**       | `panel`                           | `tables`   | `refreshPolicy: 'own-cadence'` — its own timer, no `widget.range` — and the one place `actions.refresh()` earns a button. Built from `ui.Table` | `widgets/SyncQueueTable.tsx`         |
+| **Live calls**           | `panel`                           | `stats`    | `refreshPolicy: 'realtime'` over the app-scoped event bus, plus `requiredPermissions` and a `condition`                                         | `widgets/LiveCallsWidget.tsx`        |
+| **Integration health**   | `panel` + `acceptsLeaves`         | `other`    | A **container the app ships itself**: the host draws its body and the two leaves below reorder inside it                                        | `widgets/IntegrationHealthPanel.tsx` |
+| **Contacts synced**      | `leaf` (`leafOf: 'demo-insight'`) | `stats`    | A leaf in the app's **own** container                                                                                                           | `widgets/SyncedContactsStat.tsx`     |
+| **Sync failures**        | `leaf` (`leafOf: 'demo-insight'`) | `stats`    | The second leaf — one proves they land, two prove they reorder                                                                                  | `widgets/SyncFailuresStat.tsx`       |
+| **Demo app links**       | `panel`                           | `other`    | **No** `refreshPolicy` at all, and a widget driving a host capability (it opens the side panel)                                                 | `widgets/PartnerLinksWidget.tsx`     |
+| **Recordings processed** | `leaf` (`leafOf: 'stat'`)         | `stats`    | A leaf in the **host's** existing stat card, alongside the native stat blocks                                                                   | `widgets/RecordedCallsStat.tsx`      |
 
 The two leaf rows are the interesting pair. _Recordings processed_ proves a
 remote app can contribute _into_ a host container and reorder within it;
@@ -285,13 +285,14 @@ wrong:
   `widgetZoneFor(surface)`, which is deliberately **not exported** — extracts as
   nothing and can never be attributed to your app. The zone for a dashboard is
   its surface plus `-widgets`.
-- **Do not draw a card, a heading or padding.** `chrome` defaults to `'host'` and
-  the frame draws all three, plus the overflow menu. Eight of the nine components
-  in `src/widgets/` contain no `<Paper>`, no heading and no `p:`. The ninth,
-  `CallVolumeChart.tsx`, sets `chrome: 'self'` because its plot has to reach the
-  card's edges — and it then has to match the host's `h6`/700 heading and its
-  padding by hand, which is the cost. Set it for that reason or not at all;
-  otherwise a widget gets two titles and a double inset.
+- **Do not draw a card, a heading or padding.** `chrome` defaults to `'host'`,
+  and the frame draws all of it: the card, the title, the `description` beneath
+  it as a subtitle, a window chip for a `shared-range` widget, a provenance
+  tooltip from `metric`, the inner padding and the overflow menu. Not one of the
+  nine components in `src/widgets/` contains a `<Paper>`, a heading or a `p:`.
+  `chrome: 'self'` turns all of that off in exchange for hand-matching a type
+  scale that is not yours to own; it exists for host panels that predate the
+  widget frame, and an app that reaches for it almost always wants the default.
 - **Registering makes a widget eligible, not placed.** A saved layout is
   authoritative, so both of these appear under **Customize** on the dashboard
   rather than on somebody's grid. That is the contract working, not a failure to
@@ -302,7 +303,19 @@ wrong:
   uses its box to pick a row count; the leaf never reads one.
 
 Your component receives `{ context, widget, actions }`. Every visible element
-comes from `context.ui` — a remote app has no MUI of its own. `widget.range` is
+comes from `context.ui` — a remote app has no MUI of its own. What the frame
+draws around you is worth knowing before you draw anything yourself:
+
+| You declare                     | The host draws                                              |
+| ------------------------------- | ----------------------------------------------------------- |
+| `title`                         | The card heading, and the frame's accessible name           |
+| `description`                   | The subtitle under it — the line every native panel carries |
+| `refreshPolicy: 'shared-range'` | A window chip beside the title (`24h`, `7d`)                |
+| `metric`                        | An info tooltip: formula, source, cadence, delay            |
+| `category`                      | The catalogue section, and the loading wireframe's shape    |
+| `icon`, `size`, `placement`     | The catalogue card, the grid span, where it lands           |
+
+`widget.range` is
 resolved timestamps and never a preset label; `widget.pixel` is the box the host
 derived from the grid arithmetic, which a chart needs because ECharts sizes to
 its container at init and does not observe resize. `actions` is

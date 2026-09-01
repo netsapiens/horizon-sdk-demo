@@ -1,24 +1,24 @@
 /**
- * Call volume — a `kind: 'panel'` widget in the **charts** category, and the
- * demo's one `chrome: 'self'` widget.
+ * Call volume — a `kind: 'panel'` widget in the **charts** category.
  *
- * Registered in `App.tsx` §4. Three things separate it from the Recent activity
- * panel next door, and each is deliberate:
+ * Registered in `App.tsx` §4. Two things separate it from the Recent activity
+ * panel next door:
  *
- * - **`chrome: 'self'`.** The frame draws no title row and no inner padding, and
- *   floats its controls over the content instead. That is the *exception*, not
- *   the pattern to copy: the guide's advice is the default `'host'`, because
- *   reproducing the host's padding and type scale by hand is how a card drifts
- *   from the ones beside it. A plot that has to bleed to the card's edges is the
- *   case where it earns its keep — the heading and the axis strip below are
- *   inset, the bars are not. Note what this file does NOT do: it draws no
- *   `Paper`. The frame is already one, and a second would double the border.
  * - **`category: 'charts'`.** The category picks the catalogue section AND the
  *   loading wireframe — a chart skeleton with axes and a legend, rather than the
  *   generic panel one. It is the cheapest correctness this contract offers.
  * - **`size: { default: 'full', height: 5 }`.** A full-width panel, five rows
  *   tall. `height` also reserves the slot before the code arrives, so the grid
  *   does not reflow when this lands.
+ *
+ * This file used to set `chrome: 'self'` and draw its own heading, on the
+ * argument that a plot wants the card's full width. It does not any more, and
+ * the reason is the point of the whole SDK: the host frame draws the title, a
+ * subtitle from the registration's `description`, the shared-range window chip
+ * and a provenance tooltip from `metric` — none of which a widget can reproduce
+ * without hand-matching a type scale that is not its to own. Opting out cost
+ * this card all four and bought a few pixels of width. If you think you need
+ * `chrome: 'self'`, look at what the frame draws first.
  *
  * The bars are read out of `widget.pixel`, which is the honest reason that field
  * exists: the host derives the box from its grid arithmetic and hands it over,
@@ -103,51 +103,33 @@ export function CallVolumeChart({
   }
 
   const peak = Math.max(1, ...buckets.map((b) => b.answered + b.missed));
-  // The plot gets whatever is left after the heading and axis strip. Floored so
-  // the bars stay visible on the first paint, before the box has been measured.
-  const plotHeight = Math.max(80, widget.pixel.height - 96);
+  // The plot gets whatever is left after the legend row. Floored so the bars
+  // stay visible on the first paint, before the box has been measured.
+  const plotHeight = Math.max(80, widget.pixel.height - 64);
 
   return (
-    // `chrome: 'self'`, so the padding below is this widget's own — the frame
-    // adds none. `pr` leaves room for the controls the frame floats top-right.
-    <Stack
-      {...marker}
-      direction='column'
-      spacing={1.5}
-      sx={{ height: '100%', pt: 3, pb: 2, px: { xs: 3, md: 5 } }}
-    >
-      <Stack
-        direction='row'
-        alignItems='center'
-        justifyContent='space-between'
-        spacing={1}
-        sx={{ pr: 6 }}
-      >
-        {/* The heading the frame would have drawn from `title`. Owning it is
-            the whole cost of `chrome: 'self'` — match the host's h6/700 or the
-            card reads as a different kind of card. */}
-        <Typography variant='h6' sx={{ fontWeight: 700 }}>
-          Call volume
-        </Typography>
-        {Chip ? (
-          <Stack direction='row' spacing={1} flexWrap='wrap' useFlexGap>
-            <Chip
-              size='small'
-              color='success'
-              variant='outlined'
-              label='Answered'
-            />
-            <Chip
-              size='small'
-              color='error'
-              variant='outlined'
-              label='Missed'
-            />
-          </Stack>
-        ) : null}
-      </Stack>
+    // Content only — no card, no heading, no padding. `chrome` is left at its
+    // default, so the frame drew the title, the subtitle, the window chip and
+    // the metric tooltip before this rendered.
+    <Stack {...marker} direction='column' spacing={1.5} sx={{ height: '100%' }}>
+      {Chip ? (
+        <Stack
+          direction='row'
+          spacing={1}
+          flexWrap='wrap'
+          useFlexGap
+          justifyContent='flex-end'
+        >
+          <Chip
+            size='small'
+            color='success'
+            variant='outlined'
+            label='Answered'
+          />
+          <Chip size='small' color='error' variant='outlined' label='Missed' />
+        </Stack>
+      ) : null}
 
-      {/* The plot, bled past the heading's inset to the card's edges. */}
       <Box
         sx={{
           flexGrow: 1,
@@ -155,8 +137,6 @@ export function CallVolumeChart({
           display: 'flex',
           alignItems: 'flex-end',
           gap: 1,
-          mx: { xs: -3, md: -5 },
-          px: { xs: 3, md: 5 },
         }}
       >
         {buckets.map((bucket) => {

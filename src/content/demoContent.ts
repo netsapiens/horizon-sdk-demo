@@ -299,8 +299,9 @@ sdk.registerWidget({
   refreshPolicy: 'shared-range', // → widget.range arrives as from/to timestamps
   requiredScopes: 'ADMINS',      // narrows only; intersected with the floor
   component: RecentActivityWidget,
-  // No 'chrome': it defaults to 'host', and the frame draws the card, the
-  // title, the padding and the menu. Your component draws none of them.
+  // No 'chrome': it defaults to 'host', so the frame draws the card, the title,
+  // the description above as a subtitle, the '7d' window chip, the padding and
+  // the menu. Your component draws none of them.
 });
 
 // A LEAF — a block INSIDE the host's stat container, not a card of its own.

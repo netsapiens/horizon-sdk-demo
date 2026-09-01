@@ -537,20 +537,19 @@ export default function App(horizonContext: HorizonContext) {
       // generic panel shape. The five categories are covered across this app's
       // widgets on purpose, so a partner can see all five skeletons.
       category: 'charts',
-      // The ONE `chrome: 'self'` in this app. The frame then draws no title row
-      // and no inner padding, and floats its controls over the content; the
-      // component owns both. Worth it here because the plot bleeds to the card's
-      // edges, and a mistake anywhere else: reproducing the host's padding and
-      // type scale by hand is how a card drifts from the ones beside it.
-      chrome: 'self',
+      // No `chrome`, like every other widget here. The frame draws the title,
+      // the `description` below it as a subtitle, the shared-range window chip,
+      // and the `metric` provenance tooltip. `chrome: 'self'` turns all four
+      // off in exchange for owning the padding and type scale yourself — it
+      // exists for host panels that predate the frame, not for apps.
       // `height` is in grid row units. It also sizes the reserved slot, so the
       // grid does not reflow when this widget's code arrives.
       size: { default: 'full', resizable: true, height: 5 },
       placement: { after: 'average-calls' },
       refreshPolicy: 'shared-range',
-      // Provenance for the metric tooltip. The host does not draw one yet, so
-      // this is declared rather than demonstrated — it is in the contract, it
-      // costs nothing, and a number nobody can trace is a number nobody trusts.
+      // Provenance, drawn by the frame as an info tooltip beside the title. A
+      // number nobody can trace is a number nobody trusts, and this is the whole
+      // cost of saying where one came from.
       metric: {
         formula: 'count(call_events) grouped by bucket, split by disposition',
         source: 'Demo fixture — mocks/widgetActivity.ts',

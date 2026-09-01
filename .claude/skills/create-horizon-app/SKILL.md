@@ -993,9 +993,14 @@ requiredPermissions: ['call-events:listen'],
 condition: (context) => Boolean(context.eventBus),
 ```
 
-**Do not draw a card, a heading or padding.** The frame draws all three. If your
-widget genuinely owns its own chrome, set `chrome: 'self'` — otherwise it gets
-two titles and a double inset.
+**Do not draw a card, a heading or padding.** The frame draws all of it, from
+what you already declare — `title` as the heading, `description` as the subtitle
+beneath it, a window chip for a `shared-range` widget, and a provenance tooltip
+from `metric`. Write content and it matches every native card.
+
+`chrome: 'self'` turns all of that off and hands you the padding and type scale
+to match by hand. It exists for host panels that predate the widget frame; an app
+that sets it gets two titles and a double inset, or loses the header entirely.
 
 **Do not emit `dynamic-widget:register` on the bus.** `registerWidget` is the
 only supported path; the bus is an SDK implementation detail and the event names
