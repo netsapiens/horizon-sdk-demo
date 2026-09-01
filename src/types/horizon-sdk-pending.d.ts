@@ -67,7 +67,22 @@ declare module '@netsapiens/horizon-sdk' {
     tone?: ChartTone;
   }
 
+  interface ActivityRow {
+    id: string;
+    primary: string;
+    secondary?: string;
+    meta?: string;
+    tone?: ChartTone;
+    onClick?: () => void;
+  }
+
   interface HorizonUI {
+    ActivityList?: ComponentType<{
+      rows: ActivityRow[];
+      width?: number;
+      emptyMessage?: string;
+      [key: string]: unknown;
+    }>;
     Chart?: ComponentType<{
       kind?: 'line' | 'area' | 'bar';
       data: Array<Record<string, unknown>>;

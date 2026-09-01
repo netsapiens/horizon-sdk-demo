@@ -35,12 +35,21 @@ import type { ActivityKind } from '../mocks/widgetActivity';
 import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import { buildActivityFeed } from '../mocks/widgetActivity';
 
-/** Row dot colour + label per kind. Palette paths, so both follow the toggle. */
-const KIND_META: Record<ActivityKind, { label: string; color: string }> = {
-  answered: { label: 'Answered', color: 'success.main' },
-  missed: { label: 'Missed', color: 'error.main' },
-  voicemail: { label: 'Voicemail', color: 'warning.main' },
-  transferred: { label: 'Transferred', color: 'info.main' },
+/**
+ * Row label and dot per kind.
+ *
+ * `tone` is semantic — the host resolves it to a colour, so this file names
+ * meaning and never picks a palette path. It used to carry `success.main` and
+ * friends and draw its own dot; `ui.ActivityList` draws the row now.
+ */
+const KIND_META: Record<
+  ActivityKind,
+  { label: string; tone: 'success' | 'error' | 'warning' | 'info' }
+> = {
+  answered: { label: 'Answered', tone: 'success' },
+  missed: { label: 'Missed', tone: 'error' },
+  voicemail: { label: 'Voicemail', tone: 'warning' },
+  transferred: { label: 'Transferred', tone: 'info' },
 };
 
 /** Tab order. `all` first, then the kinds, matching the host's health card. */
@@ -77,7 +86,8 @@ export function RecentActivityWidget({
   actions,
   ...marker
 }: WidgetComponentProps & ZoneMarkerProps) {
-  const { Stack, Typography, Box, Button, Divider, Tabs } = context.ui ?? {};
+  const { Stack, Typography, Button, Divider, Tabs, ActivityList } =
+    context.ui ?? {};
   const [tab, setTab] = useState<string>('all');
 
   // Keyed on the two timestamps rather than on `widget.range` itself: the host
@@ -125,9 +135,6 @@ export function RecentActivityWidget({
   }
 
   const visible = shown.slice(0, rowsThatFit(widget.pixel.height));
-  // Wide enough for a third column. Narrow cards drop the party rather than
-  // truncating three things at once.
-  const wide = widget.pixel.width >= 420;
 
   return (
     // The marker rides this root — a real, visible box the Playwright suite can
@@ -154,73 +161,41 @@ export function RecentActivityWidget({
         />
       ) : null}
 
-      {shown.length === 0 ? (
-        <Stack
-          direction='column'
-          spacing={1}
-          alignItems='flex-start'
-          sx={{ flexGrow: 1 }}
-        >
-          <Typography variant='body2' color='text.secondary'>
-            Nothing {tab === 'all' ? '' : `${tab} `}in this window. Widen the
-            dashboard&rsquo;s range, or take the card off the grid.
-          </Typography>
-          {/* The guide's stated use for `actions`: an empty state that offers to
-              remove the widget, rather than sitting there empty. */}
-          {Button ? (
-            <Button
-              size='small'
-              variant='text'
-              color='error'
-              onClick={() => actions.remove()}
-            >
-              Remove widget
-            </Button>
-          ) : null}
-        </Stack>
-      ) : (
-        <Stack
-          direction='column'
-          spacing={0.75}
-          sx={{ flexGrow: 1, minHeight: 0 }}
-        >
-          {visible.map((event) => (
-            <Stack
-              key={event.id}
-              direction='row'
-              spacing={1}
-              alignItems='center'
-            >
-              {Box ? (
-                <Box
-                  sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    flexShrink: 0,
-                    bgcolor: KIND_META[event.kind].color,
-                  }}
-                />
-              ) : null}
-              <Typography
-                variant='body2'
-                noWrap
-                sx={{ flexGrow: 1, minWidth: 0 }}
-              >
-                {KIND_META[event.kind].label} &middot; {event.agent}
-              </Typography>
-              {wide ? (
-                <Typography variant='caption' color='text.secondary' noWrap>
-                  {event.party}
-                </Typography>
-              ) : null}
-              <Typography variant='caption' color='text.secondary' noWrap>
-                {formatClock(event.at)}
-              </Typography>
-            </Stack>
-          ))}
-        </Stack>
-      )}
+      {/* The rows are the host's now. This file decides WHICH events show and
+          what each one means; the dot, the rhythm, the truncation and the empty
+          state are all drawn by `ui.ActivityList` — which is the same row the
+          host's own notice and health-alert lists use. `width` is the measured
+          card, so the host drops the middle column on a narrow card rather than
+          truncating three things at once. */}
+      <Stack direction='column' sx={{ flexGrow: 1, minHeight: 0 }}>
+        {ActivityList ? (
+          <ActivityList
+            width={widget.pixel.width}
+            emptyMessage={`Nothing ${tab === 'all' ? '' : `${tab} `}in this window.`}
+            rows={visible.map((event) => ({
+              id: event.id,
+              tone: KIND_META[event.kind].tone,
+              primary: `${KIND_META[event.kind].label} · ${event.agent}`,
+              secondary: event.party,
+              meta: formatClock(event.at),
+            }))}
+          />
+        ) : null}
+
+        {/* The one thing the list cannot offer: an empty state that takes the
+            card away. `actions` is the widget's, not the row component's. */}
+        {shown.length === 0 && Button ? (
+          <Button
+            size='small'
+            variant='text'
+            color='error'
+            onClick={() => actions.remove()}
+            sx={{ alignSelf: 'flex-start' }}
+          >
+            Remove widget
+          </Button>
+        ) : null}
+      </Stack>
 
       {Divider ? <Divider /> : null}
 
