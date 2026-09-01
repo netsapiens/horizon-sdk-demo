@@ -16,7 +16,6 @@
  * through, so the two cards on this page always agree about how many rows are
  * failing.
  */
-import type { DashboardTemplateWidgetProps } from '@netsapiens/horizon-sdk';
 import { useMemo } from 'react';
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
@@ -34,7 +33,12 @@ const SLICE_TONE: Record<SyncState, 'success' | 'info' | 'neutral' | 'error'> =
 
 const ORDER: SyncState[] = ['Synced', 'Syncing', 'Queued', 'Failed'];
 
-export function SyncOutcomesDonut(_props: DashboardTemplateWidgetProps) {
+/**
+ * Takes no props. The template hands every card a `widget` box, and this one has
+ * nothing to do with it: a ring sizes to its container and reads no timestamps,
+ * so accepting the argument only to ignore it would suggest otherwise.
+ */
+export function SyncOutcomesDonut() {
   const { ui } = useHorizonContext();
   const { Donut, Stack, Typography } = ui ?? {};
 
