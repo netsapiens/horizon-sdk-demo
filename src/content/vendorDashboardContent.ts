@@ -77,16 +77,9 @@ export const VENDOR_DASHBOARD_CARDS: VendorDashboardCard[] = [
     },
   },
   {
-    id: 'vendor-sync-queue',
-    title: 'CRM sync queue',
-    description: 'Contacts waiting to reconcile with the vendor CRM.',
-    size: 'half',
-    height: 4,
-    // Its own timer, so the page's range control correctly leaves it alone and
-    // the frame draws it no window chip.
-    refreshPolicy: 'own-cadence',
-  },
-  {
+    // Paired with the donut deliberately. A row is as tall as its tallest card,
+    // so two cards of the same declared height sit level; putting the datagrid
+    // here instead dragged the ring to 1016px for a shape that needs 400.
     id: 'vendor-recent-activity',
     title: 'Recent activity',
     description: 'Recent call activity for the selected range.',
@@ -95,11 +88,23 @@ export const VENDOR_DASHBOARD_CARDS: VendorDashboardCard[] = [
     refreshPolicy: 'shared-range',
   },
   {
+    // Full width and alone on its row: a table with ten rows, a toolbar and a
+    // pagination footer wants the space, and nothing should have to match it.
+    id: 'vendor-sync-queue',
+    title: 'CRM sync queue',
+    description: 'Contacts waiting to reconcile with the vendor CRM.',
+    size: 'full',
+    height: 6,
+    // Its own timer, so the page's range control correctly leaves it alone and
+    // the frame draws it no window chip.
+    refreshPolicy: 'own-cadence',
+  },
+  {
     id: 'vendor-live-calls',
     title: 'Live call console',
     description: 'Calls in progress, pushed as they ring.',
-    size: 'half',
-    height: 4,
+    size: 'full',
+    height: 5,
     refreshPolicy: 'realtime',
   },
 ];
