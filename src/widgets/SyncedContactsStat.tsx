@@ -1,67 +1,50 @@
 /**
  * Contacts synced — a `kind: 'leaf'` widget with `leafOf: 'demo-insight'`.
  *
- * Registered in `App.tsx` §4. The difference from `RecordedCallsStat.tsx` is
- * only where it lands: that leaf declares `leafOf: 'stat'` and drops into the
- * **host's** stat card, this one declares the demo's own category and drops into
- * `IntegrationHealthPanel.tsx`, the container this app ships. The component is
- * written identically either way — a leaf supplies a value, and its container
- * owns the frame, the heading and the width.
+ * Registered in `App.tsx` §4. The body is `ui.StatBlock` — the same block the
+ * native stat leaves draw — so this cell and *Active Calls* two panels over are
+ * the same component with different numbers. It used to hand-build a value, a
+ * caption and a row of `Box` bars, which is how an app's leaf ended up sitting
+ * beside a native one looking like a different kind of thing.
  *
- * The mini bar row under the value is here because the native stat blocks carry
- * a sparkline: a leaf sitting among them should read like one of them, and that
- * is a cheaper way to say so than a chart library in a card this size.
+ * The leaf contract is unchanged and still worth knowing: no `size` (its
+ * container's grid owns the width) and `widget.pixel` is `{ width: 0, height: 0 }`,
+ * so nothing here reads a box. The only difference from `RecordedCallsStat` is
+ * where it lands — that one declares `leafOf: 'stat'` and drops into the host's
+ * own stat card; this one names the category the demo's container accepts.
  */
 import type { WidgetComponentProps } from '@netsapiens/horizon-sdk';
 
 import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import { CONTACTS_SYNCED_24H, SYNC_TREND_24H } from '../mocks/syncQueue';
 
-const PEAK = Math.max(...SYNC_TREND_24H);
+// Trend against the previous bucket, derived once — the fixture is static, so
+// recomputing per render could not produce a different answer.
+const PREVIOUS = SYNC_TREND_24H[SYNC_TREND_24H.length - 2];
+const LATEST = SYNC_TREND_24H[SYNC_TREND_24H.length - 1];
+const DELTA_PCT = ((LATEST - PREVIOUS) / PREVIOUS) * 100;
 
 export function SyncedContactsStat({
   context,
   ...marker
 }: WidgetComponentProps & ZoneMarkerProps) {
-  const { Stack, Typography, Box } = context.ui ?? {};
+  const { StatBlock } = context.ui ?? {};
 
   // Carve-out: with no kit there is nothing to render but the number.
-  if (!Stack || !Typography) {
+  if (!StatBlock) {
     return <div {...marker}>{CONTACTS_SYNCED_24H}</div>;
   }
 
   return (
     // No heading — the container's leaf frame drew "Contacts synced" from the
-    // registration's `title`. A leaf has no box of its own either: `widget.pixel`
-    // is `{ width: 0, height: 0 }`, so nothing here reads it.
-    <Stack {...marker} direction='column' spacing={0.75}>
-      <Typography variant='h4' fontWeight={600}>
-        {CONTACTS_SYNCED_24H.toLocaleString()}
-      </Typography>
-      <Typography variant='body2' color='text.secondary'>
-        contacts reconciled in the last 24 hours
-      </Typography>
-      {Box ? (
-        <Stack
-          direction='row'
-          spacing={0.25}
-          alignItems='flex-end'
-          sx={{ height: 24 }}
-        >
-          {SYNC_TREND_24H.map((value, index) => (
-            <Box
-              key={index}
-              sx={{
-                flex: 1,
-                height: `${(value / PEAK) * 100}%`,
-                borderRadius: 0.5,
-                bgcolor: 'primary.main',
-                opacity: 0.35 + (0.65 * value) / PEAK,
-              }}
-            />
-          ))}
-        </Stack>
-      ) : null}
-    </Stack>
+    // registration's `title`.
+    <StatBlock
+      {...marker}
+      value={CONTACTS_SYNCED_24H.toLocaleString()}
+      caption='contacts reconciled'
+      delta={{ pct: DELTA_PCT }}
+      spark={SYNC_TREND_24H}
+      tone='primary'
+    />
   );
 }

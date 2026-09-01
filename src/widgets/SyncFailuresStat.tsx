@@ -1,15 +1,15 @@
 /**
  * Sync failures — the second `leafOf: 'demo-insight'` leaf.
  *
- * Registered in `App.tsx` §4. A container with one leaf demonstrates that
- * leaves land in it; a container with two demonstrates the rest of the contract
- * — they reorder *within* this card and nowhere else, and removing one leaves
- * the container on the grid rather than deleting it.
+ * Registered in `App.tsx` §4. A container with one leaf shows that leaves land
+ * in it; a container with two shows the rest of the contract — they reorder
+ * within that card and nowhere else, and removing one leaves the container on
+ * the grid rather than deleting it.
  *
- * It reads the same `mocks/syncQueue.ts` fixture the Sync queue table pages
- * through, so the failing rows in that panel and the count here agree. Two
- * surfaces disagreeing about one number is the thing a dashboard is least
- * forgiven for.
+ * Drawn with `ui.StatBlock` like its neighbour, and reading the same
+ * `mocks/syncQueue.ts` fixture the sync queue pages through, so the failing rows
+ * in that panel and the count here always agree. Two surfaces disagreeing about
+ * one number is the thing a dashboard is least forgiven for.
  */
 import type { WidgetComponentProps } from '@netsapiens/horizon-sdk';
 
@@ -21,39 +21,26 @@ const FAILURE_RATE = (
   100
 ).toFixed(2);
 
+/** Retry attempts across the window — the shape the failures arrived in. */
+const FAILURE_TREND = [0, 1, 0, 2, 1, 0, 1, 2];
+
 export function SyncFailuresStat({
   context,
   ...marker
 }: WidgetComponentProps & ZoneMarkerProps) {
-  const { Stack, Typography, Chip } = context.ui ?? {};
+  const { StatBlock } = context.ui ?? {};
 
-  // Carve-out: with no kit there is nothing to render but the number.
-  if (!Stack || !Typography) {
-    return <div {...marker}>{SYNC_FAILURES_24H}</div>;
-  }
+  if (!StatBlock) return <div {...marker}>{SYNC_FAILURES_24H}</div>;
 
   return (
-    <Stack {...marker} direction='column' spacing={0.75}>
-      <Typography
-        variant='h4'
-        fontWeight={600}
-        color={SYNC_FAILURES_24H > 0 ? 'error.main' : 'text.primary'}
-      >
-        {SYNC_FAILURES_24H}
-      </Typography>
-      <Typography variant='body2' color='text.secondary'>
-        rows that exhausted their retries
-      </Typography>
-      {Chip ? (
-        <Stack direction='row' spacing={1} flexWrap='wrap' useFlexGap>
-          <Chip
-            size='small'
-            variant='outlined'
-            color={SYNC_FAILURES_24H > 0 ? 'warning' : 'success'}
-            label={`${FAILURE_RATE}% failure rate`}
-          />
-        </Stack>
-      ) : null}
-    </Stack>
+    <StatBlock
+      {...marker}
+      value={SYNC_FAILURES_24H}
+      caption={`${FAILURE_RATE}% of attempts`}
+      spark={FAILURE_TREND}
+      // Semantic, not decorative: the host resolves the colour, so this stays
+      // right in both colour modes.
+      tone={SYNC_FAILURES_24H > 0 ? 'error' : 'success'}
+    />
   );
 }

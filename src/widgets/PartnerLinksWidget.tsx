@@ -45,6 +45,7 @@ export function PartnerLinksWidget({
   ...marker
 }: WidgetComponentProps & ZoneMarkerProps) {
   const { Stack, Typography, Button, Divider, Code } = context.ui ?? {};
+  const navigate = context.navigate;
 
   // Pass `context.eventBus`: a widget renders outside HorizonContextProvider,
   // exactly as a zone extension does, so the hook has no context to read.
@@ -64,22 +65,47 @@ export function PartnerLinksWidget({
         spacing={0.5}
         sx={{ flexGrow: 1, minHeight: 0 }}
       >
-        {PAGES.map((page) => (
-          <Stack
-            key={page.path}
-            direction='row'
-            spacing={1}
-            alignItems='baseline'
-            justifyContent='space-between'
-          >
-            <Typography variant='body2' noWrap sx={{ minWidth: 0 }}>
-              {page.label}
-            </Typography>
-            <Typography variant='caption' color='text.secondary' noWrap>
-              {page.menu} → {page.path}
-            </Typography>
-          </Stack>
-        ))}
+        {PAGES.map((page) =>
+          navigate && Button ? (
+            // A real link. `variant='text'` with the label left-aligned keeps
+            // the row reading as a list rather than a stack of buttons, while
+            // the kit supplies the focus ring and the hover state.
+            <Button
+              key={page.path}
+              size='small'
+              variant='text'
+              onClick={() => navigate(page.path)}
+              sx={{
+                justifyContent: 'space-between',
+                px: 0,
+                textTransform: 'none',
+              }}
+            >
+              <Typography variant='body2' noWrap sx={{ minWidth: 0 }}>
+                {page.label}
+              </Typography>
+              <Typography variant='caption' color='text.secondary' noWrap>
+                {page.menu}
+              </Typography>
+            </Button>
+          ) : (
+            // No navigate on this host: show the path rather than a dead control.
+            <Stack
+              key={page.path}
+              direction='row'
+              spacing={1}
+              alignItems='baseline'
+              justifyContent='space-between'
+            >
+              <Typography variant='body2' noWrap sx={{ minWidth: 0 }}>
+                {page.label}
+              </Typography>
+              <Typography variant='caption' color='text.secondary' noWrap>
+                {page.menu} → {page.path}
+              </Typography>
+            </Stack>
+          ),
+        )}
       </Stack>
 
       {Divider ? <Divider /> : null}
