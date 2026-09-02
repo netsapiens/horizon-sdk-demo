@@ -20,7 +20,13 @@ export default function ListSection() {
         mode.
       </Typography>
 
-      <List component='ol'>
+      {/* The kit's List clears the browser's markers, so an ordered list needs
+          its numbering asked for explicitly — otherwise `component='ol'` is
+          semantics with nothing on screen to match. */}
+      <List
+        component='ol'
+        sx={{ listStyle: 'decimal', pl: 3, '& > li': { display: 'list-item' } }}
+      >
         <ListItem component='li'>
           <ListItemText
             primary='Request a token'
@@ -53,7 +59,9 @@ export default function ListSection() {
       <SectionCode>
         {`const { List, ListItem, ListItemText, Code } = horizonContext.ui;
 
-<List component="ol">
+// component='ol' is the semantics; the sx is what draws the numbers.
+<List component="ol" sx={{ listStyle: 'decimal', pl: 3,
+                           '& > li': { display: 'list-item' } }}>
   <ListItem component="li">
     <ListItemText primary="Request a token" secondary="auth.requestRemoteAuth()" />
   </ListItem>
