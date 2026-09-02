@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 const OPTIONS = [
   { value: 'acme', label: 'Acme Corporation' },
@@ -13,8 +13,7 @@ const OPTIONS = [
 
 export default function SearchFieldSection() {
   const { ui } = useHorizonContext();
-  const { SearchField, Autocomplete, Typography, Stack, Paper, Divider } =
-    ui || {};
+  const { SearchField, Autocomplete, Typography, Stack, Paper } = ui || {};
   const [search, setSearch] = useState('');
   const [choice, setChoice] = useState<string | number | null>('acme');
 
@@ -52,8 +51,7 @@ export default function SearchFieldSection() {
         </Typography>
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { SearchField, Autocomplete } = horizonContext.ui;
 
 // Debounced by the host, so onChange fires on settled values — filter or
@@ -67,7 +65,7 @@ export default function SearchFieldSection() {
 
 // Or your own data:
 <Autocomplete source={{ options }} value={v} onChange={setV} />`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

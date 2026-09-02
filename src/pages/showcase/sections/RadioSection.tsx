@@ -2,11 +2,11 @@
 import { useState } from 'react';
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function RadioSection() {
   const { ui } = useHorizonContext();
-  const { Radio, Typography, Stack, Paper, Divider } = ui || {};
+  const { Radio, Typography, Stack, Paper } = ui || {};
   const [radioValue, setRadioValue] = useState('option1');
   if (!Paper || !Typography || !Stack || !Radio) return null;
 
@@ -32,8 +32,7 @@ export default function RadioSection() {
         />
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { Radio } = horizonContext.ui;
 const [radioValue, setRadioValue] = useState('option1');
 
@@ -49,7 +48,7 @@ const [radioValue, setRadioValue] = useState('option1');
     onChange={() => setRadioValue('option2')}
   />
 </Stack>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

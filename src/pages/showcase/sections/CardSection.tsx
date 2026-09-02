@@ -1,7 +1,7 @@
 /** Showcase section: Card, CardContent, Divider and Icon. */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 const CARDS = [
   { icon: 'mdi:rocket-launch', title: 'Static card', note: 'Just content' },
@@ -14,8 +14,7 @@ const CARDS = [
 
 export default function CardSection() {
   const { ui } = useHorizonContext();
-  const { Card, CardContent, Icon, Typography, Stack, Paper, Divider, Box } =
-    ui || {};
+  const { Card, CardContent, Icon, Typography, Stack, Paper, Box } = ui || {};
   if (!Paper || !Typography || !Stack || !Card || !CardContent || !Box)
     return null;
 
@@ -58,8 +57,7 @@ export default function CardSection() {
         ))}
       </Box>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { Card, CardContent, Icon } = horizonContext.ui;
 
 // Passing onClick makes the host render a CardActionArea internally, so the
@@ -70,7 +68,7 @@ export default function CardSection() {
     <Typography variant="subtitle2">Clickable card</Typography>
   </CardContent>
 </Card>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

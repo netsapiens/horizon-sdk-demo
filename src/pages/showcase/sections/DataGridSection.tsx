@@ -1,8 +1,8 @@
 /** Showcase section: DatagridTemplate (sortable/filterable data table). */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
 import { DATAGRID_SAMPLE_USERS } from '../../../mocks/datagridSample';
+import { SectionCode } from '../SectionCode';
 
 // Hoisted to module scope on purpose. The grid caches its internal column set
 // against the identity of `columns`/`actions`/`toolbar`, so a fresh literal per
@@ -47,7 +47,7 @@ const getRowId = (row: { id: string | number }) => row.id;
 
 export default function DataGridSection() {
   const { ui } = useHorizonContext();
-  const { Box, Typography, Paper, Divider } = ui || {};
+  const { Box, Typography, Paper } = ui || {};
   const { DatagridTemplate } = ui?.templates || {};
   if (!Paper || !Typography || !Box || !DatagridTemplate) return null;
 
@@ -73,8 +73,7 @@ export default function DataGridSection() {
         />
       </Box>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { DatagridTemplate } = horizonContext.ui.templates;
 
 // Define these OUTSIDE the render. The grid caches its column set against the
@@ -120,7 +119,7 @@ function UsersPage() {
     />
   );
 }`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

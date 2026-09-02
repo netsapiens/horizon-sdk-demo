@@ -1,11 +1,11 @@
 /** Showcase section: Alert severities. */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function AlertSection() {
   const { ui } = useHorizonContext();
-  const { Alert, Typography, Stack, Paper, Divider } = ui || {};
+  const { Alert, Typography, Stack, Paper } = ui || {};
   if (!Paper || !Typography || !Stack || !Alert) return null;
 
   return (
@@ -28,8 +28,7 @@ export default function AlertSection() {
         <Alert severity='error'>This is an error alert — check it out!</Alert>
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { Alert } = horizonContext.ui;
 
 <Stack spacing={2}>
@@ -38,7 +37,7 @@ export default function AlertSection() {
   <Alert severity="warning">This is a warning alert — check it out!</Alert>
   <Alert severity="error">This is an error alert — check it out!</Alert>
 </Stack>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

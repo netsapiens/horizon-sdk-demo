@@ -2,11 +2,11 @@
 import { useState } from 'react';
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function CheckboxSection() {
   const { ui } = useHorizonContext();
-  const { Checkbox, Typography, Stack, Paper, Divider } = ui || {};
+  const { Checkbox, Typography, Stack, Paper } = ui || {};
   const [checked, setChecked] = useState(true);
   if (!Paper || !Typography || !Stack || !Checkbox) return null;
 
@@ -29,8 +29,7 @@ export default function CheckboxSection() {
         <Checkbox label='Disabled' disabled />
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { Checkbox } = horizonContext.ui;
 const [checked, setChecked] = useState(true);
 
@@ -43,7 +42,7 @@ const [checked, setChecked] = useState(true);
   <Checkbox label="Unchecked" checked={false} onChange={() => {}} />
   <Checkbox label="Disabled" disabled />
 </Stack>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

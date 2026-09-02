@@ -1,11 +1,11 @@
 /** Showcase section: Tooltip. */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function TooltipSection() {
   const { ui } = useHorizonContext();
-  const { Tooltip, IconButton, Typography, Stack, Paper, Divider } = ui || {};
+  const { Tooltip, IconButton, Typography, Stack, Paper } = ui || {};
   if (!Paper || !Typography || !Stack || !Tooltip || !IconButton) return null;
 
   return (
@@ -26,8 +26,7 @@ export default function TooltipSection() {
         </Tooltip>
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { Tooltip, IconButton } = horizonContext.ui;
 
 <Stack direction="row" spacing={2}>
@@ -38,7 +37,7 @@ export default function TooltipSection() {
     <IconButton icon="mdi:delete" color="error" aria-label="Delete" />
   </Tooltip>
 </Stack>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

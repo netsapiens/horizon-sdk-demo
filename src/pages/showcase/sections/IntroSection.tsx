@@ -9,6 +9,7 @@
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
 import { CodeBlock } from '../../../components/CodeBlock';
+import { useShowCode } from '../ShowCode';
 
 const POINTS: Array<{ icon: string; title: string; body: string }> = [
   {
@@ -36,6 +37,7 @@ const POINTS: Array<{ icon: string; title: string; body: string }> = [
 export default function IntroSection() {
   const { ui } = useHorizonContext();
   const { Typography, Paper, Box, Stack, Divider, Icon, Chip } = ui || {};
+  const showCode = useShowCode();
   if (!Paper || !Typography || !Box || !Stack) return null;
 
   return (
@@ -80,18 +82,19 @@ export default function IntroSection() {
         ))}
       </Box>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-
-      <Typography variant='subtitle1' gutterBottom>
-        The whole API
-      </Typography>
-      <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
-        One hook, one destructure, one guard. The guard matters: your app may be
-        mounted by a host that predates a component, so treat every one as
-        optional and render a fallback rather than crashing the page.
-      </Typography>
-      <CodeBlock>
-        {`import { useHorizonContext } from '@netsapiens/horizon-sdk';
+      {showCode ? (
+        <>
+          {Divider && <Divider sx={{ my: 3 }} />}
+          <Typography variant='subtitle1' gutterBottom>
+            The whole API
+          </Typography>
+          <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
+            One hook, one destructure, one guard. The guard matters: your app
+            may be mounted by a host that predates a component, so treat every
+            one as optional and render a fallback rather than crashing the page.
+          </Typography>
+          <CodeBlock>
+            {`import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
 function MyPanel() {
   const { ui, theme, t } = useHorizonContext();
@@ -109,7 +112,9 @@ function MyPanel() {
     </Paper>
   );
 }`}
-      </CodeBlock>
+          </CodeBlock>
+        </>
+      ) : null}
 
       <Typography
         variant='caption'

@@ -1,11 +1,11 @@
 /** Showcase section: IconButton. */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function IconButtonSection() {
   const { ui } = useHorizonContext();
-  const { IconButton, Typography, Stack, Paper, Divider } = ui || {};
+  const { IconButton, Typography, Stack, Paper } = ui || {};
   if (!Paper || !Typography || !Stack || !IconButton) return null;
 
   return (
@@ -23,8 +23,7 @@ export default function IconButtonSection() {
         <IconButton icon='mdi:settings' size='small' aria-label='Settings' />
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { IconButton } = horizonContext.ui;
 
 <Stack direction="row" spacing={1}>
@@ -32,7 +31,7 @@ export default function IconButtonSection() {
   <IconButton icon="mdi:delete" color="error" aria-label="Delete" />
   <IconButton icon="mdi:settings" size="small" aria-label="Settings" />
 </Stack>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

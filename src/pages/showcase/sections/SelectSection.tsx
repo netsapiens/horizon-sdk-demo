@@ -3,11 +3,11 @@ import type { ChangeEvent } from 'react';
 import { useState } from 'react';
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function SelectSection() {
   const { ui } = useHorizonContext();
-  const { Select, Typography, Stack, Paper, Divider } = ui || {};
+  const { Select, Typography, Stack, Paper } = ui || {};
   const [selectValue, setSelectValue] = useState('option1');
   if (!Paper || !Typography || !Stack || !Select) return null;
 
@@ -33,8 +33,7 @@ export default function SelectSection() {
         ]}
       />
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { Select } = horizonContext.ui;
 const [selectValue, setSelectValue] = useState('option1');
 
@@ -48,7 +47,7 @@ const [selectValue, setSelectValue] = useState('option1');
     { value: 'option3', label: 'Option 3' }
   ]}
 />`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

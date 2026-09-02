@@ -1,7 +1,7 @@
 /** Showcase section: the page- and panel-level templates. */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 const TEMPLATES: Array<{ name: string; what: string; where: string }> = [
   {
@@ -43,7 +43,7 @@ const TEMPLATES: Array<{ name: string; what: string; where: string }> = [
 
 export default function TemplatesSection() {
   const { ui } = useHorizonContext();
-  const { Typography, Stack, Paper, Divider, Box, Chip } = ui || {};
+  const { Typography, Stack, Paper, Box, Chip } = ui || {};
   if (!Paper || !Typography || !Stack || !Box) return null;
 
   return (
@@ -89,8 +89,7 @@ export default function TemplatesSection() {
         ))}
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { PageTemplate, DashboardTemplate } = horizonContext.ui.templates;
 
 // A normal page
@@ -107,7 +106,7 @@ export default function TemplatesSection() {
       refreshPolicy: 'shared-range', component: VolumeChart },
   ]}
 />`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

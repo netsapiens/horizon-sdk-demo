@@ -3,12 +3,11 @@ import type { SyntheticEvent } from 'react';
 import { useState } from 'react';
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function ToggleButtonGroupSection() {
   const { ui } = useHorizonContext();
-  const { ToggleButtonGroup, Box, Typography, Stack, Paper, Divider } =
-    ui || {};
+  const { ToggleButtonGroup, Box, Typography, Stack, Paper } = ui || {};
   const [toggleValue, setToggleValue] = useState('left');
   const [toggleMultiple, setToggleMultiple] = useState(['bold']);
   if (!Paper || !Typography || !Stack || !ToggleButtonGroup || !Box)
@@ -57,8 +56,7 @@ export default function ToggleButtonGroupSection() {
         </Box>
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { ToggleButtonGroup } = horizonContext.ui;
 const [toggleValue, setToggleValue] = useState('left');
 
@@ -72,7 +70,7 @@ const [toggleValue, setToggleValue] = useState('left');
     { value: 'right', label: 'Right' }
   ]}
 />`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

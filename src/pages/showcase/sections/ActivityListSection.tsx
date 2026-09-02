@@ -1,7 +1,7 @@
 /** Showcase section: ActivityList — the host's feed row. */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 const ROWS = [
   {
@@ -36,7 +36,7 @@ const ROWS = [
 
 export default function ActivityListSection() {
   const { ui } = useHorizonContext();
-  const { ActivityList, Typography, Stack, Paper, Divider } = ui || {};
+  const { ActivityList, Typography, Stack, Paper } = ui || {};
   if (!Paper || !Typography || !Stack || !ActivityList) return null;
 
   return (
@@ -51,8 +51,7 @@ export default function ActivityListSection() {
 
       <ActivityList rows={ROWS} width={640} emptyMessage='Nothing yet.' />
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { ActivityList } = horizonContext.ui;
 
 <ActivityList
@@ -67,7 +66,7 @@ export default function ActivityListSection() {
     onClick: () => open(e),    // optional; keyboard-operable when set
   }))}
 />`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

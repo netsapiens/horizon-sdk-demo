@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 const PANEL_TABS = [
   { value: 'overview', label: 'Overview', icon: 'mdi:view-dashboard' },
@@ -27,7 +27,7 @@ const PLAIN_TABS = [
 
 export default function TabsSection() {
   const { ui } = useHorizonContext();
-  const { Tabs, Box, Typography, Stack, Paper, Divider } = ui || {};
+  const { Tabs, Box, Typography, Stack, Paper } = ui || {};
   const [panelTab, setPanelTab] = useState<string | number>('overview');
   const [pillTab, setPillTab] = useState<string | number>('all');
   const [standardTab, setStandardTab] = useState<string | number>('all');
@@ -90,8 +90,7 @@ export default function TabsSection() {
         </Box>
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { Tabs } = horizonContext.ui;
 
 // Options-based, like Select and ToggleButtonGroup — the kit does not expose
@@ -121,7 +120,7 @@ function MyPage() {
 // variant="pill" (default) is the host treatment; "standard" is the underlined
 // bar. fullWidth stretches the pills, and is only meaningful for pill.
 <Tabs options={OPTIONS} value={tab} onChange={setTab} variant="standard" />`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

@@ -1,11 +1,11 @@
 /** Showcase section: Typography variants. */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function TypographySection() {
   const { ui } = useHorizonContext();
-  const { Typography, Stack, Paper, Divider } = ui || {};
+  const { Typography, Stack, Paper } = ui || {};
   if (!Paper || !Typography || !Stack) return null;
 
   return (
@@ -30,8 +30,7 @@ export default function TypographySection() {
         </Typography>
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { Typography } = horizonContext.ui;
 
 <Stack spacing={2}>
@@ -46,7 +45,7 @@ export default function TypographySection() {
     Caption text
   </Typography>
 </Stack>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

@@ -1,7 +1,7 @@
 /** Showcase section: CarouselTemplate (horizontally-rotating strip). */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 const FEATURED = [
   {
@@ -63,7 +63,7 @@ const FEATURED = [
 
 export default function CarouselSection() {
   const { ui } = useHorizonContext();
-  const { Box, Typography, Stack, Paper, Divider, Chip } = ui || {};
+  const { Box, Typography, Stack, Paper, Chip } = ui || {};
   const { CarouselTemplate, Icon } = ui?.templates || {};
   if (!Paper || !Typography || !Stack || !Box || !CarouselTemplate) return null;
 
@@ -142,8 +142,7 @@ export default function CarouselSection() {
         </Box>
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { CarouselTemplate } = horizonContext.ui.templates;
 
 // Slides are children — one per item, and a slide is whatever you render.
@@ -165,7 +164,7 @@ export default function CarouselSection() {
 <CarouselTemplate autoRotate={3000} showDots showArrows aria-label="Promotions">
   {promos.map((p) => <PromoCard key={p.id} promo={p} />)}
 </CarouselTemplate>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

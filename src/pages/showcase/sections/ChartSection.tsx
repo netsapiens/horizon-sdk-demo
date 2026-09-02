@@ -1,7 +1,7 @@
 /** Showcase section: Chart — line, area and bar, drawn by the host. */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 /** One week of call outcomes. Keys match the `series` declared below. */
 const DATA = [
@@ -22,7 +22,7 @@ const KINDS = [
 
 export default function ChartSection() {
   const { ui } = useHorizonContext();
-  const { Chart, Typography, Stack, Paper, Divider, Box, Chip } = ui || {};
+  const { Chart, Typography, Stack, Paper, Box, Chip } = ui || {};
   if (!Paper || !Typography || !Stack || !Chart || !Box) return null;
 
   return (
@@ -65,8 +65,7 @@ export default function ChartSection() {
         ))}
       </Box>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { Chart } = horizonContext.ui;
 
 <Chart
@@ -79,7 +78,7 @@ export default function ChartSection() {
     { key: 'missed',   label: 'Missed',   tone: 'error' },
   ]}
 />`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

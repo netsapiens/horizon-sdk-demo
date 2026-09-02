@@ -1,11 +1,11 @@
 /** Showcase section: Avatar. */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function AvatarSection() {
   const { ui } = useHorizonContext();
-  const { Avatar, Typography, Stack, Paper, Divider } = ui || {};
+  const { Avatar, Typography, Stack, Paper } = ui || {};
   if (!Paper || !Typography || !Stack || !Avatar) return null;
 
   return (
@@ -23,8 +23,7 @@ export default function AvatarSection() {
         <Avatar sx={{ bgcolor: 'success.main' }}>CD</Avatar>
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { Avatar } = horizonContext.ui;
 
 <Stack direction="row" spacing={1}>
@@ -32,7 +31,7 @@ export default function AvatarSection() {
   <Avatar sx={{ bgcolor: 'primary.main' }}>AB</Avatar>
   <Avatar sx={{ bgcolor: 'success.main' }}>CD</Avatar>
 </Stack>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

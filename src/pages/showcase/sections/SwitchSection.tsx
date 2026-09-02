@@ -2,11 +2,11 @@
 import { useState } from 'react';
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function SwitchSection() {
   const { ui } = useHorizonContext();
-  const { Switch, Typography, Stack, Paper, Divider } = ui || {};
+  const { Switch, Typography, Stack, Paper } = ui || {};
   const [switchValue, setSwitchValue] = useState(true);
   if (!Paper || !Typography || !Stack || !Switch) return null;
 
@@ -28,8 +28,7 @@ export default function SwitchSection() {
         <Switch label='Disabled' disabled />
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { Switch } = horizonContext.ui;
 const [switchValue, setSwitchValue] = useState(true);
 
@@ -41,7 +40,7 @@ const [switchValue, setSwitchValue] = useState(true);
   />
   <Switch label="Disabled" disabled />
 </Stack>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

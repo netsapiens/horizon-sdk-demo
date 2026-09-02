@@ -2,11 +2,11 @@
 import { useState } from 'react';
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function TextFieldSection() {
   const { ui } = useHorizonContext();
-  const { TextField, Typography, Stack, Paper, Divider } = ui || {};
+  const { TextField, Typography, Stack, Paper } = ui || {};
   const [inputValue, setInputValue] = useState('');
   if (!Paper || !Typography || !Stack || !TextField) return null;
 
@@ -30,8 +30,7 @@ export default function TextFieldSection() {
         <TextField label='Disabled' disabled fullWidth />
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { TextField } = horizonContext.ui;
 const [inputValue, setInputValue] = useState('');
 
@@ -45,7 +44,7 @@ const [inputValue, setInputValue] = useState('');
   <TextField label="Required" required fullWidth />
   <TextField label="Disabled" disabled fullWidth />
 </Stack>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

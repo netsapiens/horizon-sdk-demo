@@ -1,7 +1,7 @@
 /** Showcase section: the static Table primitives. */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 const ROWS = [
   { zone: 'page-header-actions', mounts: 'Page header', count: 5 },
@@ -19,7 +19,6 @@ export default function TableSection() {
     TableCell,
     Typography,
     Paper,
-    Divider,
   } = ui || {};
   if (
     !Paper ||
@@ -65,8 +64,7 @@ export default function TableSection() {
         </TableBody>
       </Table>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { Table, TableHead, TableBody, TableRow, TableCell } =
   horizonContext.ui;
 
@@ -80,7 +78,7 @@ export default function TableSection() {
     ))}
   </TableBody>
 </Table>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

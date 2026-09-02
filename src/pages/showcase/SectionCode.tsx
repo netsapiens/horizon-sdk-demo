@@ -1,0 +1,27 @@
+/**
+ * A showcase section's code snippet, together with the rule above it.
+ *
+ * The pair is one unit: the divider exists to separate the live demo from the
+ * snippet, so when the snippet is hidden the divider is a line under nothing.
+ * Sections render this instead of a `Divider` plus a `CodeBlock` so that
+ * hiding the code leaves no trace of where it was.
+ */
+import { useHorizonContext } from '@netsapiens/horizon-sdk';
+
+import { CodeBlock } from '../../components/CodeBlock';
+import { useShowCode } from './ShowCode';
+
+export function SectionCode({ children }: { children: string }) {
+  const { ui } = useHorizonContext();
+  const Divider = ui?.Divider;
+  const showCode = useShowCode();
+
+  if (!showCode) return null;
+
+  return (
+    <>
+      {Divider && <Divider sx={{ my: 3 }} />}
+      <CodeBlock>{children}</CodeBlock>
+    </>
+  );
+}

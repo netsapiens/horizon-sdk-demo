@@ -2,12 +2,11 @@
 import { useState } from 'react';
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function SidePanelSection() {
   const { ui } = useHorizonContext();
-  const { Button, IconButton, Chip, Stack, Typography, Paper, Divider } =
-    ui || {};
+  const { Button, IconButton, Chip, Stack, Typography, Paper } = ui || {};
   const { SidePanel, SideTrayComponents } = ui?.templates || {};
   const [open, setOpen] = useState(false);
   if (
@@ -105,8 +104,7 @@ export default function SidePanelSection() {
         </Stack>
       </SidePanel>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { SidePanel, SideTrayComponents } = horizonContext.ui.templates;
 const [open, setOpen] = useState(false);
 
@@ -128,7 +126,7 @@ const [open, setOpen] = useState(false);
     </SideTrayComponents.Section>
   </Stack>
 </SidePanel>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

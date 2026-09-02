@@ -2,11 +2,11 @@
 import { useState } from 'react';
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function RadioGroupSection() {
   const { ui } = useHorizonContext();
-  const { RadioGroup, Typography, Stack, Paper, Divider } = ui || {};
+  const { RadioGroup, Typography, Stack, Paper } = ui || {};
   const [radioGroupValue, setRadioGroupValue] = useState('all');
   if (!Paper || !Typography || !Stack || !RadioGroup) return null;
 
@@ -30,8 +30,7 @@ export default function RadioGroupSection() {
         ]}
       />
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { RadioGroup } = horizonContext.ui;
 const [radioGroupValue, setRadioGroupValue] = useState('all');
 
@@ -45,7 +44,7 @@ const [radioGroupValue, setRadioGroupValue] = useState('all');
     { value: 'none', label: 'None' }
   ]}
 />`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

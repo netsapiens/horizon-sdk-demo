@@ -13,7 +13,16 @@
  * host that predates a component simply shows a shorter page instead of a
  * broken one. That is the same guard partner code should use, demonstrated at
  * page scale.
+ *
+ * The header's Hide code action collapses every snippet at once. Roughly half
+ * this page by height is source, which is what a developer came for and pure
+ * noise to anyone scanning for a control — so the page is really two documents
+ * and the toggle picks which one you are reading. It is also the shortest
+ * honest demonstration of a `PageAction` descriptor: a label, an icon and an
+ * onClick, rendered by the host in the same style as every other page's header
+ * button.
  */
+import { useState } from 'react';
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
 import { type ZoneMarkerProps } from '../integration/withZoneTestId';
@@ -48,11 +57,13 @@ import {
   TooltipSection,
   TypographySection,
 } from './showcase/sections';
+import { ShowCodeContext } from './showcase/ShowCode';
 
 export default function ComponentShowcasePage({ ...marker }: ZoneMarkerProps) {
   const { ui } = useHorizonContext();
   const { PageTemplate } = ui?.templates || {};
   const { Stack } = ui || {};
+  const [showCode, setShowCode] = useState(true);
 
   if (!PageTemplate || !Stack) {
     return (
@@ -71,62 +82,78 @@ export default function ComponentShowcasePage({ ...marker }: ZoneMarkerProps) {
         { label: 'Apps', url: '/apps' },
         { label: 'Component Showcase' },
       ]}
+      // A descriptor rather than JSX: the host then draws it in the house
+      // style, which is the whole argument this page is making.
+      actions={[
+        {
+          label: showCode ? 'Hide code' : 'Show code',
+          icon: showCode ? 'mdi:code-tags-check' : 'mdi:code-tags',
+          variant: 'secondary',
+          onClick: () => setShowCode((on) => !on),
+          tooltip: showCode
+            ? 'Collapse every snippet and read the gallery on its own'
+            : 'Show the copy-paste snippet under each component',
+          'data-testid': 'sdk-demo-showcase-code-toggle',
+        },
+      ]}
     >
-      <Stack spacing={3}>
-        <IntroSection />
+      <ShowCodeContext.Provider value={showCode}>
+        <Stack spacing={3}>
+          <IntroSection />
 
-        <GroupHeading
-          title='Foundations'
-          blurb='Text, surfaces and the layout primitives everything else sits on.'
-        />
-        <TypographySection />
-        <LayoutSection />
-        <CardSection />
+          <GroupHeading
+            title='Foundations'
+            blurb='Text, surfaces and the layout primitives everything else sits on.'
+          />
+          <TypographySection />
+          <LayoutSection />
+          <CardSection />
 
-        <GroupHeading
-          title='Inputs'
-          blurb='Controls a user types into, picks from, or toggles.'
-        />
-        <ButtonsSection />
-        <IconButtonSection />
-        <TextFieldSection />
-        <SearchFieldSection />
-        <SelectSection />
-        <CheckboxSection />
-        <RadioSection />
-        <RadioGroupSection />
-        <SwitchSection />
-        <ToggleButtonGroupSection />
+          <GroupHeading
+            title='Inputs'
+            blurb='Controls a user types into, picks from, or toggles.'
+          />
+          <ButtonsSection />
+          <IconButtonSection />
+          <TextFieldSection />
+          <SearchFieldSection />
+          <SelectSection />
+          <CheckboxSection />
+          <RadioSection />
+          <RadioGroupSection />
+          <SwitchSection />
+          <ToggleButtonGroupSection />
 
-        <GroupHeading
-          title='Feedback & navigation'
-          blurb='Telling the user what happened, what something is, and where they are.'
-        />
-        <AlertSection />
-        <ChipSection />
-        <AvatarSection />
-        <TooltipSection />
-        <TabsSection />
+          <GroupHeading
+            title='Feedback & navigation'
+            blurb='Telling the user what happened, what something is, and where they are.'
+          />
+          <AlertSection />
+          <ChipSection />
+          <AvatarSection />
+          <TooltipSection />
+          <TabsSection />
 
-        <GroupHeading
-          title='Data display'
-          blurb='Components that draw your data. These are also what dashboard widgets are built from, which is why they match the native cards exactly.'
-        />
-        <ListSection />
-        <TableSection />
-        <ChartSection />
-        <StatBlockSection />
-        <ActivityListSection />
+          <GroupHeading
+            title='Data display'
+            blurb='Components that draw your data. These are also what dashboard widgets are built from, which is why they match the native cards exactly.'
+          />
+          <ListSection />
+          <TableSection />
+          <ChartSection />
+          <StatBlockSection />
+          <ActivityListSection />
 
-        <GroupHeading
-          title='Templates'
-          blurb='Whole page and panel shells on ui.templates — the fastest route to a page that looks native, the host owns the layout and you own only the content.'
-        />
-        <TemplatesSection />
-        <DataGridSection />
-        <CarouselSection />
-        <SidePanelSection />
-      </Stack>
+          <GroupHeading
+            title='Templates'
+            blurb='Whole page and panel shells on ui.templates — the fastest route to a page that looks native, the host owns the layout and you own only the content.'
+          />
+          <TemplatesSection />
+          <DataGridSection />
+          <CarouselSection />
+          <SidePanelSection />
+        </Stack>
+      </ShowCodeContext.Provider>
     </PageTemplate>
   );
 }

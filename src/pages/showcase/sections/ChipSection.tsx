@@ -1,11 +1,11 @@
 /** Showcase section: Chip tags/labels. */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function ChipSection() {
   const { ui } = useHorizonContext();
-  const { Chip, Typography, Stack, Paper, Divider } = ui || {};
+  const { Chip, Typography, Stack, Paper } = ui || {};
   if (!Paper || !Typography || !Stack || !Chip) return null;
 
   return (
@@ -25,8 +25,7 @@ export default function ChipSection() {
         <Chip label='Small' size='small' />
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { Chip } = horizonContext.ui;
 
 <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -36,7 +35,7 @@ export default function ChipSection() {
   <Chip label="Error" color="error" />
   <Chip label="Small" size="small" />
 </Stack>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

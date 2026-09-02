@@ -1,11 +1,11 @@
 /** Showcase section: Button variants. */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function ButtonsSection() {
   const { ui } = useHorizonContext();
-  const { Box, Button, Typography, Stack, Paper, Divider } = ui || {};
+  const { Box, Button, Typography, Stack, Paper } = ui || {};
   if (!Paper || !Typography || !Stack || !Button || !Box) return null;
 
   return (
@@ -65,8 +65,7 @@ export default function ButtonsSection() {
         </Box>
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { Button } = horizonContext.ui;
 
 // Contained Variant
@@ -88,7 +87,7 @@ export default function ButtonsSection() {
   <Button variant="text">Text Button</Button>
   <Button variant="text" color="primary">Text Primary</Button>
 </Stack>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

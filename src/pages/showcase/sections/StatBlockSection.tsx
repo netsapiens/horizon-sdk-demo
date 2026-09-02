@@ -1,7 +1,7 @@
 /** Showcase section: StatBlock and Donut — the dashboard's own figures. */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 const SPARK = [96, 141, 118, 187, 152, 204, 173, 213];
 
@@ -29,7 +29,7 @@ const SLICES = [
 
 export default function StatBlockSection() {
   const { ui } = useHorizonContext();
-  const { StatBlock, Donut, Typography, Stack, Paper, Divider, Box } = ui || {};
+  const { StatBlock, Donut, Typography, Stack, Paper, Box } = ui || {};
   if (!Paper || !Typography || !Stack || !StatBlock || !Box) return null;
 
   return (
@@ -65,8 +65,7 @@ export default function StatBlockSection() {
         </Box>
       ) : null}
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { StatBlock, Donut } = horizonContext.ui;
 
 <StatBlock
@@ -84,7 +83,7 @@ export default function StatBlockSection() {
   ]}
   centerLabel="168"
 />`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

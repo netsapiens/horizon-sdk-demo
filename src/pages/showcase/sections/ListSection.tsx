@@ -1,20 +1,12 @@
 /** Showcase section: List primitives and the Code surface. */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function ListSection() {
   const { ui } = useHorizonContext();
-  const {
-    List,
-    ListItem,
-    ListItemText,
-    Code,
-    Typography,
-    Paper,
-    Divider,
-    Box,
-  } = ui || {};
+  const { List, ListItem, ListItemText, Code, Typography, Paper, Box } =
+    ui || {};
   if (!Paper || !Typography || !List || !ListItem || !ListItemText) return null;
 
   return (
@@ -58,8 +50,7 @@ export default function ListSection() {
         </Box>
       ) : null}
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { List, ListItem, ListItemText, Code } = horizonContext.ui;
 
 <List component="ol">
@@ -70,7 +61,7 @@ export default function ListSection() {
 
 <Code inline>requestRemoteAuth()</Code>
 <Code>{\`const { token } = await auth.requestRemoteAuth('example-crm');\`}</Code>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'

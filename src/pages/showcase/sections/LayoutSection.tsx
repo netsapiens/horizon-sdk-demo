@@ -1,7 +1,7 @@
 /** Showcase section: Stack & Divider layout primitives. */
 import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
-import { CodeBlock } from '../../../components/CodeBlock';
+import { SectionCode } from '../SectionCode';
 
 export default function LayoutSection() {
   const { ui } = useHorizonContext();
@@ -61,8 +61,7 @@ export default function LayoutSection() {
         </Box>
       </Stack>
 
-      {Divider && <Divider sx={{ my: 3 }} />}
-      <CodeBlock>
+      <SectionCode>
         {`const { Stack, Divider, Avatar, Chip, Typography } = horizonContext.ui;
 
 // Horizontal Stack
@@ -85,7 +84,7 @@ export default function LayoutSection() {
   <Divider />
   <Typography variant="body2">Content below divider</Typography>
 </Stack>`}
-      </CodeBlock>
+      </SectionCode>
 
       <Typography
         variant='caption'
