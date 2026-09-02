@@ -47,22 +47,51 @@ style={...}>`, `<h2>`, `<table>`, `<pre>`. Use `Box`, `Button`, `Typography`,
 - The one reactive theme signal is `useTheme()` from the SDK. Use it only to
   **pick** something (an icon, a `grey.900` vs `grey.50` background — see
   `src/components/CodeBlock.tsx`), never to rebuild styling the kit already does.
-- Missing a component? Say so and pick the nearest kit primitive — e.g. the kit
-  has no `Table`, so `src/pages/demo/PatternsPanel.tsx` renders real table
-  _elements_ through `Box component='table' | 'tr' | 'td'` with every color from
-  `sx`. Do not fill a gap with hand-styled markup.
+- Missing a component? Say so and pick the nearest kit primitive, with every color
+  still from `sx`. Do not fill a gap with hand-styled markup — and check the list
+  below before deciding it is a gap. `src/pages/demo/PatternsPanel.tsx` builds a
+  table out of `Box component='table' | 'tr' | 'td'` because this file used to say
+  the kit had no `Table`; it has one.
 
-### What the kit does not have
+### What the kit has
 
-Verified against the host's `src/lib/sdk/ui/horizonUi.ts` — do not go looking:
+Verified against the host's `src/lib/sdk/ui/horizonUi.ts`. Forty-one components on
+`ui`, plus nine shells on `ui.templates`:
 
-| Wanted                             | Use instead                                                                                                                          |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `Table` / `TableRow` / `TableCell` | `Box component='table' \| 'tr' \| 'td'` for a static table (`demo/PatternsPanel.tsx`), or `templates.DatagridTemplate` for real data |
-| `Grid`                             | `Box` with `sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}`                                   |
-| `List` / `ListItem`                | `Box component='ol' \| 'ul'` + `Typography component='li'`                                                                           |
-| a monospace `Code` block           | `src/components/CodeBlock.tsx` (local; branches on `useTheme()` for the surface)                                                     |
-| `CardActionArea`                   | `Card` with `onClick` — the host renders one internally, keyboard-reachable                                                          |
+```
+ActivityList  Alert  Autocomplete  Avatar  Box  Button  Card  CardContent
+Chart  Checkbox  Chip  Code  Divider  Donut  FormControlLabel  FormLabel
+Grid  Icon  IconButton  List  ListItem  ListItemText  Paper  Radio
+RadioGroup  SearchField  Select  Stack  StatBlock  Switch  Table  TableBody
+TableCell  TableHead  TableRow  Tabs  TextField  ToggleButton
+ToggleButtonGroup  Tooltip  Typography
+
+templates: PageTemplate  PageTemplateWithExtensions  FormTemplate  FormPanel
+           SidePanel  DatagridTemplate  DashboardTemplate  CarouselTemplate
+           SideTrayComponents
+```
+
+`src/pages/ComponentShowcasePage.tsx` renders every one of them with a live demo
+and a snippet — read that before writing anything new.
+
+### What it genuinely does not have
+
+| Wanted                        | Use instead                                                                   |
+| ----------------------------- | ----------------------------------------------------------------------------- |
+| `CardActionArea`              | `Card` with `onClick` — the host renders one internally, keyboard-reachable   |
+| `Dialog` / `Drawer`           | `templates.SidePanel`, the platform's own right-hand drawer                   |
+| `Menu`                        | nothing yet; say so rather than hand-rolling a popper                         |
+| `Accordion`                   | nothing yet                                                                   |
+| `Badge`, `Skeleton`, progress | nothing yet — a widget's loading state is the host's job, via `refreshPolicy` |
+| `Snackbar`                    | nothing yet; `Alert` in place, or the host's own notifications                |
+
+> **This table was wrong for a while, and it cost real work.** It used to list
+> `Table`, `Grid`, `List` and a `Code` block as missing, long after the host
+> started shipping all four. `src/pages/demo/PatternsPanel.tsx` still hand-rolls a
+> table through `Box component='table'` on that advice, and
+> `src/components/CodeBlock.tsx` duplicates `ui.Code`. If you find yourself about
+> to build a primitive, check `horizonUi.ts` first — this file is a copy and copies
+> go stale.
 
 ### Carve-outs (the only ones)
 
