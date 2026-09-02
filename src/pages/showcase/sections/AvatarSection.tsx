@@ -39,7 +39,12 @@ export default function AvatarSection() {
             <Avatar sx={{ bgcolor: 'success.main' }}>CD</Avatar>
             <Avatar sx={{ bgcolor: 'warning.main' }}>EF</Avatar>
             {Icon ? (
-              <Avatar sx={{ bgcolor: 'background.elevation3' }}>
+              <Avatar
+                sx={{
+                  bgcolor: 'background.elevation3',
+                  color: 'text.secondary',
+                }}
+              >
                 <Icon icon='mdi:account' />
               </Avatar>
             ) : null}
@@ -64,7 +69,16 @@ export default function AvatarSection() {
                   ml: index === 0 ? 0 : -1,
                   border: '2px solid',
                   borderColor: 'background.paper',
-                  bgcolor: index === 3 ? 'background.elevation3' : undefined,
+                  // A neutral background needs a colour to go with it. The
+                  // Avatar's default text colour is picked to sit on a SATURATED
+                  // fill, so on a grey one it disappears — measured at 1.27
+                  // against `background.elevation3`, in both colour modes.
+                  ...(index === 3
+                    ? {
+                        bgcolor: 'background.elevation3',
+                        color: 'text.secondary',
+                      }
+                    : {}),
                 }}
               >
                 {initials}
@@ -87,7 +101,13 @@ export default function AvatarSection() {
 
 // Colour from a PALETTE PATH, never a hex — this follows a reseller's brand
 // and the dark/light toggle for free.
-<Avatar sx={{ bgcolor: 'primary.main' }}>AB</Avatar>`}
+<Avatar sx={{ bgcolor: 'primary.main' }}>AB</Avatar>
+
+// Overriding bgcolor to a NEUTRAL? Set color too. The default text colour is
+// chosen to sit on a saturated fill, so on grey it vanishes (1.27:1 here).
+<Avatar sx={{ bgcolor: 'background.elevation3', color: 'text.secondary' }}>
+  +4
+</Avatar>`}
       </SectionCode>
 
       <Typography
