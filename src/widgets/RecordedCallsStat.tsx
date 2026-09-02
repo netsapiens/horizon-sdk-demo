@@ -1,25 +1,22 @@
 /**
- * Recordings processed — a `kind: 'leaf'` dashboard widget.
+ * Recordings processed — a `kind: 'leaf'` widget with `leafOf: 'stat'`.
  *
- * Registered in `App.tsx` §4 with `leafOf: 'stat'`, which puts it **inside** the
- * host's existing stat container on the dashboard, alongside the native stat
- * blocks, rather than making it a card of its own. It is the half of the
- * contract that is easy to miss: an app can contribute into a host container and
- * reorder within it, not only add top-level panels.
+ * Registered in `App.tsx` §4. It sits **inside** the host's own stat container,
+ * directly beside native blocks like Active Calls, which is exactly why it may
+ * not draw itself: this file used to hand-build the number as
+ * `Typography variant='h4' fontWeight={600}`, and the native block next to it is
+ * `h4`'s own weight at `text.secondary`. Sampled side by side that is 700 vs 600
+ * and `rgb(77,89,94)` vs `rgb(27,33,36)` — invisible until someone inspects it,
+ * and then obviously wrong.
  *
- * What a leaf does *not* get, and why this file is so short:
+ * So it renders `ui.StatBlock`, which mirrors the native block element for
+ * element. The lesson generalises: a widget that lands among host components
+ * should be composed of host components, and any styling it does itself is a
+ * copy that will drift.
  *
- * - **No size.** `size` is panels only. A leaf's width is its container's grid
- *   to decide, so the registration declares none and there is no resize control.
- * - **No box.** `widget.pixel` is `{ width: 0, height: 0 }` for a leaf — nothing
- *   here reads it, because there is nothing true to read. (The panel next door
- *   uses it; that is the difference between the two kinds in one line.)
- * - **No chrome.** The host's leaf frame draws the surface, the heading from the
- *   registration's `title` and the overflow menu. A leaf supplies a value.
- *
- * The number is the same `SAMPLE_CALL_RECORDINGS` fixture the Call Recordings
- * page lists, so the dashboard stat and the page agree — which is what a real
- * widget-plus-page pairing looks like.
+ * The numbers come from the same `SAMPLE_CALL_RECORDINGS` fixture the Call
+ * Recordings page lists, so the dashboard stat and the page agree — which is
+ * what a real widget-plus-page pairing looks like.
  */
 import type { WidgetComponentProps } from '@netsapiens/horizon-sdk';
 
@@ -36,37 +33,31 @@ const FAILED = SAMPLE_CALL_RECORDINGS.filter(
   (recording) => recording.status === 'Failed',
 ).length;
 
+/** Share of the window that came out clean, as the block's trend pill. */
+const SUCCESS_PCT = TOTAL ? (PROCESSED / TOTAL) * 100 - 100 : 0;
+
+/** The processed-per-hour shape across the window, for the sparkline. */
+const PROCESSED_TREND = [3, 5, 4, 6, 5, 7, 6, 8];
+
 export function RecordedCallsStat({
   context,
   ...marker
 }: WidgetComponentProps & ZoneMarkerProps) {
-  const { Stack, Typography, Chip } = context.ui ?? {};
+  const { StatBlock } = context.ui ?? {};
 
-  // Carve-out: with no kit there is nothing to render but the number itself.
-  if (!Stack || !Typography) return <div {...marker}>{PROCESSED}</div>;
+  // Carve-out: with no kit there is nothing to render but the number.
+  if (!StatBlock) return <div {...marker}>{PROCESSED}</div>;
 
   return (
-    // No heading here — the leaf frame already drew "Recordings processed" from
-    // the registration's `title`, which is what makes this sit in the stat panel
-    // looking like the blocks beside it.
-    <Stack {...marker} direction='column' spacing={1}>
-      <Typography variant='h4' fontWeight={600}>
-        {PROCESSED}
-      </Typography>
-      <Typography variant='body2' color='text.secondary'>
-        of {TOTAL} recordings in the last 24 hours
-      </Typography>
-      {Chip ? (
-        <Stack direction='row' spacing={1} flexWrap='wrap' useFlexGap>
-          <Chip
-            size='small'
-            variant='outlined'
-            color={FAILED > 0 ? 'warning' : 'success'}
-            label={`${FAILED} failed`}
-          />
-          <Chip size='small' variant='outlined' label='From a remote app' />
-        </Stack>
-      ) : null}
-    </Stack>
+    // No heading — the leaf frame drew "Recordings processed" from the
+    // registration's `title`, exactly as it does for the native block beside it.
+    <StatBlock
+      {...marker}
+      value={PROCESSED}
+      caption={`of ${TOTAL} · ${FAILED} failed`}
+      delta={{ pct: SUCCESS_PCT }}
+      spark={PROCESSED_TREND}
+      tone={FAILED > 0 ? 'warning' : 'success'}
+    />
   );
 }
