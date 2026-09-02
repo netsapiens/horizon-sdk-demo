@@ -97,7 +97,7 @@ If the target directory exists, ask before overwriting.
   },
   "engines": { "node": ">=18" },
   "dependencies": {
-    "@netsapiens/horizon-sdk": "^0.2.5",
+    "@netsapiens/horizon-sdk": "^0.2.11",
     "loglevel": "^1.9.2",
     "react": "19.2.0",
     "react-dom": "19.2.0"
@@ -739,14 +739,17 @@ know what exists. Everything below hangs off `horizonContext.ui`.
 
 **Whole shells** — `ui.templates.*`: `PageTemplate`,
 `PageTemplateWithExtensions`, `FormTemplate`, `FormPanel`, `SidePanel`,
-`DatagridTemplate`, `CarouselTemplate`, `SideTrayComponents`, `Icon`,
-`ExtensionZone` (mount a zone in your own page so other apps can contribute).
+`DatagridTemplate`, `DashboardTemplate` _(0.2.11 — a dashboard page you own, with
+the host's grid and card frames, minus reorder and Customize)_,
+`CarouselTemplate`, `SideTrayComponents`, `Icon`, `ExtensionZone` (mount a zone
+in your own page so other apps can contribute).
 
 **Actions & input**: `Button`, `IconButton` (icon-name prop, never children),
-`TextField`, `TextArea`, `SearchField` (debounced), `Autocomplete`, `Select`
-(`options`, never `MenuItem` children), `Checkbox`, `Radio`, `RadioGroup`,
-`Switch`, `ToggleButton`, `ToggleButtonGroup`, `FormLabel`, `FormControlLabel`,
-`DatePicker`.
+`TextField` (`multiline` for a textarea — there is no `TextArea`), `SearchField`
+(debounced; pass `debounceMs={0}` to opt out), `Autocomplete` (host datasets or
+your own `options`; deliberately no `fetchOptions`), `Select` (`options`, never
+`MenuItem` children), `Checkbox`, `Radio`, `RadioGroup`, `Switch`,
+`ToggleButton`, `ToggleButtonGroup`, `FormLabel`, `FormControlLabel`.
 
 **Navigation & surfaces**: `Tabs` (owns the strip; you render the panels),
 `Card`, `CardContent`, `Paper` (pre-styled card — see below).
@@ -763,21 +766,43 @@ primitive), `Grid` _(0.2.7 — MUI v7 API: `size={{ xs: 12, md: 6 }}`, not
 use `DatagridTemplate` instead — these are for short fixed tables only.
 
 **Lists** _(0.2.7)_: `List`, `ListItem`, `ListItemText`. `component='ol'`/`'li'`
-for a numbered sequence.
+gives you the semantics; the markers need asking for —
+`sx={{ listStyle: 'decimal', pl: 3, '& > li': { display: 'list-item' } }}` — or
+you ship an ordered list with no numbers in it.
 
-Several components carry **host-side defaults**, so declaring them bare is
-correct and `sx`/`variant` are for departing from the default, not assembling it:
-`Paper` (outlined, 24px padding), `Button` (`variant='primary'`), `Chip`
-(`'soft'`), `Card` (`'outlined'`), `Tabs` (`'pill'`), `Stack`
-(`direction='column'`). `sx` merges as an array, so an override wins
-per-property and leaves the rest intact.
+**Dashboard figures** _(0.2.11)_: `Chart` (`kind='line' | 'area' | 'bar'`),
+`Donut`, `StatBlock`, `ActivityList`. These are what the host's own dashboard
+cards are built from, so a widget made of them is indistinguishable from a native
+one. Colour is a semantic `tone`, never a hex. See the widget contract below.
+
+Several components arrive **already styled**, so declaring them bare is correct
+and `sx`/`variant` are for departing from the default, not assembling it: `Paper`
+(24px padding on the platform's own surface), `Button` (`variant='primary'`),
+`Chip` (soft, neutral, small), `Tabs` (`'pill'`), `Stack` (`direction='column'`).
+`sx` merges as an array, so an override wins per-property and leaves the rest
+intact.
+
+⚠️ **The default is the theme's, not the kit's.** `Paper`, `Card` and `Chip` used
+to have a `variant` pinned by the SDK wrapper; that was removed in 0.2.11 because
+re-specifying the theme's own settings is how a contributed card ends up rounder
+than every native surface around it. Two consequences for you: don't pass a
+`variant` to match what you see (you are freezing today's choice), and don't pass
+`size='small'` to a `Chip` — the theme already sets it platform-wide, so it
+changes nothing and `'medium'` would make your chip the odd one out.
 
 **Genuinely not in the kit** — do not hunt for these: `TableContainer` (use
 `Paper sx={{ overflowX: 'auto' }}`), `TableSortLabel` (sorting is
 `DatagridTemplate`'s job), `MenuItem`, `Menu`, `Accordion`, `Badge`,
-`LinearProgress`, `Skeleton`, `Breadcrumbs` (`PageTemplate` takes a
-`breadcrumbs` prop). If you need one, use the nearest primitive and log it in
-`KIT-GAPS.md`.
+`LinearProgress`, `Skeleton`, `Snackbar`, `Dialog`/`Drawer` (use
+`templates.SidePanel`), `CardActionArea` (give `Card` an `onClick` — the host
+renders one internally, keyboard-reachable), `Breadcrumbs` (`PageTemplate` takes
+a `breadcrumbs` prop), `TextArea` (`TextField multiline`), `DatePicker`. If you
+need one, use the nearest primitive and log it in `KIT-GAPS.md`.
+
+**Verify this list before trusting it.** It is a copy of the host's
+`src/lib/sdk/ui/horizonUi.ts` and copies go stale — this section listed `Table`,
+`Grid`, `List` and `Code` as missing for several releases after they shipped, and
+apps hand-rolled all four on that advice.
 
 ## Theming & dark/light mode (contract)
 
@@ -997,6 +1022,24 @@ condition: (context) => Boolean(context.eventBus),
 what you already declare — `title` as the heading, `description` as the subtitle
 beneath it, a window chip for a `shared-range` widget, and a provenance tooltip
 from `metric`. Write content and it matches every native card.
+
+**And build the content from the same components the native cards use** _(0.2.11)_:
+
+| Card is… | Use               | Instead of                                   |
+| -------- | ----------------- | -------------------------------------------- |
+| a figure | `ui.StatBlock`    | `Typography variant='h4'` + a hand sparkline |
+| a trend  | `ui.Chart`        | ECharts, Recharts, anything of your own      |
+| a split  | `ui.Donut`        | a pie you style yourself                     |
+| a feed   | `ui.ActivityList` | a `List` with hand-placed status dots        |
+
+This is not a style preference, it is the whole reason a contributed card looks
+native. A stat leaf that hand-built its number as
+`Typography variant='h4' fontWeight={600}` sat beside a native block that is
+`h4`'s own weight at `text.secondary` — 700 vs 600, `rgb(77,89,94)` vs
+`rgb(27,33,36)`. Invisible until somebody inspects it, then obviously wrong, and
+it drifts again the next time the platform restyles. Pass a semantic `tone`
+(`success`, `error`, `warning`, `neutral`, `primary`) and the host picks the
+colour, so it follows the toggle and a reseller's palette with nothing to update.
 
 `chrome: 'self'` turns all of that off and hands you the padding and type scale
 to match by hand. It exists for host panels that predate the widget frame; an app
