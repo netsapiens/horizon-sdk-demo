@@ -74,7 +74,7 @@ export function CallDetailsPanel({
           {Divider && <Divider />}
           <Stack direction='row' spacing={1} justifyContent='flex-end'>
             <Button variant='text' onClick={close}>
-              Close
+              {context.t?.('CLOSE') ?? 'Close'}
             </Button>
           </Stack>
         </>

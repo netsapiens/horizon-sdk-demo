@@ -1,10 +1,13 @@
 /** Showcase section: Tooltip. */
-import { useHorizonContext } from '@netsapiens/horizon-sdk';
+import { useHorizonContext, useLocale } from '@netsapiens/horizon-sdk';
 
 import { SectionCode } from '../SectionCode';
 
 export default function TooltipSection() {
   const { ui } = useHorizonContext();
+  // Host keys for the shared vocabulary: these follow the language switch,
+  // and a string hard-coded here would be English forever.
+  const { t } = useLocale();
   const { Tooltip, IconButton, Button, Chip, Typography, Stack, Paper, Box } =
     ui || {};
   if (!Paper || !Typography || !Stack || !Tooltip || !IconButton || !Box)
@@ -27,11 +30,18 @@ export default function TooltipSection() {
             Naming an icon-only control
           </Typography>
           <Stack direction='row' spacing={1} alignItems='center'>
-            <Tooltip title='Edit' arrow>
-              <IconButton icon='mdi:pencil' aria-label='Edit' />
+            <Tooltip title={t?.('EDIT') ?? 'Edit'} arrow>
+              <IconButton
+                icon='mdi:pencil'
+                aria-label={t?.('EDIT') ?? 'Edit'}
+              />
             </Tooltip>
-            <Tooltip title='Delete' arrow>
-              <IconButton icon='mdi:delete' color='error' aria-label='Delete' />
+            <Tooltip title={t?.('DELETE') ?? 'Delete'} arrow>
+              <IconButton
+                icon='mdi:delete'
+                color='error'
+                aria-label={t?.('DELETE') ?? 'Delete'}
+              />
             </Tooltip>
             <Tooltip title='Re-run the sync now' arrow>
               <IconButton icon='mdi:sync' aria-label='Re-run the sync now' />

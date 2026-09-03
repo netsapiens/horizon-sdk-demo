@@ -185,7 +185,7 @@ export default function CrmIntegrationPage({ ...marker }: ZoneMarkerProps) {
       title={`${VENDOR_NAME} Integration`}
       subtitle="The signed-in user's NetSapiens calls, matched to their CRM record"
       breadcrumbs={[
-        { label: t?.('MANAGE') || 'Manage', url: '/manage' },
+        { label: t?.('MANAGE') ?? 'Manage', url: '/manage' },
         { label: `${VENDOR_NAME} Integration` },
       ]}
     >
@@ -329,7 +329,7 @@ export default function CrmIntegrationPage({ ...marker }: ZoneMarkerProps) {
                   T={Typography}
                 />
                 <Field
-                  label='Notes'
+                  label={t?.('NOTES') ?? 'Notes'}
                   value={selectedRecord.notes}
                   T={Typography}
                 />

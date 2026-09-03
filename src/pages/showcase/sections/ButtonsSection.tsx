@@ -7,7 +7,7 @@
  * real toolbar, dialog and form footer in the platform, and a showcase that
  * shows them any other way is showing the wrong thing.
  */
-import { useHorizonContext } from '@netsapiens/horizon-sdk';
+import { useHorizonContext, useLocale } from '@netsapiens/horizon-sdk';
 
 import { SectionCode } from '../SectionCode';
 
@@ -15,6 +15,9 @@ const COLORS = ['primary', 'secondary', 'success', 'error'] as const;
 
 export default function ButtonsSection() {
   const { ui } = useHorizonContext();
+  // Host keys for the shared vocabulary: these follow the language switch,
+  // and a string hard-coded here would be English forever.
+  const { t } = useLocale();
   const { Box, Button, Icon, Typography, Stack, Paper } = ui || {};
   if (!Paper || !Typography || !Stack || !Button || !Box) return null;
 
@@ -106,10 +109,10 @@ export default function ButtonsSection() {
               </Button>
             ) : null}
             <Button variant='contained' disabled>
-              Disabled
+              {t?.('DISABLED') ?? 'Disabled'}
             </Button>
             <Button variant='outlined' disabled>
-              Disabled
+              {t?.('DISABLED') ?? 'Disabled'}
             </Button>
           </>,
         )}

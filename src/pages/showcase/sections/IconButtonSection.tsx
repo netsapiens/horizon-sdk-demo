@@ -1,10 +1,13 @@
 /** Showcase section: IconButton. */
-import { useHorizonContext } from '@netsapiens/horizon-sdk';
+import { useHorizonContext, useLocale } from '@netsapiens/horizon-sdk';
 
 import { SectionCode } from '../SectionCode';
 
 export default function IconButtonSection() {
   const { ui } = useHorizonContext();
+  // Host keys for the shared vocabulary: these follow the language switch,
+  // and a string hard-coded here would be English forever.
+  const { t } = useLocale();
   const { IconButton, Typography, Stack, Paper } = ui || {};
   if (!Paper || !Typography || !Stack || !IconButton) return null;
 
@@ -18,9 +21,17 @@ export default function IconButtonSection() {
       </Typography>
 
       <Stack direction='row' spacing={1}>
-        <IconButton icon='mdi:pencil' aria-label='Edit' />
-        <IconButton icon='mdi:delete' color='error' aria-label='Delete' />
-        <IconButton icon='mdi:settings' size='small' aria-label='Settings' />
+        <IconButton icon='mdi:pencil' aria-label={t?.('EDIT') ?? 'Edit'} />
+        <IconButton
+          icon='mdi:delete'
+          color='error'
+          aria-label={t?.('DELETE') ?? 'Delete'}
+        />
+        <IconButton
+          icon='mdi:settings'
+          size='small'
+          aria-label={t?.('SETTINGS') ?? 'Settings'}
+        />
       </Stack>
 
       <SectionCode>

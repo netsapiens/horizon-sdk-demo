@@ -1,10 +1,13 @@
 /** Showcase section: Stack & Divider layout primitives. */
-import { useHorizonContext } from '@netsapiens/horizon-sdk';
+import { useHorizonContext, useLocale } from '@netsapiens/horizon-sdk';
 
 import { SectionCode } from '../SectionCode';
 
 export default function LayoutSection() {
   const { ui } = useHorizonContext();
+  // Host keys for the shared vocabulary: these follow the language switch,
+  // and a string hard-coded here would be English forever.
+  const { t } = useLocale();
   const { Box, Avatar, Chip, Typography, Stack, Paper, Divider } = ui || {};
   if (!Paper || !Typography || !Stack || !Box) return null;
 
@@ -27,7 +30,13 @@ export default function LayoutSection() {
             <Stack direction='row' spacing={2} alignItems='center'>
               {Avatar && <Avatar>JD</Avatar>}
               <Typography>John Doe</Typography>
-              {Chip && <Chip label='Admin' size='small' color='primary' />}
+              {Chip && (
+                <Chip
+                  label={t?.('ROLE_ADMIN') ?? 'Admin'}
+                  size='small'
+                  color='primary'
+                />
+              )}
             </Stack>
           </Paper>
         </Box>

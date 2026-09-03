@@ -62,7 +62,9 @@ export default function TypographySection() {
       {Divider && <Divider sx={{ my: 3 }} />}
 
       <Stack direction='row' spacing={1} alignItems='center' sx={{ mb: 1 }}>
-        <Typography variant='subtitle1'>Localization</Typography>
+        <Typography variant='subtitle1'>
+          {t?.('LOCALIZATION') ?? 'Localization'}
+        </Typography>
         {Chip ? (
           <Chip size='small' color='primary' label={`locale: ${locale}`} />
         ) : null}

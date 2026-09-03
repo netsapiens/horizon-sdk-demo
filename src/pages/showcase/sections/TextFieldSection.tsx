@@ -1,11 +1,14 @@
 /** Showcase section: TextField. */
 import { useState } from 'react';
-import { useHorizonContext } from '@netsapiens/horizon-sdk';
+import { useHorizonContext, useLocale } from '@netsapiens/horizon-sdk';
 
 import { SectionCode } from '../SectionCode';
 
 export default function TextFieldSection() {
   const { ui } = useHorizonContext();
+  // Host keys for the shared vocabulary: these follow the language switch,
+  // and a string hard-coded here would be English forever.
+  const { t } = useLocale();
   const { TextField, Typography, Stack, Paper } = ui || {};
   const [inputValue, setInputValue] = useState('');
   if (!Paper || !Typography || !Stack || !TextField) return null;
@@ -27,7 +30,7 @@ export default function TextFieldSection() {
           fullWidth
         />
         <TextField label='Required' required fullWidth />
-        <TextField label='Disabled' disabled fullWidth />
+        <TextField label={t?.('DISABLED') ?? 'Disabled'} disabled fullWidth />
       </Stack>
 
       <SectionCode>

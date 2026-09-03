@@ -59,7 +59,7 @@ export function QuickLinksPanel({ context, close }: SidePanelContentProps) {
         <>
           {Divider && <Divider />}
           <Button variant='text' onClick={close}>
-            Close
+            {context.t?.('CLOSE') ?? 'Close'}
           </Button>
         </>
       )}

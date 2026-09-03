@@ -273,11 +273,11 @@ export default function CallRecordingsPage({ ...marker }: ZoneMarkerProps) {
     <PageTemplate
       layout='fill'
       {...marker}
-      title='Call Recordings'
+      title={t?.('CALL_RECORDINGS') ?? 'Call recordings'}
       subtitle='Recordings of calls on your extension'
       breadcrumbs={[
-        { label: t?.('MY_ACCOUNT') || 'My Account', url: '/home/dashboard' },
-        { label: 'Call Recordings' },
+        { label: t?.('MY_ACCOUNT') ?? 'My Account', url: '/home/dashboard' },
+        { label: t?.('CALL_RECORDINGS') ?? 'Call recordings' },
       ]}
       // Descriptors, not JSX — the host renders these as themed buttons in the
       // header. `disabled` reacts to the grid's checkbox selection.

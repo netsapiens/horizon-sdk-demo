@@ -1,6 +1,6 @@
 /** Showcase section: SearchField and Autocomplete. */
 import { useState } from 'react';
-import { useHorizonContext } from '@netsapiens/horizon-sdk';
+import { useHorizonContext, useLocale } from '@netsapiens/horizon-sdk';
 
 import { SectionCode } from '../SectionCode';
 
@@ -13,6 +13,9 @@ const OPTIONS = [
 
 export default function SearchFieldSection() {
   const { ui } = useHorizonContext();
+  // Host keys for the shared vocabulary: these follow the language switch,
+  // and a string hard-coded here would be English forever.
+  const { t } = useLocale();
   const { SearchField, Autocomplete, Typography, Stack, Paper } = ui || {};
   const [search, setSearch] = useState('');
   const [choice, setChoice] = useState<string | number | null>('acme');
@@ -41,7 +44,7 @@ export default function SearchFieldSection() {
             source={{ options: OPTIONS }}
             value={choice}
             onChange={setChoice}
-            label='Customer'
+            label={t?.('CUSTOMER') ?? 'Customer'}
             fullWidth
           />
         ) : null}

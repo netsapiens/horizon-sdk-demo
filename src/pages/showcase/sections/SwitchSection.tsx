@@ -1,11 +1,14 @@
 /** Showcase section: Switch toggle. */
 import { useState } from 'react';
-import { useHorizonContext } from '@netsapiens/horizon-sdk';
+import { useHorizonContext, useLocale } from '@netsapiens/horizon-sdk';
 
 import { SectionCode } from '../SectionCode';
 
 export default function SwitchSection() {
   const { ui } = useHorizonContext();
+  // Host keys for the shared vocabulary: these follow the language switch,
+  // and a string hard-coded here would be English forever.
+  const { t } = useLocale();
   const { Switch, Typography, Stack, Paper } = ui || {};
   const [switchValue, setSwitchValue] = useState(true);
   if (!Paper || !Typography || !Stack || !Switch) return null;
@@ -21,11 +24,11 @@ export default function SwitchSection() {
 
       <Stack spacing={1}>
         <Switch
-          label='Enabled'
+          label={t?.('ENABLED') ?? 'Enabled'}
           checked={switchValue}
           onChange={(e) => setSwitchValue(e.target.checked)}
         />
-        <Switch label='Disabled' disabled />
+        <Switch label={t?.('DISABLED') ?? 'Disabled'} disabled />
       </Stack>
 
       <SectionCode>

@@ -1,11 +1,14 @@
 /** Showcase section: SidePanel drawer + SideTrayComponents building blocks. */
 import { useState } from 'react';
-import { useHorizonContext } from '@netsapiens/horizon-sdk';
+import { useHorizonContext, useLocale } from '@netsapiens/horizon-sdk';
 
 import { SectionCode } from '../SectionCode';
 
 export default function SidePanelSection() {
   const { ui } = useHorizonContext();
+  // Host keys for the shared vocabulary: these follow the language switch,
+  // and a string hard-coded here would be English forever.
+  const { t } = useLocale();
   const { Button, IconButton, Chip, Stack, Typography, Paper } = ui || {};
   const { SidePanel, SideTrayComponents } = ui?.templates || {};
   const [open, setOpen] = useState(false);
@@ -34,7 +37,7 @@ export default function SidePanelSection() {
       </Button>
 
       <SidePanel
-        title='User Details'
+        title={t?.('USER_DETAILS') ?? 'User details'}
         subtitle='View and edit user information'
         icon={IconButton && <IconButton icon='mdi:account' iconSize={20} />}
         open={open}
@@ -47,14 +50,14 @@ export default function SidePanelSection() {
               color='primary'
               onClick={() => setOpen(false)}
             >
-              Cancel
+              {t?.('CANCEL') ?? 'Cancel'}
             </Button>
             <Button
               variant='contained'
               color='primary'
               onClick={() => setOpen(false)}
             >
-              Save Changes
+              {t?.('SAVE_CHANGES') ?? 'Save changes'}
             </Button>
           </Stack>
         }
@@ -64,38 +67,52 @@ export default function SidePanelSection() {
             name='John Doe'
             subtitle='john.doe@example.com'
             trailing={
-              Chip && <Chip label='Admin' size='small' color='primary' />
+              Chip && (
+                <Chip
+                  label={t?.('ROLE_ADMIN') ?? 'Admin'}
+                  size='small'
+                  color='primary'
+                />
+              )
             }
           />
 
           <SideTrayComponents.Divider />
 
-          <SideTrayComponents.Section title='Basic Information'>
-            <SideTrayComponents.Field label='Full Name' value='John Doe' />
+          <SideTrayComponents.Section
+            title={t?.('BASIC_INFORMATION') ?? 'Basic information'}
+          >
             <SideTrayComponents.Field
-              label='Email'
+              label={t?.('FULL_NAME') ?? 'Full name'}
+              value='John Doe'
+            />
+            <SideTrayComponents.Field
+              label={t?.('EMAIL') ?? 'Email'}
               value='john.doe@example.com'
             />
             <SideTrayComponents.Field label='Role' value='Administrator' />
-            <SideTrayComponents.Field label='Status' value='Active' />
+            <SideTrayComponents.Field
+              label={t?.('STATUS') ?? 'Status'}
+              value='Active'
+            />
           </SideTrayComponents.Section>
 
           <SideTrayComponents.Divider />
 
           <SideTrayComponents.Section title='Edit Information'>
             <SideTrayComponents.Input
-              label='Display Name'
+              label={t?.('DISPLAY_NAME') ?? 'Display name'}
               value='John Doe'
               placeholder='Enter display name'
             />
             <SideTrayComponents.Input
-              label='Phone Number'
+              label={t?.('PHONE_NUMBER') ?? 'Phone number'}
               value='+1 (555) 123-4567'
-              placeholder='Enter phone number'
+              placeholder={t?.('ENTER_PHONE_NUMBER') ?? 'Enter phone number'}
               type='tel'
             />
             <SideTrayComponents.Input
-              label='Notes'
+              label={t?.('NOTES') ?? 'Notes'}
               placeholder='Add notes...'
               multiline
               rows={4}

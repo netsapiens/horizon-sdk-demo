@@ -27,10 +27,7 @@
  * data so the page is never blank while you are looking at it.
  */
 import { useEffect, useMemo, useState } from 'react';
-import {
-  useHorizonContext,
-  useManagingDomain,
-} from '@netsapiens/horizon-sdk';
+import { useHorizonContext, useManagingDomain } from '@netsapiens/horizon-sdk';
 
 import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import { MOCK_CRM_DIRECTORY } from '../mocks/crm';
@@ -60,10 +57,32 @@ interface NetSapiensUser {
  * they are looking at real data for the domain they selected.
  */
 const SAMPLE_ROWS: SyncRow[] = [
-  { userId: '1001', displayName: 'Dana Whitfield', extension: '1001', crmCompany: 'Northwind Retail', source: 'sample' },
-  { userId: '1002', displayName: 'Marcus Reyes', extension: '1002', crmCompany: 'Contoso Freight', source: 'sample' },
-  { userId: '1003', displayName: 'Priya Raman', extension: '1003', source: 'sample' },
-  { userId: '1004', displayName: 'Sam Okafor', extension: '1004', source: 'sample' },
+  {
+    userId: '1001',
+    displayName: 'Dana Whitfield',
+    extension: '1001',
+    crmCompany: 'Northwind Retail',
+    source: 'sample',
+  },
+  {
+    userId: '1002',
+    displayName: 'Marcus Reyes',
+    extension: '1002',
+    crmCompany: 'Contoso Freight',
+    source: 'sample',
+  },
+  {
+    userId: '1003',
+    displayName: 'Priya Raman',
+    extension: '1003',
+    source: 'sample',
+  },
+  {
+    userId: '1004',
+    displayName: 'Sam Okafor',
+    extension: '1004',
+    source: 'sample',
+  },
 ];
 
 /**
@@ -168,7 +187,7 @@ export default function DomainCrmSyncPage({ ...marker }: ZoneMarkerProps) {
   return (
     <PageTemplate
       {...marker}
-      title="CRM Sync"
+      title='CRM Sync'
       breadcrumbs={[
         { label: 'Manage', url: '/manage' },
         { label: managing ?? 'Domain' },
@@ -183,32 +202,32 @@ export default function DomainCrmSyncPage({ ...marker }: ZoneMarkerProps) {
         */}
         <Paper sx={{ p: 3 }}>
           <Stack spacing={1}>
-            <Typography variant="h6">Domain being managed</Typography>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Typography variant="body1">
+            <Typography variant='h6'>Domain being managed</Typography>
+            <Stack direction='row' spacing={1} alignItems='center'>
+              <Typography variant='body1'>
                 <strong>{managing ?? 'None selected'}</strong>
               </Typography>
               {Chip ? (
                 <Chip
-                  size="small"
+                  size='small'
                   label={isLive ? 'live data' : 'sample data'}
                   color={isLive ? 'success' : 'default'}
                 />
               ) : null}
             </Stack>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant='body2' color='text.secondary'>
               Signed in against {user.domain} — this page is scoped to the
               domain selected above, not to the account you signed in with.
               Switch domains and these numbers follow.
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant='body2' color='text.secondary'>
               Registered once as <code>/manage/:domain/crm-sync</code>.
             </Typography>
           </Stack>
         </Paper>
 
         {liveError && Alert ? (
-          <Alert severity="warning">
+          <Alert severity='warning'>
             Could not read users for {managing}: {liveError}. Showing sample
             data instead.
           </Alert>
@@ -217,13 +236,13 @@ export default function DomainCrmSyncPage({ ...marker }: ZoneMarkerProps) {
         <Paper sx={{ p: 3 }}>
           <Stack spacing={2}>
             <Stack
-              direction="row"
+              direction='row'
               spacing={2}
-              alignItems="center"
-              justifyContent="space-between"
+              alignItems='center'
+              justifyContent='space-between'
             >
-              <Typography variant="h6">CRM linkage</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant='h6'>CRM linkage</Typography>
+              <Typography variant='body2' color='text.secondary'>
                 {loading
                   ? 'Loading…'
                   : `${linked} of ${rows.length} users linked`}
@@ -233,23 +252,23 @@ export default function DomainCrmSyncPage({ ...marker }: ZoneMarkerProps) {
             {rows.map((row) => (
               <Stack
                 key={row.userId}
-                direction="row"
+                direction='row'
                 spacing={2}
-                alignItems="center"
-                justifyContent="space-between"
+                alignItems='center'
+                justifyContent='space-between'
               >
-                <Typography variant="body2">
+                <Typography variant='body2'>
                   {row.displayName} · ext {row.extension}
                 </Typography>
                 {Chip ? (
                   <Chip
-                    size="small"
+                    size='small'
                     label={row.crmCompany ?? 'Not linked'}
                     color={row.crmCompany ? 'primary' : 'default'}
                     variant={row.crmCompany ? 'filled' : 'outlined'}
                   />
                 ) : (
-                  <Typography variant="body2">
+                  <Typography variant='body2'>
                     {row.crmCompany ?? 'Not linked'}
                   </Typography>
                 )}

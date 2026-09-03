@@ -23,7 +23,7 @@
  * button.
  */
 import { useState } from 'react';
-import { useHorizonContext } from '@netsapiens/horizon-sdk';
+import { useHorizonContext, useLocale } from '@netsapiens/horizon-sdk';
 
 import { type ZoneMarkerProps } from '../integration/withZoneTestId';
 import {
@@ -61,6 +61,7 @@ import { ShowCodeContext } from './showcase/ShowCode';
 
 export default function ComponentShowcasePage({ ...marker }: ZoneMarkerProps) {
   const { ui } = useHorizonContext();
+  const { t } = useLocale();
   const { PageTemplate } = ui?.templates || {};
   const { Stack } = ui || {};
   const [showCode, setShowCode] = useState(true);
@@ -145,7 +146,7 @@ export default function ComponentShowcasePage({ ...marker }: ZoneMarkerProps) {
           <ActivityListSection />
 
           <GroupHeading
-            title='Templates'
+            title={t?.('TEMPLATES') ?? 'Templates'}
             blurb='Whole page and panel shells on ui.templates — the fastest route to a page that looks native, the host owns the layout and you own only the content.'
           />
           <TemplatesSection />

@@ -1,5 +1,5 @@
 /** Showcase section: the page- and panel-level templates. */
-import { useHorizonContext } from '@netsapiens/horizon-sdk';
+import { useHorizonContext, useLocale } from '@netsapiens/horizon-sdk';
 
 import { SectionCode } from '../SectionCode';
 
@@ -43,13 +43,16 @@ const TEMPLATES: Array<{ name: string; what: string; where: string }> = [
 
 export default function TemplatesSection() {
   const { ui } = useHorizonContext();
+  // Host keys for the shared vocabulary: these follow the language switch,
+  // and a string hard-coded here would be English forever.
+  const { t } = useLocale();
   const { Typography, Stack, Paper, Box, Chip } = ui || {};
   if (!Paper || !Typography || !Stack || !Box) return null;
 
   return (
     <Paper>
       <Typography variant='h5' gutterBottom>
-        Templates
+        {t?.('TEMPLATES') ?? 'Templates'}
       </Typography>
       <Typography variant='body2' color='text.secondary' sx={{ mb: 3 }}>
         Whole page and panel shells, on <code>ui.templates</code>. A template is

@@ -1,11 +1,14 @@
 /** Showcase section: Checkbox. */
 import { useState } from 'react';
-import { useHorizonContext } from '@netsapiens/horizon-sdk';
+import { useHorizonContext, useLocale } from '@netsapiens/horizon-sdk';
 
 import { SectionCode } from '../SectionCode';
 
 export default function CheckboxSection() {
   const { ui } = useHorizonContext();
+  // Host keys for the shared vocabulary: these follow the language switch,
+  // and a string hard-coded here would be English forever.
+  const { t } = useLocale();
   const { Checkbox, Typography, Stack, Paper } = ui || {};
   const [checked, setChecked] = useState(true);
   if (!Paper || !Typography || !Stack || !Checkbox) return null;
@@ -26,7 +29,7 @@ export default function CheckboxSection() {
           onChange={(e) => setChecked(e.target.checked)}
         />
         <Checkbox label='Unchecked' checked={false} onChange={() => {}} />
-        <Checkbox label='Disabled' disabled />
+        <Checkbox label={t?.('DISABLED') ?? 'Disabled'} disabled />
       </Stack>
 
       <SectionCode>
