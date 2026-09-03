@@ -3,9 +3,28 @@ import { useHorizonContext } from '@netsapiens/horizon-sdk';
 
 import { SectionCode } from '../SectionCode';
 
+/**
+ * First letter of the first two words — "Andrew Lighterink" → "AL".
+ *
+ * The same treatment the host's own top-bar avatar uses, which matters: an
+ * avatar an app draws for the signed-in user sits a few pixels from the one
+ * Horizon draws, and two different abbreviations of the same name is the kind
+ * of thing nobody reports and everybody notices.
+ */
+function initialsOf(name: string): string {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || '?'
+  );
+}
+
 export default function AvatarSection() {
-  const { ui } = useHorizonContext();
-  const { Avatar, Box, Icon, Typography, Stack, Paper } = ui || {};
+  const { ui, user } = useHorizonContext();
+  const { Avatar, Box, Typography, Stack, Paper } = ui || {};
   if (!Paper || !Typography || !Stack || !Avatar || !Box) return null;
 
   return (
@@ -14,8 +33,9 @@ export default function AvatarSection() {
         Avatar
       </Typography>
       <Typography variant='body2' color='text.secondary' sx={{ mb: 3 }}>
-        Initials, a photo, or a fallback — in three sizes, and stacked into a
-        group when several people share a row.
+        Initials in three sizes, the platform's semantic colours, the signed-in
+        user drawn from real session data, and a stacked group for when several
+        people share a row.
       </Typography>
 
       <Stack spacing={2.5}>
@@ -38,19 +58,31 @@ export default function AvatarSection() {
             <Avatar sx={{ bgcolor: 'primary.main' }}>AB</Avatar>
             <Avatar sx={{ bgcolor: 'success.main' }}>CD</Avatar>
             <Avatar sx={{ bgcolor: 'warning.main' }}>EF</Avatar>
-            {Icon ? (
-              <Avatar
-                sx={{
-                  bgcolor: 'background.elevation3',
-                  color: 'text.secondary',
-                }}
-              >
-                <Icon icon='mdi:account' />
-              </Avatar>
-            ) : null}
-            <Avatar variant='rounded' sx={{ bgcolor: 'info.main' }}>
-              GH
-            </Avatar>
+          </Stack>
+        </Box>
+
+        <Box>
+          <Typography variant='subtitle2' gutterBottom>
+            The signed-in user
+          </Typography>
+          <Typography variant='caption' color='text.secondary'>
+            Real session data, out of the context — not a placeholder.
+          </Typography>
+          <Stack
+            direction='row'
+            spacing={1.5}
+            alignItems='center'
+            sx={{ mt: 1 }}
+          >
+            <Avatar>{initialsOf(user?.displayName ?? '')}</Avatar>
+            <Stack direction='column' spacing={0.25}>
+              <Typography variant='subtitle2'>
+                {user?.displayName ?? 'Unknown user'}
+              </Typography>
+              <Typography variant='caption' color='text.secondary'>
+                {user?.email ?? user?.domain ?? ''}
+              </Typography>
+            </Stack>
           </Stack>
         </Box>
 
@@ -91,9 +123,15 @@ export default function AvatarSection() {
       <SectionCode>
         {`const { Avatar } = horizonContext.ui;
 
-<Avatar>JD</Avatar>                                   // initials
-<Avatar src={user.photo} alt={user.name}>JD</Avatar>  // photo, initials as fallback
-<Avatar variant="rounded">GH</Avatar>                 // square-ish
+<Avatar>JD</Avatar>                        // initials
+<Avatar src={photoUrl} alt={name}>JD</Avatar>  // an image, initials as fallback
+
+// The signed-in user, from the context. There is no avatar URL on user —
+// the fields are displayName, domain, email, extension, scope, department,
+// site — so initials are the honest treatment, and they are what Horizon's
+// own top-bar avatar renders for the same person.
+const { user } = useHorizonContext();
+<Avatar>{initialsOf(user.displayName)}</Avatar>
 
 // Size is width + height together, and the font has to come with them,
 // or the initials stay 20px inside a 56px circle.
@@ -118,7 +156,10 @@ export default function AvatarSection() {
         💡 Used in: user lists, profiles, contacts — call history, user
         management, the directory. Always give an avatar a name in text nearby
         or an <code>alt</code>: two initials on their own tell a screen reader
-        nothing.
+        nothing. And derive them the way the host does — an avatar your app
+        draws for the signed-in user sits inches from the one Horizon draws, and
+        two abbreviations of the same name is a mismatch nobody reports and
+        everybody sees.
       </Typography>
     </Paper>
   );

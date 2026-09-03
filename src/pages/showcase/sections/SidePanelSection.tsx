@@ -93,7 +93,7 @@ export default function SidePanelSection() {
             <SideTrayComponents.Field label='Role' value='Administrator' />
             <SideTrayComponents.Field
               label={t?.('STATUS') ?? 'Status'}
-              value='Active'
+              value={t?.('ACTIVE') ?? 'Active'}
             />
           </SideTrayComponents.Section>
 
