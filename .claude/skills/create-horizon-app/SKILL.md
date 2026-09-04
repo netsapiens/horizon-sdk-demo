@@ -16,6 +16,14 @@ Scaffolds a new remote app for NetSapiens Horizon.
 > 2. **Source maps with `sourcesContent`** (`devtool: 'source-map'`, and `dist/*.map` must ship)
 > 3. **`@netsapiens/horizon-sdk` must NOT be in webpack `shared`**
 >
+> And one that only bites once the app grows past the template:
+>
+> 4. **`react-dom/client` must be declared `import: false`** if anything in the
+>    dependency graph calls `createRoot`. Sharing `react-dom` does not cover it, and
+>    the failure is a hard load error (React #527) naming a version that appears
+>    nowhere in the host. See the `shared` block below — it also explains why
+>    `import: false` is right there and wrong everywhere else.
+>
 > Run `npm run verify` before submitting. A pass locally is a pass on the platform.
 
 > **RULE 1 — never hand-roll a UI component.** Every visible element comes from
@@ -99,8 +107,8 @@ If the target directory exists, ask before overwriting.
   "dependencies": {
     "@netsapiens/horizon-sdk": "^0.2.11",
     "loglevel": "^1.9.2",
-    "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.23.0",
@@ -158,6 +166,16 @@ module.exports = (_env, argv) => {
     crossOriginLoading: 'anonymous',
     clean: true,
   },
+  // Needed as soon as your bundle imports react-dom at all — directly, or through
+  // a UI library that renders portals. Without it webpack's default cache group can
+  // emit a chunk that is present in the manifest with NO FILE, and the integrity
+  // plugin writes a placeholder for every manifest entry, so one with no bytes can
+  // never resolve: the build fails with "contains unresolved integrity
+  // placeholders" and names neither react-dom nor `shared`. Vendor splitting is
+  // unaffected. `webpack --json`, looking for a chunk with an empty `files` array,
+  // is how you confirm it.
+  optimization: { splitChunks: { cacheGroups: { default: false } } },
+
   resolve: { extensions: ['.tsx', '.ts', '.js', '.jsx'] },
   module: {
     rules: [
@@ -185,12 +203,36 @@ module.exports = (_env, argv) => {
       // Host-provided singletons only. Do NOT add `@netsapiens/horizon-sdk` here:
       // sharing it fails the build outright with "contains unresolved integrity
       // placeholders", and the verifier rejects on `sdk-not-shared`. Removing it
-      // entirely is the fix — do not try `import: false`.
-      // Keep webpack's default local fallback copy for these (never `import: false`).
+      // entirely is the fix — do not try `import: false` for the SDK.
+      //
+      // Keep webpack's default local fallback for the three below. `react-dom/client`
+      // is the ONE exception and takes `import: false` — see the note under it.
       shared: {
         react: { singleton: true, requiredVersion: '^19.2.0', eager: false },
         'react-dom': { singleton: true, requiredVersion: '^19.2.0', eager: false },
         loglevel: { singleton: true, requiredVersion: '^1.9.2', eager: false },
+
+        // ⚠️ ONLY IF something in your graph calls createRoot — and you may not
+        // have written that import. `@ant-design/v5-patch-for-react-19` does it,
+        // so anyone porting an antd UI has it whether they know or not. A Horizon
+        // remote is mounted by the host inside the host's React tree, so a normal
+        // extension never calls createRoot: check before adding this.
+        //
+        // Sharing 'react-dom' does NOT cover it. They are separate builds —
+        // `react-dom` is createPortal/flushSync/version, while `react-dom/client`
+        // is the entire reconciler, carrying the React version as a literal baked
+        // in at publish time and checked at module evaluation. Undeclared, your
+        // bundle keeps its own reconciler while `react` resolves to the host's,
+        // the literals differ, and it fails to load with React error #527 naming a
+        // react-dom version that appears nowhere in the host.
+        //
+        // `import: false` is required, not optional, and it is the opposite of the
+        // rule above: keeping the fallback emits a chunk that leaves the integrity
+        // plugin with a placeholder it cannot resolve. Use the exact key, never the
+        // `react-dom/` prefix — the prefix would demand the host provide every
+        // react-dom subpath your graph touches, and only `react-dom/client` is shared.
+        //
+        // 'react-dom/client': { singleton: true, requiredVersion: '^19.2.0', import: false },
       },
     }),
     // REQUIRED in production. Emits the per-chunk integrity map the platform
