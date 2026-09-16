@@ -64,7 +64,7 @@
       "testId": "sdk-demo-ext-active-calls-recording-filter"
     },
     {
-      "$comment": "Scoped to the demo's OWN landing page, not the '/*' it used to carry. A badge reading 'Demo Extension' on every native page — Call Logs, the platform dashboard, a customer's Users list — reads as platform chrome rather than as something an app injected, which is the opposite of what it is demonstrating. One registration is enough for the Playwright suite to prove `page-header-secondary` still mounts, and on this page the label is self-evidently true.",
+      "$comment": "Scoped to the demo's OWN landing page, not the '/*' it used to carry. A badge reading 'Demo Extension' on every native page — Call Logs, the platform dashboard, a customer's Users list — reads as platform chrome rather than as something an app injected, which is the opposite of what it is demonstrating. It survives on this one page purely to demonstrate the zone, where the label is self-evidently true. NOT for test coverage: netsapiens-horizon-testing cut over to horizon-sdk-testapp and loads only that app's manifest, so nothing here is asserted by any suite — an app's id derives from its webpack_module and a bundle publishes one container name, so pointing the suite at this showcase would make the two share a registration, which is how a run once deleted it. Change or delete anything in this file on its own merits; no test will stop you, and none will catch you either.",
       "id": "demo-header-status-badge",
       "zone": "page-header-secondary",
       "routes": ["/apps/horizon-sdk-demo"],
