@@ -15,7 +15,7 @@ export function TableToolbarInfo({
 
   const handleClick = () => {
     alert(
-      'Tip: use the Priority column to triage missed and long-running calls first.',
+      'Tip: filter by direction, then sort by duration to find the calls worth listening to.',
     );
   };
 

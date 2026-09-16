@@ -5,7 +5,7 @@
   "remoteEntryUrl": "https://netsapiens.github.io/horizon-sdk-demo/remoteEntry.js",
   "$comment_requiredScopes": "Where a route, column or widget declares `requiredScopes`, it is recorded here so the Playwright suite knows which signed-in scope can assert that surface — but the manifest is NOT what registers it. The enforcing value is an inline string literal at the registerRoute/registerDynamicColumn/registerWidget call site in App.tsx, because the platform analyser extracts an app's declared surface by reading string literals out of submitted source and cannot follow a constant or a loop. The duplication is deliberate; keep the two in step.",
   "$comment_widgets": "Dashboard widgets are NOT auto-mounted, and that is the contract working, not a bug: registering a widget makes it eligible, and a saved layout is authoritative, so a newly available widget appears in a dashboard's Customize catalogue rather than placing itself on somebody's grid. The Playwright suite must therefore ADD the widget from Customize before it can assert its testId. `zones` is the whole list the widget is eligible on; there is no data-zone attribute on a widget, because the same component can mount on any of them and a single zone attribute would name the wrong one. Like `requiredScopes`, `zones` here is documentation — the enforcing declaration is the inline literal array at the registerWidget call site in App.tsx, for the same string-literal-extraction reason.",
-  "version": "1.8.7",
+  "version": "1.8.8",
   "extensions": [
     {
       "id": "demo-export-button",
@@ -64,9 +64,10 @@
       "testId": "sdk-demo-ext-active-calls-recording-filter"
     },
     {
+      "$comment": "Scoped to the demo's OWN landing page, not the '/*' it used to carry. A badge reading 'Demo Extension' on every native page — Call Logs, the platform dashboard, a customer's Users list — reads as platform chrome rather than as something an app injected, which is the opposite of what it is demonstrating. One registration is enough for the Playwright suite to prove `page-header-secondary` still mounts, and on this page the label is self-evidently true.",
       "id": "demo-header-status-badge",
       "zone": "page-header-secondary",
-      "routes": ["/*"],
+      "routes": ["/apps/horizon-sdk-demo"],
       "testId": "sdk-demo-ext-header-status-badge"
     },
     {
@@ -132,12 +133,16 @@
   ],
   "columns": [
     {
-      "id": "demo-call-priority-column",
-      "zone": "call-logs-columns",
-      "field": "call-priority",
-      "routes": ["/manage/call-logs", "/manage/*/call-logs"],
+      "$comment": "Was a \"Priority\" column on Call Logs, which was wrong twice over: Call Logs is among the busiest tables in the platform, so a column an app invented got read as platform data; and \"Priority\" was this app's own rule about call duration and direction with nothing on screen saying so. Contacts is quieter, the content belongs there \u2014 it is the demo's CRM story, sharing the fixture behind the CRM Sync page and the sync-queue widget \u2014 and \"(SDK)\" in the header names the owner before a reader reaches a value.",
+      "id": "demo-crm-status-column",
+      "zone": "contacts-columns",
+      "field": "crm-status",
+      "routes": [
+        "/manage/contacts",
+        "/manage/*/contacts"
+      ],
       "requiredScopes": "PLATFORM",
-      "testId": "sdk-demo-col-call-priority"
+      "testId": "sdk-demo-col-crm-status"
     }
   ],
   "widgets": [

@@ -20,9 +20,9 @@
  *
  *   - Component Showcase sits under `/apps`, which has NO section floor, so its
  *     'DOMAIN_MANAGERS' declaration is the only thing gating the page.
- *   - The Priority column sits on a `/manage` page whose floor is already
+ *   - The CRM Status column sits on a `/manage` page whose floor is already
  *     ADMINS, and asks for 'PLATFORM' — narrowing a gate the host enforces, so a
- *     Reseller sees Call Logs without that column.
+ *     Reseller sees Contacts without that column.
  *
  * The rule underneath both: a declaration is intersected with the host's floor,
  * so it can only ever restrict further. Declaring a wider audience grants
@@ -47,7 +47,7 @@ import {
 } from '@netsapiens/horizon-sdk';
 
 import type { ZoneMarkerProps } from './integration/withZoneTestId';
-import { CallPriorityCell } from './columns/CallPriorityColumn';
+import { CrmStatusCell } from './columns/CrmStatusColumn';
 import { withZoneTestId } from './integration/withZoneTestId';
 import {
   columnTestId,
@@ -55,6 +55,7 @@ import {
   routeTestId,
   widgetTestId,
 } from './integration/zones';
+import { crmStatusOf } from './mocks/crmStatus';
 import CallRecordingsPage from './pages/CallRecordingsPage';
 import ComponentShowcasePage from './pages/ComponentShowcasePage';
 import CrmIntegrationPage from './pages/CrmIntegrationPage';
@@ -428,14 +429,27 @@ export default function App(horizonContext: HorizonContext) {
     // DataTable derives the `call-logs-columns` zone from the route and merges
     // registered columns into the grid. Each rendered cell is tagged with the
     // manifest testId so the suite can assert the column mounted.
+    // "CRM Status (SDK)" merged into the host's domain Contacts grid. The
+    // host's DataTable derives the `contacts-columns` zone from the route and
+    // merges registered columns into the grid. Each rendered cell carries the
+    // manifest testId so the suite can assert the column mounted.
+    //
+    // This used to be a "Priority" column on Call Logs, and both halves of that
+    // were wrong. Call Logs is among the busiest tables in the platform, so an
+    // invented column there gets read as platform data; and "Priority" was this
+    // app's own rule about duration and direction with nothing on screen saying
+    // so. Contacts is quieter, the content actually belongs there — it is the
+    // demo's CRM story, the same fixture behind the CRM Sync page and the
+    // sync-queue widget — and `(SDK)` in the header says whose column it is
+    // before anyone reads a value.
     sdk.registerDynamicColumn({
-      id: 'demo-call-priority-column',
-      zone: 'call-logs-columns',
+      id: 'demo-crm-status-column',
+      zone: 'contacts-columns',
       routes: [
-        { pattern: '/manage/call-logs' },
-        { pattern: '/manage/*/call-logs' },
+        { pattern: '/manage/contacts' },
+        { pattern: '/manage/*/contacts' },
       ],
-      // Narrower than the page it appears on. Call Logs lives under `/manage`,
+      // Narrower than the page it appears on. Contacts lives under `/manage`,
       // whose section floor is ADMINS (Admin, Super User, Reseller); this column
       // asks for PLATFORM, so a Reseller opens the page and sees every native
       // column but not this one. That is the intended shape of a column gate —
@@ -447,9 +461,12 @@ export default function App(horizonContext: HorizonContext) {
       // it would intersect to the empty set and hide the column from everyone.
       requiredScopes: 'PLATFORM',
       column: {
-        field: 'call-priority',
-        headerName: 'Priority',
-        width: 120,
+        field: 'crm-status',
+        // The caveat lives in the header, where a reader meets it before the
+        // value. A column an app invents should never be mistakable for one the
+        // platform owns, and that costs exactly one word.
+        headerName: 'CRM Status (SDK)',
+        width: 160,
         sortable: true,
         filterable: true,
         type: 'string',
@@ -459,21 +476,16 @@ export default function App(horizonContext: HorizonContext) {
         // `theme`, `t` and app-scoped `eventBus` a zone extension receives. The
         // cell renders from `context.ui`, so it re-themes with the host toggle.
         renderCell: (params, context) => (
-          <CallPriorityCell
+          <CrmStatusCell
             params={params}
             context={context}
-            data-testid={columnTestId('demo-call-priority-column')}
-            data-zone='call-logs-columns'
+            data-testid={columnTestId('demo-crm-status-column')}
+            data-zone='contacts-columns'
           />
         ),
-        valueGetter: (_value, row) => {
-          const duration = Number(row['call-total-duration-seconds']) || 0;
-          const direction = row['call-direction'];
-          if (direction === 2) return 'High';
-          if (direction === 1 && duration > 300) return 'High';
-          if (duration > 180) return 'Medium';
-          return 'Low';
-        },
+        // Sorting and filtering act on this, not on the rendered chip, so the
+        // grid orders by the same string the reader sees.
+        valueGetter: (_value, row) => crmStatusOf(row),
       },
     });
 

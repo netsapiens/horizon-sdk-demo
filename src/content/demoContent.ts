@@ -28,7 +28,7 @@ export const CAPABILITIES: Capability[] = [
   {
     title: 'Dynamic columns',
     api: 'sdk.registerDynamicColumn()',
-    desc: 'Add a sortable/filterable column to a host data table, such as the Priority column on Call Logs.',
+    desc: 'Add a sortable/filterable column to a host data table, such as the CRM Status (SDK) column on domain Contacts.',
   },
   {
     title: 'Dashboard widgets',
@@ -81,7 +81,7 @@ export const ZONES: ZoneInfo[] = [
   {
     zone: 'page-header-secondary',
     desc: 'Badges / status beside the page title.',
-    usedFor: '“● Live” status badge on Call Logs.',
+    usedFor: '“● Live” status badge, on this app\u2019s own page only.',
   },
   {
     zone: 'page-content-after',
@@ -108,7 +108,7 @@ export const ZONES: ZoneInfo[] = [
   {
     zone: 'call-logs-columns (dynamic column)',
     desc: 'A registered column merged into a host table.',
-    usedFor: 'Priority column on the Call Logs table.',
+    usedFor: 'CRM Status (SDK) column on the domain Contacts table.',
   },
   {
     zone: 'form-section-before',
@@ -180,7 +180,7 @@ export interface WalkthroughItem {
 export const WALKTHROUGH: WalkthroughItem[] = [
   {
     label: 'Call Logs',
-    desc: 'Export button, Priority column, “● Live” badge, analytics widget, toolbar tips, and a row quick-action that opens a Call details side panel.',
+    desc: 'Export button, CRM Status column, analytics widget, toolbar tips, and a row quick-action that opens a Call details side panel.',
     nav: '/manage/call-logs',
     badge: 'primary',
   },
@@ -267,16 +267,32 @@ sdk.registerDynamicExtension({
   {
     title: 'Add a table column',
     code: `sdk.registerDynamicColumn({
-  id: 'demo-call-priority-column',
-  zone: 'call-logs-columns',
-  routes: [{ pattern: '/manage/*/call-logs' }],
+  id: 'demo-crm-status-column',
+  // The zone is derived from the route's last segment, so any host
+  // DataTable opts in without the page wiring anything.
+  zone: 'contacts-columns',
+  routes: [{ pattern: '/manage/*/contacts' }],
+  requiredScopes: 'PLATFORM',   // narrows the page's floor; never widens it
   column: {
-    field: 'call-priority',
-    headerName: 'Priority',
+    field: 'crm-status',
+    // Say whose column it is, in the header. A column an app invents
+    // should not be mistakable for one the platform owns, and a reader
+    // meets the header before the value.
+    headerName: 'CRM Status (SDK)',
     sortable: true,
-    renderCell: (params) => <CallPriorityCell params={params} />,
+    // Second arg is the ExtensionContext — render from context.ui and the
+    // cell re-themes with the host's light/dark toggle for free.
+    renderCell: (params, context) => (
+      <CrmStatusCell params={params} context={context} />
+    ),
+    // Sort and filter act on this, not on the rendered chip.
+    valueGetter: (_value, row) => crmStatusOf(row),
   },
-});`,
+});
+
+// Pick a quiet page. This started life as a 'Priority' column on Call
+// Logs — one of the busiest tables we ship — where an invented column
+// gets read as platform data.`,
   },
   {
     title: 'Contribute a dashboard widget',
