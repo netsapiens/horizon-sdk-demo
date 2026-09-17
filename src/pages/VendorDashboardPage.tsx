@@ -97,6 +97,8 @@ const COMPONENTS: Record<
     CallVolumeChart,
     'sdk-demo-vendor-call-volume',
   ),
+  // Leaves, not cards. Same map — the template asks for a component per id
+  // whether that id names a card or a figure inside one.
   'vendor-contacts-synced': asPageWidget(
     SyncedContactsStat,
     'sdk-demo-vendor-contacts-synced',
@@ -148,10 +150,20 @@ export default function VendorDashboardPage({ ...marker }: ZoneMarkerProps) {
         rangeControl
         // Copy and layout from content/, components from the map above. The
         // page itself is neither — it is the join.
-        widgets={VENDOR_DASHBOARD_CARDS.map((card) => ({
-          ...card,
-          component: COMPONENTS[card.id],
-        }))}
+        widgets={VENDOR_DASHBOARD_CARDS.map(({ leaves, ...card }) =>
+          leaves
+            ? // A card of figures. The template draws each on the host's leaf
+              // frame, so `Sync health` here is the same object the host builds
+              // when these two register as `kind: 'leaf'` on its own dashboard.
+              {
+                ...card,
+                leaves: leaves.map((leaf) => ({
+                  ...leaf,
+                  component: COMPONENTS[leaf.id],
+                })),
+              }
+            : { ...card, component: COMPONENTS[card.id] },
+        )}
       />
     </Box>
   );
