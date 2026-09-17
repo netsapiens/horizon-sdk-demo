@@ -12,7 +12,13 @@
  * choose — the host draws the card from exactly these fields.
  */
 
-/** One card, minus its component. `VendorDashboardPage` supplies that. */
+/** One figure inside a card, minus its component. */
+export interface VendorDashboardLeaf {
+  id: string;
+  title: string;
+}
+
+/** One card, minus its component(s). `VendorDashboardPage` supplies those. */
 export interface VendorDashboardCard {
   id: string;
   title: string;
@@ -27,14 +33,19 @@ export interface VendorDashboardCard {
     cadence?: string;
     delay?: string;
   };
+  /**
+   * Figures drawn inside this card on the host's leaf frame, instead of one
+   * body. A card declares `leaves` or a component, never both.
+   */
+  leaves?: VendorDashboardLeaf[];
 }
 
 /**
  * The page's layout, in reading order.
  *
  * Ordered the way a dashboard is read rather than by widget kind: the headline
- * chart, then the two figures it raises questions about, then the detail behind
- * them, then the live board.
+ * chart, then the card of figures it raises questions about, then the detail
+ * behind them, then the live board.
  */
 export const VENDOR_DASHBOARD_CARDS: VendorDashboardCard[] = [
   {
@@ -50,19 +61,31 @@ export const VENDOR_DASHBOARD_CARDS: VendorDashboardCard[] = [
       cadence: 'On range change',
     },
   },
+  // One CARD holding two FIGURES, not two cards.
+  //
+  // These same two components register on the host's dashboard as `kind: 'leaf'`
+  // (App.tsx §4), where the host puts them in a container and draws each one's
+  // frame. Declaring them here as `leaves` gets exactly that — the same leaf
+  // frame, the same grid breaks, the same square corners — so the pair looks
+  // identical whether a reader meets it here or on the host's own dashboard.
+  //
+  // Declared as two separate cards, which is what this page did before the
+  // template understood leaves, they came out as two panels: right numbers,
+  // wrong shape, and visibly not the thing the host renders.
+  //
+  // A leaf only exists inside a card. There is no standalone leaf, deliberately
+  // — outside a container it would just be a card with fewer features, which is
+  // what `component` already gives you.
   {
-    id: 'vendor-contacts-synced',
-    title: 'Contacts synced',
-    description: 'Reconciled with the CRM in the last 24 hours.',
-    size: 'half',
+    id: 'vendor-sync-health',
+    title: 'Sync health',
+    description: 'Reconciliation over the last 24 hours.',
+    size: 'full',
     height: 3,
-  },
-  {
-    id: 'vendor-sync-failures',
-    title: 'Sync failures',
-    description: 'Rows that exhausted their retries.',
-    size: 'half',
-    height: 3,
+    leaves: [
+      { id: 'vendor-contacts-synced', title: 'Contacts synced' },
+      { id: 'vendor-sync-failures', title: 'Sync failures' },
+    ],
   },
   {
     id: 'vendor-sync-outcomes',
