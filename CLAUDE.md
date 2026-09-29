@@ -26,17 +26,17 @@ style={...}>`, `<h2>`, `<table>`, `<pre>`. Use `Box`, `Button`, `Typography`,
   - The host keeps one frozen `ui` surface **per color mode** and rebuilds the
     whole context when the mode changes (`createHorizonUi(mode)` in its
     `HorizonAppsLoader`). So the host hands over correct tokens.
-  - `HorizonContextProvider` refreshes only `theme` and `locale` — it re-spreads
-    `{ ...context, theme, locale }` and never touches `context.ui`.
-  - So the moment an app **freezes the context** — which the SDK's own
-    recommended `useMemo([], …)` wrapper pattern in `App.tsx` does, to keep
-    component identity stable — `ui.theme`/`ui.styles` are pinned to the mode
-    that was active on first paint, while `theme` keeps updating around them.
+  - The SDK's recommended `useMemo([], …)` wrapper pattern in `App.tsx`
+    **freezes the context** to keep component identity stable, so the rebuilt
+    context never reaches `HorizonContextProvider`.
+  - The provider therefore keeps `theme`, `locale`, `managing` and `ui` live
+    from host events. `ui` arrives on `theme:changed` (`{ theme, ui }`); on a
+    host too old to send it, `ui.theme`/`ui.styles` stay pinned to the mode
+    that was active on first paint while `theme` keeps updating around them.
 
-  `src/App.tsx` now bridges this with a ref, so page components do see the live
-  `ui`. Do **not** treat that as permission to style from tokens: it holds only
-  as long as that bridge does, and inline token styling still skips the focus
-  rings, hover states and a11y the kit components carry.
+  Do **not** treat a live `ui` as permission to style from tokens: it depends
+  on the host version, and inline token styling still skips the focus rings,
+  hover states and a11y the kit components carry.
 
 - Colors belong in `sx`, as **palette paths** the host resolves at render:
   `color='text.secondary'`, `borderColor='divider'`, `borderLeftColor='primary.main'`,
@@ -125,9 +125,10 @@ Then `npm run typecheck && npm run lint && npm run format && npm run build`.
 - Panels inside a page read the live context themselves via
   `useHorizonContext()`. Do not prop-drill `ui` / `theme` / `styles` down —
   drilling is how a stale snapshot spreads.
-- The `useMemo([], …)` page wrappers in `src/App.tsx` read the context through
-  `contextRef.current`, not the closure. Keep it that way: closing over
-  `horizonContext` directly is what pinned `ui` to the first-paint color mode.
+- The `useMemo([], …)` page wrappers in `src/App.tsx` close over
+  `horizonContext` directly, exactly as the SDK README shows. Do not add a ref
+  or re-read to "refresh" it — the provider keeps the live fields current from
+  host events, and a workaround here would hide a regression there.
 - Static page copy lives in `src/content/`; a page file is layout only.
 - Scaffolding a new Horizon app? Use the `create-horizon-app` skill in
   `.claude/skills/`, which carries the current SDK shape and theming rules.

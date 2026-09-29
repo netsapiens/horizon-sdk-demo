@@ -39,7 +39,7 @@
  * which sits at plain `/manage` and is the same page for every domain.
  */
 import type { CallEvent, WidgetComponentProps } from '@netsapiens/horizon-sdk';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   HorizonContext,
   HorizonContextProvider,
@@ -145,18 +145,14 @@ export default function App(horizonContext: HorizonContext) {
   // registry attribution.
   const { sdk, user, theme } = useRemoteApp(horizonContext, __MF_NAME__);
 
-  // The host rebuilds `horizonContext` on every color-mode change — including
-  // `ui`, of which it keeps one frozen surface per mode (`createHorizonUi(mode)`
-  // in its HorizonAppsLoader). The wrappers below are memoized with empty deps
-  // to keep component identity stable across re-registration, which on its own
-  // would pin them to the context captured on first paint — `ui.theme` and
-  // `ui.styles` would then keep the mode that was active when the app loaded.
-  // This ref bridges the two: each wrapper reads the LATEST context at render,
-  // so HorizonContextProvider spreads a `ui` matching the mode the user is
-  // actually looking at. (Prefer `ui.*` components regardless — see CLAUDE.md.)
-  const contextRef = useRef(horizonContext);
-  contextRef.current = horizonContext;
-
+  // The page wrappers below are memoized with empty deps so component identity
+  // stays stable across host re-renders, which freezes `horizonContext` at first
+  // paint. That is fine: HorizonContextProvider keeps `theme`, `locale`,
+  // `managing` and `ui` live from host events (`ui` rides on `theme:changed`),
+  // so pages read the current color mode through useHorizonContext(). Needs a
+  // host that sends `ui` with `theme:changed`; on an older one `ui.theme` and
+  // `ui.styles` stay on the first-paint mode — another reason to use `ui.*`
+  // components and palette paths rather than painting from tokens.
   // Full-page route components, wrapped once so they render with the live
   // HorizonContext (theme/locale/ui) available via useHorizonContext().
   const DemoPageWithContext = useMemo(
@@ -165,78 +161,78 @@ export default function App(horizonContext: HorizonContext) {
       // into the page so it can tag its own root — otherwise they're dropped.
       function DemoPageWithContext(props: ZoneMarkerProps) {
         return (
-          <HorizonContextProvider context={contextRef.current}>
+          <HorizonContextProvider context={horizonContext}>
             <DemoPage {...props} />
           </HorizonContextProvider>
         );
       },
-
-    [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [], // stable identity prevents the host from remounting the page
   );
 
   const ComponentShowcasePageWithContext = useMemo(
     () =>
       function ComponentShowcasePageWithContext(props: ZoneMarkerProps) {
         return (
-          <HorizonContextProvider context={contextRef.current}>
+          <HorizonContextProvider context={horizonContext}>
             <ComponentShowcasePage {...props} />
           </HorizonContextProvider>
         );
       },
-
-    [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [], // stable identity prevents the host from remounting the page
   );
 
   const CrmIntegrationPageWithContext = useMemo(
     () =>
       function CrmIntegrationPageWithContext(props: ZoneMarkerProps) {
         return (
-          <HorizonContextProvider context={contextRef.current}>
+          <HorizonContextProvider context={horizonContext}>
             <CrmIntegrationPage {...props} />
           </HorizonContextProvider>
         );
       },
-
-    [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [], // stable identity prevents the host from remounting the page
   );
 
   const DomainCrmSyncPageWithContext = useMemo(
     () =>
       function DomainCrmSyncPageWithContext(props: ZoneMarkerProps) {
         return (
-          <HorizonContextProvider context={contextRef.current}>
+          <HorizonContextProvider context={horizonContext}>
             <DomainCrmSyncPage {...props} />
           </HorizonContextProvider>
         );
       },
-
-    [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [], // stable identity prevents the host from remounting the page
   );
 
   const VendorDashboardPageWithContext = useMemo(
     () =>
       function VendorDashboardPageWithContext(props: ZoneMarkerProps) {
         return (
-          <HorizonContextProvider context={contextRef.current}>
+          <HorizonContextProvider context={horizonContext}>
             <VendorDashboardPage {...props} />
           </HorizonContextProvider>
         );
       },
-
-    [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [], // stable identity prevents the host from remounting the page
   );
 
   const CallRecordingsPageWithContext = useMemo(
     () =>
       function CallRecordingsPageWithContext(props: ZoneMarkerProps) {
         return (
-          <HorizonContextProvider context={contextRef.current}>
+          <HorizonContextProvider context={horizonContext}>
             <CallRecordingsPage {...props} />
           </HorizonContextProvider>
         );
       },
-
-    [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [], // stable identity prevents the host from remounting the page
   );
 
   useEffect(() => {
