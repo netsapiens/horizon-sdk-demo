@@ -29,6 +29,16 @@ module.exports = (_env, argv) => {
       crossOriginLoading: 'anonymous',
       clean: true,
     },
+    // `nodeEnv: 'production'` in every mode, the dev server included. `react` is
+    // shared, so at runtime it is the host's PRODUCTION React — but
+    // `react/jsx-runtime` is not shared and gets bundled. Under `--mode development`
+    // that is React's development JSX runtime, which calls `dispatcher.getOwner()`
+    // on the host's production internals and fails on first render with
+    // "dispatcher.getOwner is not a function". Our own code is still built in
+    // development mode, with source maps.
+    optimization: {
+      nodeEnv: 'production',
+    },
     resolve: {
       extensions: ['.tsx', '.ts', '.js', '.jsx'],
     },
@@ -124,6 +134,18 @@ module.exports = (_env, argv) => {
       port: 5005,
       headers: {
         'Access-Control-Allow-Origin': '*',
+      },
+      // Required to load the dev server from Horizon. webpack-dev-server ≥5.2
+      // answers a cross-site <script> load (Sec-Fetch-Site: cross-site +
+      // Sec-Fetch-Mode: no-cors) with 403 "Cross-Origin request blocked" unless the
+      // Host is explicitly allowed — exactly how Horizon fetches a dev remote. The
+      // CORS header above does not help: the guard runs first. Only `localhost`
+      // (not 'all'), so the DNS-rebinding Host check still holds for other names.
+      allowedHosts: ['localhost'],
+      // The live-reload client otherwise dials the PAGE's host
+      // (wss://<horizon-host>:5005/ws) and fails on every reconnect.
+      client: {
+        webSocketURL: 'ws://localhost:5005/ws',
       },
     },
   };
